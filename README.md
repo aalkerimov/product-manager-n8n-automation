@@ -1,5 +1,7 @@
 # Product & Founder Automation OS
 
+> ⚠️ **This project has zero affiliation with n8n GmbH.** It is fully independent, 100% open-source, and non-profit. No sponsorship, no endorsement, no commercial relationship — just workflows built by practitioners for practitioners.
+
 <div align="center">
 
 **50 production-ready n8n workflows for product managers, founders, and small teams.**
@@ -266,20 +268,13 @@ Every workflow ships with 7 files so you can import, test, and customise with co
 
 ## About the author
 
-This project was built by **[Arthur Kerimov](https://arthurkerimov.com)** — AI Product Leader, Founder, and Innovation Operator based in **Dubai, UAE**.
-
-Arthur brings 5+ years of hands-on experience across AI, IoT, fintech, SaaS, DaaS, mobile products, startup execution, and applied research. His philosophy: *a typical PM manages backlogs and sprints; a builder constructs systems and ventures.* He integrates socio-technical thinking, applied AI, and founder-level ownership to make product execution drive real business traction.
-
-He is the founder of **[Wayanjo](https://arthurkerimov.com)** (product studio & cyberagency) and **SocialShade** (AI media platform), and writes about product, systems, and venture building at [arthurkerimov.com/blog](https://arthurkerimov.com/blog).
+This project was built by **[Arthur Kerimov](https://arthurkerimov.com)** — AI Product Leader & Founder.
 
 **Connect:**
-- 🌐 Website: [arthurkerimov.com](https://arthurkerimov.com)
-- 💼 LinkedIn: [linkedin.com/in/aalkerimov](https://www.linkedin.com/in/aalkerimov/)
-- 🐦 X / Twitter: [@aalkerimov](https://x.com/aalkerimov)
-- ✈️ Telegram: [@kerimoff_artur](https://t.me/kerimoff_artur)
-- 📧 Email: kerimovartur.official@gmail.com
-
-> *"Whether you are scaling a venture, restructuring product systems, or looking for a builder to join your team — let's build something meaningful."*
+- 🌐 [arthurkerimov.com](https://arthurkerimov.com)
+- 💼 [linkedin.com/in/aalkerimov](https://www.linkedin.com/in/aalkerimov/)
+- 🐦 [@aalkerimov](https://x.com/aalkerimov)
+- ✈️ [Telegram @kerimoff_artur](https://t.me/kerimoff_artur)
 
 ---
 
@@ -291,5 +286,15 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the workflow submission process, nami
 
 ## License
 
-MIT — see [LICENSE](LICENSE).  
-Not affiliated with n8n GmbH.
+MIT — see [LICENSE](LICENSE).
+
+---
+
+## ⚠️ Disclaimer
+
+**This project is completely independent and non-profit.**
+
+- 🚫 **No affiliation** with [n8n GmbH](https://n8n.io) — not sponsored, not endorsed, not officially supported by them in any way
+- 🔓 **Fully open-source** under the MIT licence — fork it, extend it, redistribute it freely
+- 💸 **Non-profit** — built by a practitioner to solve real problems, not to sell anything
+- 🏷️ "n8n" is a trademark of n8n GmbH — used here purely as a descriptive term for the automation platform this project runs on
