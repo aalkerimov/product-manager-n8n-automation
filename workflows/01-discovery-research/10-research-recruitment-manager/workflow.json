@@ -1,0 +1,179 @@
+{
+  "meta": {
+    "id": "10",
+    "name": "Research Recruitment Manager",
+    "description": "Track research participants, screen against criteria, schedule approved interviews, and prevent repeatedly contacting the same people.",
+    "category": "Discovery & Research",
+    "status": "beta",
+    "version": "1.0.0",
+    "testedN8nVersion": "2.30.0",
+    "difficulty": "intermediate",
+    "setupTime": "25 min",
+    "estimatedMonthlyCost": "$0.02–0.10",
+    "requiredIntegrations": ["Google Sheets", "SMTP Email"],
+    "optionalIntegrations": ["Calendly API", "Typeform API", "Slack API"],
+    "triggerType": "webhook",
+    "inputTypes": ["screening form submission", "manual candidate entry"],
+    "outputTypes": ["screened candidate", "scheduling email", "rejection email"],
+    "aiRequired": false,
+    "humanApproval": true,
+    "selfHosted": true,
+    "n8nCloud": true,
+    "tags": ["recruitment", "research", "participants", "scheduling", "ux-research"]
+  },
+  "name": "10 – Research Recruitment Manager",
+  "nodes": [
+    {
+      "id": "node-setup",
+      "name": "⚙️ SETUP",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-480, -320],
+      "parameters": {
+        "content": "## 10 — Research Recruitment Manager\n\n**Required:**\n- Google Sheets: PARTICIPANT_SHEET_ID\n  Columns: email, name, company, segment, role, last_contacted, interview_count, status\n- SMTP Email credential\n- NOTIFICATION_EMAIL_TO (researcher's email)\n\n**Optional:**\n- CALENDLY_LINK for scheduling\n- RESEARCH_COOLDOWN_DAYS (default: 60 — prevent re-contact within 60 days)\n\n**Status:** Beta.",
+        "height": 320,
+        "width": 380,
+        "color": 7
+      }
+    },
+    {
+      "id": "node-webhook",
+      "name": "Webhook — New Applicant",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-200, -20],
+      "parameters": {
+        "path": "research-recruitment",
+        "httpMethod": "POST",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "webhookId": "research-recruitment-webhook"
+    },
+    {
+      "id": "node-manual",
+      "name": "Manual Trigger (Testing)",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [-200, 100],
+      "parameters": {}
+    },
+    {
+      "id": "node-normalise",
+      "name": "Normalise Applicant",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [60, 40],
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body || $input.first().json;\nreturn [{ json: { email: (body.email||'').toLowerCase().trim(), name: body.name || body.full_name || 'Unknown', company: body.company || 'Unknown', segment: body.segment || body.plan || 'unknown', role: body.role || body.job_title || 'Unknown', use_case: body.use_case || body.how_do_you_use || '', applied_at: new Date().toISOString() } }];"
+      }
+    },
+    {
+      "id": "node-lookup",
+      "name": "Check Participant Database",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [300, 40],
+      "parameters": {
+        "operation":  "read",
+        "documentId": { "__rl": true, "value": "={{ $env.PARTICIPANT_SHEET_ID }}", "mode": "id" },
+        "sheetName":  { "__rl": true, "value": "Participants", "mode": "name" },
+        "filters": {
+          "conditions": [{ "value1": "email", "condition": "eq", "value2": "={{ $json.email }}" }]
+        },
+        "options": {}
+      },
+      "credentials": { "googleSheetsOAuth2Api": { "id": "SHEETS_CREDENTIAL_ID", "name": "Google Sheets OAuth2" } }
+    },
+    {
+      "id": "node-screen",
+      "name": "Screen Candidate",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [540, 40],
+      "parameters": {
+        "jsCode": "const applicant = $('Normalise Applicant').first().json;\nconst existingRows = $input.all().map(i => i.json);\nconst existing = existingRows.find(r => r.email === applicant.email);\nconst cooldownDays = parseInt($env.RESEARCH_COOLDOWN_DAYS||60,10);\nconst now = new Date();\nlet decision = 'approve';\nlet reason = '';\n\nif (existing) {\n  const lastContacted = existing.last_contacted ? new Date(existing.last_contacted) : null;\n  const daysSince = lastContacted ? Math.floor((now-lastContacted)/86400000) : 9999;\n  const interviews = parseInt(existing.interview_count||0,10);\n  if (daysSince < cooldownDays) { decision = 'cooldown'; reason = `Last contacted ${daysSince} days ago (cooldown: ${cooldownDays} days)`; }\n  else if (interviews >= 5) { decision = 'max_reached'; reason = `Already participated in ${interviews} interviews`; }\n  else { decision = 'approve'; reason = 'Eligible — cooldown expired'; }\n} else {\n  decision = 'new'; reason = 'New participant — not in database';\n}\nreturn [{ json: { ...applicant, is_existing: !!existing, existing_record: existing||null, decision, reason, interview_count: existing?.interview_count||0 } }];"
+      }
+    },
+    {
+      "id": "node-route",
+      "name": "Route by Decision",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [780, 40],
+      "parameters": {
+        "mode": "expression",
+        "output": "={{ $json.decision }}",
+        "rules": {
+          "rules": [
+            { "outputKey": "approve", "conditions": { "conditions": [{ "leftValue": "={{ $json.decision }}", "rightValue": "approve", "operator": { "type": "string", "operation": "equals" } }] } },
+            { "outputKey": "new",     "conditions": { "conditions": [{ "leftValue": "={{ $json.decision }}", "rightValue": "new",     "operator": { "type": "string", "operation": "equals" } }] } }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "node-request-approval",
+      "name": "Notify Researcher",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1020, -80],
+      "parameters": {
+        "fromEmail": "={{ $env.EMAIL_FROM || 'noreply@yourcompany.com' }}",
+        "toEmail":   "={{ $env.NOTIFICATION_EMAIL_TO }}",
+        "subject":   "✅ Research Recruit Ready: {{ $json.name }} ({{ $json.company }})",
+        "emailType": "text",
+        "message":   "New research participant is eligible for scheduling.\n\nName: {{ $json.name }}\nEmail: {{ $json.email }}\nCompany: {{ $json.company }}\nSegment: {{ $json.segment }}\nRole: {{ $json.role }}\nUse case: {{ $json.use_case }}\nStatus: {{ $json.decision }} — {{ $json.reason }}\n\nTo schedule: reply to this email or use your scheduling tool.\n\nNote: Approve scheduling manually — do not contact participants automatically.",
+        "options": {}
+      },
+      "credentials": { "smtp": { "id": "SMTP_CREDENTIAL_ID", "name": "SMTP Email" } }
+    },
+    {
+      "id": "node-add-to-db",
+      "name": "Add to Participant Database",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1020, 80],
+      "parameters": {
+        "operation":  "append",
+        "documentId": { "__rl": true, "value": "={{ $env.PARTICIPANT_SHEET_ID }}", "mode": "id" },
+        "sheetName":  { "__rl": true, "value": "Participants", "mode": "name" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "email":           "={{ $json.email }}",
+            "name":            "={{ $json.name }}",
+            "company":         "={{ $json.company }}",
+            "segment":         "={{ $json.segment }}",
+            "role":            "={{ $json.role }}",
+            "status":          "pending_scheduling",
+            "interview_count": 0,
+            "applied_at":      "={{ $json.applied_at }}"
+          }
+        },
+        "options": {}
+      },
+      "credentials": { "googleSheetsOAuth2Api": { "id": "SHEETS_CREDENTIAL_ID", "name": "Google Sheets OAuth2" } }
+    }
+  ],
+  "connections": {
+    "Webhook — New Applicant":    { "main": [[{ "node": "Normalise Applicant",      "type": "main", "index": 0 }]] },
+    "Manual Trigger (Testing)":   { "main": [[{ "node": "Normalise Applicant",      "type": "main", "index": 0 }]] },
+    "Normalise Applicant":        { "main": [[{ "node": "Check Participant Database","type": "main", "index": 0 }]] },
+    "Check Participant Database": { "main": [[{ "node": "Screen Candidate",          "type": "main", "index": 0 }]] },
+    "Screen Candidate":           { "main": [[{ "node": "Route by Decision",         "type": "main", "index": 0 }]] },
+    "Route by Decision": {
+      "main": [
+        [{ "node": "Notify Researcher",         "type": "main", "index": 0 }, { "node": "Add to Participant Database", "type": "main", "index": 0 }],
+        [{ "node": "Notify Researcher",         "type": "main", "index": 0 }, { "node": "Add to Participant Database", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": { "executionOrder": "v1", "saveManualExecutions": true },
+  "tags": [{ "name": "recruitment" }, { "name": "research" }],
+  "triggerCount": 1,
+  "updatedAt": "2025-01-13T00:00:00.000Z",
+  "versionId": "10-v1.0.0"
+}

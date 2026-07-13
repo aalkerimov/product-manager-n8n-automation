@@ -1,0 +1,5 @@
+{
+  "workflow_id": "35",
+  "test": "happy_path",
+  "expected": { "status": "success", "email_sent": true }
+}

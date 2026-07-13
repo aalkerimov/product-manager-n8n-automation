@@ -1,0 +1,44 @@
+{
+  "_comment": "Set COMPETITOR_PAGES_CONFIG in your .env file with this JSON array",
+  "workflow_id": "competitor-change-monitor",
+  "COMPETITOR_PAGES_CONFIG": [
+    {
+      "company": "Rival A",
+      "url": "https://rival-a.com/pricing",
+      "type": "pricing"
+    },
+    {
+      "company": "Rival A",
+      "url": "https://rival-a.com/changelog",
+      "type": "changelog"
+    },
+    {
+      "company": "Rival B",
+      "url": "https://rival-b.com/features",
+      "type": "features"
+    }
+  ],
+  "configuration": {
+    "COMPETITOR_CHECK_SCHEDULE": {
+      "default": "0 */6 * * *",
+      "description": "Cron: every 6 hours"
+    },
+    "COMPETITOR_CHANGE_IMPORTANCE_THRESHOLD": {
+      "default": "6",
+      "description": "Only notify if AI importance score >= this value (1-10)"
+    },
+    "COMPETITOR_DIFF_MIN_CHARS": {
+      "default": "100",
+      "description": "Ignore diffs shorter than this many characters"
+    },
+    "AI_MODEL_SMART": {
+      "default": "gpt-4o",
+      "description": "Model for competitor change analysis"
+    }
+  },
+  "n8n_credentials_required": [
+    { "name": "OpenAI API", "type": "openAiApi", "required": true },
+    { "name": "SMTP Email", "type": "smtp", "required": true },
+    { "name": "Slack API", "type": "slackApi", "required": false }
+  ]
+}

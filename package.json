@@ -1,0 +1,36 @@
+{
+  "name": "product-founder-automation-os",
+  "version": "2.0.0",
+  "description": "50 practical n8n automation workflows for product managers, founders, and small teams",
+  "private": true,
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "list":              "node scripts/list.js",
+    "validate":          "node scripts/validate-json.js && node scripts/check-secrets.js && node scripts/check-required-files.js",
+    "validate:json":     "node scripts/validate-json.js",
+    "validate:secrets":  "node scripts/check-secrets.js",
+    "validate:files":    "node scripts/check-required-files.js",
+    "test":              "node scripts/test-fixtures.js",
+    "import:workflow":   "node scripts/import-workflow.js",
+    "import:category":   "node scripts/import-category.js",
+    "import:all":        "node scripts/import-all.js",
+    "catalog:build":     "node scripts/build-catalog.js",
+    "catalog:validate":  "node scripts/validate-catalog.js"
+  },
+  "keywords": [
+    "n8n", "automation", "product-management", "founders",
+    "workflows", "ai", "no-code"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/YOUR_ORG/product-founder-automation-os",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/YOUR_ORG/product-founder-automation-os.git"
+  },
+  "n8n": {
+    "version": "2.30.0",
+    "minVersion": "1.50.0"
+  }
+}

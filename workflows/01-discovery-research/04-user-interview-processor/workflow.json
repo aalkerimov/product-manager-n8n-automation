@@ -1,0 +1,214 @@
+{
+  "meta": {
+    "id": "04",
+    "name": "User Interview Processor",
+    "description": "Turn raw interview transcripts into structured research artefacts: problems, motivations, quotes, objections, segments, and opportunities — with links to original evidence.",
+    "category": "Discovery & Research",
+    "status": "beta",
+    "version": "1.0.0",
+    "testedN8nVersion": "2.30.0",
+    "difficulty": "intermediate",
+    "setupTime": "20 min",
+    "estimatedMonthlyCost": "$0.05–0.30 per interview",
+    "requiredIntegrations": ["OpenAI API", "SMTP Email"],
+    "optionalIntegrations": ["Slack API", "Notion API", "Google Docs"],
+    "triggerType": "webhook",
+    "inputTypes": ["transcript text", "audio (via Whisper)", "structured JSON"],
+    "outputTypes": ["research artefact JSON", "email summary", "Notion page"],
+    "aiRequired": true,
+    "humanApproval": true,
+    "selfHosted": true,
+    "n8nCloud": true,
+    "tags": ["research", "interviews", "discovery", "product", "ux"]
+  },
+  "name": "04 – User Interview Processor",
+  "nodes": [
+    {
+      "id": "node-setup",
+      "name": "⚙️ SETUP — Read This First",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-480, -320],
+      "parameters": {
+        "content": "## 04 — User Interview Processor\n\n**Required (must set before activating):**\n- `OPENAI_CREDENTIAL_NAME` → your OpenAI API credential in n8n\n- `NOTIFICATION_EMAIL_TO` → where to send processed artefacts\n\n**Optional:**\n- `SLACK_CHANNEL_RESEARCH` → Slack channel for research team\n- `INTERVIEW_STORAGE` → `sheets` (default) or `notion`\n\n**How to test:**\n1. Click Manual Trigger\n2. Paste a sample transcript in the trigger payload\n3. Check Executions for the output artefact\n\n**Status:** Beta — statically validated, not runtime-tested.",
+        "height": 380,
+        "width": 440,
+        "color": 7
+      }
+    },
+    {
+      "id": "node-manual",
+      "name": "Manual Trigger (Testing)",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [-200, -100],
+      "parameters": {}
+    },
+    {
+      "id": "node-webhook",
+      "name": "Webhook — Receive Transcript",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-200, 60],
+      "parameters": {
+        "path": "interview-processor",
+        "httpMethod": "POST",
+        "responseMode": "onReceived",
+        "responseData": "firstEntryJson",
+        "options": {}
+      },
+      "webhookId": "interview-processor-webhook"
+    },
+    {
+      "id": "node-normalise",
+      "name": "Normalise Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [60, -20],
+      "parameters": {
+        "jsCode": "// Normalise input from webhook or manual trigger\nconst body = $input.first().json.body || $input.first().json;\n\nconst transcript = body.transcript ||\n  body.text ||\n  'No transcript provided — please pass { transcript: \"...\" }';\n\nconst interview = {\n  id:           body.id           || `int_${Date.now()}`,\n  participant:  body.participant  || 'Anonymous',\n  role:         body.role         || 'Unknown',\n  company:      body.company      || 'Unknown',\n  segment:      body.segment      || 'Unknown',\n  date:         body.date         || new Date().toISOString().slice(0,10),\n  duration_min: body.duration_min || null,\n  interviewer:  body.interviewer  || 'Unknown',\n  transcript:   transcript.slice(0, 15000), // max 15k chars to control AI cost\n  source:       body.source       || 'webhook',\n};\n\nreturn [{ json: interview }];"
+      }
+    },
+    {
+      "id": "node-extract",
+      "name": "Extract Research Artefacts (AI)",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.7,
+      "position": [300, -20],
+      "parameters": {
+        "resource": "text",
+        "operation": "message",
+        "model": {
+          "__rl": true,
+          "value": "={{ $env.AI_MODEL_SMART || 'gpt-4o' }}",
+          "mode": "id"
+        },
+        "messages": {
+          "values": [
+            {
+              "role": "system",
+              "content": "You are a senior UX researcher extracting structured insights from user interview transcripts. Extract ONLY what is explicitly stated — never invent or infer beyond the text. Return valid JSON only."
+            },
+            {
+              "role": "user",
+              "content": "Extract research artefacts from this interview transcript.\n\nParticipant: {{ $json.participant }}\nRole: {{ $json.role }}\nCompany: {{ $json.company }}\nSegment: {{ $json.segment }}\nDate: {{ $json.date }}\n\nTranscript:\n{{ $json.transcript }}\n\nReturn a JSON object with these exact keys:\n{\n  \"problems\": [{\"text\": str, \"quote\": str, \"frequency\": \"one-off|recurring\", \"severity\": \"low|medium|high|critical\"}],\n  \"motivations\": [{\"text\": str, \"quote\": str}],\n  \"current_alternatives\": [{\"name\": str, \"why_used\": str, \"why_inadequate\": str}],\n  \"key_quotes\": [{\"text\": str, \"context\": str, \"theme\": str}],\n  \"objections\": [{\"text\": str, \"quote\": str}],\n  \"opportunities\": [{\"text\": str, \"confidence\": \"low|medium|high\", \"evidence\": str}],\n  \"segment_signals\": [{\"signal\": str, \"implication\": str}],\n  \"recommended_follow_ups\": [str],\n  \"overall_sentiment\": \"very_negative|negative|neutral|positive|very_positive\",\n  \"themes\": [str]\n}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "credentials": {
+        "openAiApi": {
+          "id": "OPENAI_CREDENTIAL_ID",
+          "name": "OpenAI API"
+        }
+      }
+    },
+    {
+      "id": "node-parse",
+      "name": "Parse AI Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [540, -20],
+      "parameters": {
+        "jsCode": "const interview = $('Normalise Input').first().json;\nlet artefacts;\ntry {\n  const raw = $input.first().json.message?.content ||\n              $input.first().json.content || '{}';\n  artefacts = JSON.parse(raw.replace(/```json|```/g, '').trim());\n} catch (e) {\n  artefacts = { _parse_error: e.message, _raw: $input.first().json };\n}\n\nreturn [{\n  json: {\n    interview_id:  interview.id,\n    participant:   interview.participant,\n    role:          interview.role,\n    company:       interview.company,\n    segment:       interview.segment,\n    date:          interview.date,\n    processed_at:  new Date().toISOString(),\n    artefacts,\n    evidence_link: `Source: interview with ${interview.participant} on ${interview.date}`,\n  }\n}];"
+      }
+    },
+    {
+      "id": "node-approve",
+      "name": "Request Human Approval",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 2,
+      "position": [780, -20],
+      "parameters": {
+        "workflowId": { "__rl": true, "value": "HUMAN_APPROVAL_WORKFLOW_ID", "mode": "id" },
+        "mode": "each",
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "title":           "Approve: Interview Artefacts — {{ $json.participant }}",
+            "summary":         "Interview with {{ $json.participant }} ({{ $json.role }}, {{ $json.company }}). Found {{ $json.artefacts.problems.length || 0 }} problems, {{ $json.artefacts.opportunities.length || 0 }} opportunities.",
+            "details":         "={{ $json }}",
+            "approver_email":  "={{ $env.NOTIFICATION_EMAIL_TO }}",
+            "timeout_hours":   48
+          }
+        }
+      }
+    },
+    {
+      "id": "node-check-approved",
+      "name": "Approved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [1020, -20],
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false },
+          "conditions": [
+            {
+              "leftValue":  "={{ $json.approved }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "true" }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "node-notify",
+      "name": "Send Research Artefact",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 2,
+      "position": [1260, -80],
+      "parameters": {
+        "workflowId": { "__rl": true, "value": "NOTIFICATION_ROUTER_WORKFLOW_ID", "mode": "id" },
+        "mode": "each",
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "channel": "={{ $env.NOTIFICATION_CHANNEL || 'email' }}",
+            "title":   "📋 Research Artefact: {{ $('Parse AI Response').first().json.participant }}",
+            "body":    "Interview processed. {{ $('Parse AI Response').first().json.artefacts.problems.length || 0 }} problems • {{ $('Parse AI Response').first().json.artefacts.opportunities.length || 0 }} opportunities\n\nSee attached JSON for full artefact.",
+            "urgency": "low"
+          }
+        }
+      }
+    },
+    {
+      "id": "node-log-rejected",
+      "name": "Log Rejection",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1260, 120],
+      "parameters": {
+        "jsCode": "console.log('Interview artefact rejected or timed out:', $json);\nreturn [{ json: { status: 'rejected', interview_id: $json.interview_id } }];"
+      }
+    }
+  ],
+  "connections": {
+    "Manual Trigger (Testing)":    { "main": [[{ "node": "Normalise Input", "type": "main", "index": 0 }]] },
+    "Webhook — Receive Transcript":{ "main": [[{ "node": "Normalise Input", "type": "main", "index": 0 }]] },
+    "Normalise Input":             { "main": [[{ "node": "Extract Research Artefacts (AI)", "type": "main", "index": 0 }]] },
+    "Extract Research Artefacts (AI)": { "main": [[{ "node": "Parse AI Response", "type": "main", "index": 0 }]] },
+    "Parse AI Response":           { "main": [[{ "node": "Request Human Approval", "type": "main", "index": 0 }]] },
+    "Request Human Approval":      { "main": [[{ "node": "Approved?", "type": "main", "index": 0 }]] },
+    "Approved?": {
+      "main": [
+        [{ "node": "Send Research Artefact", "type": "main", "index": 0 }],
+        [{ "node": "Log Rejection",          "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": ""
+  },
+  "staticData": null,
+  "tags": [{ "name": "discovery" }, { "name": "research" }],
+  "triggerCount": 1,
+  "updatedAt": "2025-01-13T00:00:00.000Z",
+  "versionId": "04-v1.0.0"
+}

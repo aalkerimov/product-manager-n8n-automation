@@ -1,0 +1,122 @@
+version: "3.9"
+
+# =============================================================================
+# Product & Founder Automation OS — Local Development Stack
+# =============================================================================
+# Quick start:
+#   cp .env.example .env   # then fill in your values
+#   docker compose up -d
+#   open http://localhost:5678
+# =============================================================================
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # n8n — Workflow Automation
+  # ---------------------------------------------------------------------------
+  n8n:
+    image: n8nio/n8n:2.30.0
+    container_name: automation-os-n8n
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      # Core
+      - N8N_HOST=0.0.0.0
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - WEBHOOK_URL=http://localhost:5678/
+      - GENERIC_TIMEZONE=${TIMEZONE:-UTC}
+
+      # Database — use PostgreSQL in this stack
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=postgres
+      - DB_POSTGRESDB_PORT=5432
+      - DB_POSTGRESDB_DATABASE=n8n
+      - DB_POSTGRESDB_USER=n8n
+      - DB_POSTGRESDB_PASSWORD=n8n_local_password
+
+      # Security — change before exposing publicly
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=admin
+      - N8N_BASIC_AUTH_PASSWORD=changeme_local
+
+      # Execution
+      - EXECUTIONS_PROCESS=main
+      - EXECUTIONS_DATA_SAVE_ON_ERROR=all
+      - EXECUTIONS_DATA_SAVE_ON_SUCCESS=all
+      - EXECUTIONS_DATA_SAVE_MANUAL_EXECUTIONS=true
+
+      # Enable community nodes (optional)
+      - N8N_COMMUNITY_PACKAGES_ENABLED=true
+
+      # AI — point to your provider
+      - N8N_AI_ENABLED=true
+
+      # Logging
+      - N8N_LOG_LEVEL=info
+
+    volumes:
+      # Persist n8n data across restarts
+      - n8n_data:/home/node/.n8n
+      # Mount workflow files for easy import
+      - ./workflows:/home/node/workflows:ro
+      - ./subworkflows:/home/node/subworkflows:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - automation-os
+
+  # ---------------------------------------------------------------------------
+  # PostgreSQL — Persistent storage for competitor snapshots, feedback, etc.
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: automation-os-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=n8n
+      - POSTGRES_USER=n8n
+      - POSTGRES_PASSWORD=n8n_local_password
+      # Create the automation_os database alongside n8n's database
+      - POSTGRES_MULTIPLE_DATABASES=n8n,automation_os
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U n8n"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - automation-os
+    ports:
+      - "5432:5432"
+
+  # ---------------------------------------------------------------------------
+  # pgAdmin (optional) — DB explorer on port 5050
+  # ---------------------------------------------------------------------------
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: automation-os-pgadmin
+    restart: unless-stopped
+    profiles:
+      - debug
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@local.dev
+      - PGADMIN_DEFAULT_PASSWORD=changeme_local
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+    networks:
+      - automation-os
+
+volumes:
+  n8n_data:
+  postgres_data:
+
+networks:
+  automation-os:
+    driver: bridge

@@ -1,0 +1,1 @@
+{ "email": "tom@examplestartup.com", "name": "Tom Chen", "company": "Example Startup", "segment": "startup", "role": "CTO", "is_existing": false, "decision": "new", "reason": "New participant — not in database", "interview_count": 0, "status": "pending_scheduling", "applied_at": "2025-01-13T09:00:00Z" }

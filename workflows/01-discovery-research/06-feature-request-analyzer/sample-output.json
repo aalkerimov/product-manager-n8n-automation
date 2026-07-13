@@ -1,0 +1,43 @@
+{
+  "analysis_date": "2025-01-15",
+  "total_requests": 8,
+  "clusters": [
+    {
+      "cluster_id": "c01",
+      "title": "CSV / Bulk Data Export",
+      "underlying_need": "Export product data to external tools for reporting and analysis",
+      "request_indices": [0, 1, 2],
+      "total_mentions": 25,
+      "affected_segments": ["enterprise", "growth"],
+      "evidence_quotes": [
+        "Bulk data export would save us hours every week",
+        "CSV export button to the reports page"
+      ],
+      "confidence": 0.95,
+      "recommended_action": "add_to_backlog",
+      "reasoning": "3 requests with 25 combined votes, enterprise-dominant segment"
+    },
+    {
+      "cluster_id": "c02",
+      "title": "SSO / SAML Authentication",
+      "underlying_need": "Enterprise security compliance — IT department requirement",
+      "request_indices": [3, 4],
+      "total_mentions": 18,
+      "affected_segments": ["enterprise"],
+      "evidence_quotes": ["Our IT department won't approve without it", "dealbreaker if you don't have it"],
+      "confidence": 0.97,
+      "recommended_action": "add_to_backlog",
+      "reasoning": "18 combined mentions, explicitly blocks enterprise sales deals"
+    }
+  ],
+  "singletons": [
+    { "index": 5, "reason": "Mobile iOS app — unique, no duplicate found" },
+    { "index": 6, "reason": "Dark mode — unique theme request" },
+    { "index": 7, "reason": "Keyboard shortcuts — unique UX request" }
+  ],
+  "top_cluster": {
+    "cluster_id": "c02",
+    "title": "SSO / SAML Authentication",
+    "total_mentions": 18
+  }
+}

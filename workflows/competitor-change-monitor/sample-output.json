@@ -1,0 +1,20 @@
+{
+  "company": "Example Rival",
+  "page_type": "pricing",
+  "url": "https://example-rival.com/pricing",
+  "previous_hash": "abc123def",
+  "new_hash": "xyz789ghi",
+  "has_changed": true,
+  "ai_analysis": {
+    "change_type": "pricing",
+    "importance_score": 8,
+    "possible_reason": "They may be repositioning upmarket or responding to competitive pressure to increase revenue per seat.",
+    "product_impact": "If their new pricing removes the lower tier, we have an opportunity to capture price-sensitive customers with our current plans.",
+    "recommended_response": "Review our pricing page to ensure we clearly highlight our lower entry-point. Consider a comparison page or blog post within 1 week.",
+    "confidence": 0.87,
+    "reasoning": "The addition of a new '$99/month' price point combined with removal of the free tier strongly suggests a deliberate upmarket move."
+  },
+  "detected_at": "2025-01-13T14:30:00Z",
+  "notification_sent": true,
+  "notification_channel": "slack"
+}

@@ -1,0 +1,67 @@
+{
+  "meta": {
+    "period": "2025-01-06 → 2025-01-13",
+    "company": "Acme Inc",
+    "generated_at": "2025-01-13T08:00:00Z"
+  },
+  "overall_health": "green",
+  "health_emoji": "🟢",
+  "health_reasoning": "Strong WAU growth and reduced support load offset by one significant blocker.",
+  "executive_summary": "Good week: dark mode shipped, performance up 35%, WAU +11%. Billing page blocker needs resolution before Q1 target. One decision due by Jan 24.",
+  "what_shipped": [
+    "Dark mode released to all users",
+    "API CDN optimisation — response time -35%",
+    "New onboarding checklist (15% completion rate improvement)"
+  ],
+  "important_metric_changes": [
+    {
+      "metric": "Weekly Active Users",
+      "change": "+11.3% (1,240 → 1,380)",
+      "significance": "Strongest WAU growth in 6 weeks — likely driven by dark mode launch"
+    },
+    {
+      "metric": "Support tickets opened",
+      "change": "-28.7% (87 → 62)",
+      "significance": "Significant reduction — onboarding checklist likely reducing confusion-based tickets"
+    }
+  ],
+  "customer_insights": [
+    "5 enterprise customers requested bulk export — follow up with Sales this week",
+    "Onboarding completion rate up 15% — validate with cohort analysis"
+  ],
+  "current_blockers": [
+    {
+      "blocker": "Design review for v2 billing page",
+      "owner": "Design team",
+      "urgency": "high"
+    },
+    {
+      "blocker": "Legal approval for new ToS",
+      "owner": "Legal",
+      "urgency": "medium"
+    }
+  ],
+  "scope_changes": [
+    "SSO feature moved from Q1 to Q2 due to security review timeline"
+  ],
+  "risks": [
+    {
+      "risk": "Third-party payment provider pricing changes",
+      "likelihood": "medium",
+      "mitigation": "Evaluate alternatives; budget impact analysis by Jan 20"
+    }
+  ],
+  "decisions_required": [
+    {
+      "question": "Sunset legacy CSV export format?",
+      "context": "3% of users, high maintenance cost, blocks refactor",
+      "deadline": "2025-01-24"
+    }
+  ],
+  "priorities_next_week": [
+    "Unblock billing page design review",
+    "Start SSO vendor evaluation",
+    "Review 15 new feature requests from feedback report",
+    "Budget impact analysis for payment provider change"
+  ]
+}

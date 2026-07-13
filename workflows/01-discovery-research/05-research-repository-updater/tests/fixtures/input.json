@@ -1,0 +1,10 @@
+{
+  "type": "interview",
+  "source": "manual",
+  "content": "Customer: We currently use Notion for everything but the research notes are completely unorganized. Nobody uses the same tags and we can't search for anything. We had five interviews last month about the onboarding flow and I couldn't find two of them when we were writing the PRD.",
+  "segment": "startup",
+  "date": "2025-01-12",
+  "author": "Sam (PM)",
+  "tags": ["onboarding"],
+  "metadata": { "project": "Q1 Research" }
+}

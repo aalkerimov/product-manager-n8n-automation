@@ -1,0 +1,364 @@
+{
+  "name": "Customer Feedback Brain",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 🧠 Customer Feedback Brain\n\n**Setup checklist (5 minutes):**\n1. ✅ Create credential `OpenAI API` (Settings → Credentials)\n2. ✅ Create credential `SMTP Email` or `Slack API` for notifications\n3. ✅ Create credential `Google Sheets OAuth2` if using the basic stack\n4. ✅ Set environment variables (see .env.example)\n5. ✅ Test with Manual Trigger first — paste a sample-input.json item into the webhook\n\n**How it works:**\n1. Collects feedback from webhook, CSV, or Google Sheets\n2. Normalises to a common schema\n3. Deduplicates within the configured window\n4. Classifies each item (sentiment, urgency, segment, product area)\n5. Generates a product insights report\n6. Requires human approval before sending\n7. Routes the report to configured channels\n\n**Supported sources:** webhook, CSV, Google Sheets, manual",
+        "height": 440,
+        "width": 540,
+        "color": 6
+      },
+      "id": "sticky-main-setup",
+      "name": "📌 Setup Instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, -300]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "={{ $env.FEEDBACK_REPORT_SCHEDULE || '0 9 * * 1' }}"
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Weekly Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 100]
+    },
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Trigger (for testing)",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 280]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "={{ $env.FEEDBACK_WEBHOOK_PATH || '/webhook/feedback' }}",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook: Receive Feedback",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 460],
+      "webhookId": "feedback-intake-webhook"
+    },
+    {
+      "parameters": {
+        "content": "**Triggers:**\n- 🕐 Weekly Schedule: runs every Monday 09:00 (default)\n- 🖱️ Manual: for testing and ad-hoc runs\n- 🔗 Webhook: receives real-time feedback from forms/integrations\n\nThe schedule and webhook paths are configured via environment variables.",
+        "height": 160,
+        "width": 340,
+        "color": 7
+      },
+      "id": "sticky-triggers",
+      "name": "Trigger Notes",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, 100]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Collect and merge feedback from all available sources\n// In a scheduled run, this collects from configured sources.\n// In a webhook run, the incoming data is the source.\n\nconst triggerNode = $input.first();\nconst isWebhook = triggerNode.json?.body !== undefined || triggerNode.json?.headers !== undefined;\n\nlet rawItems = [];\n\nif (isWebhook) {\n  // Single item from webhook\n  const body = triggerNode.json.body || triggerNode.json;\n  rawItems = Array.isArray(body) ? body : [body];\n} else {\n  // Scheduled run: use embedded sample data for demo\n  // In production: replace this with calls to your actual sources\n  // (Google Sheets, database queries, etc.)\n  rawItems = [\n    {\n      id: `demo_${Date.now()}_1`,\n      text: \"The onboarding flow is confusing — I spent 30 minutes trying to connect my first integration.\",\n      source: \"typeform\",\n      customer_segment: \"startup\",\n      rating: 2,\n      created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()\n    },\n    {\n      id: `demo_${Date.now()}_2`,\n      text: \"Billing page doesn't show invoice history for the last 3 months. This is a blocker for our finance team.\",\n      source: \"support_email\",\n      customer_segment: \"enterprise\",\n      rating: null,\n      created_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString()\n    },\n    {\n      id: `demo_${Date.now()}_3`,\n      text: \"Would love a bulk import feature for contacts. We have 5000 records to migrate.\",\n      source: \"in_app_survey\",\n      customer_segment: \"growth\",\n      rating: 4,\n      created_at: new Date().toISOString()\n    },\n    {\n      id: `demo_${Date.now()}_4`,\n      text: \"The API rate limit documentation is outdated — it still says 100 req/min but the actual limit is 50.\",\n      source: \"github_issue\",\n      customer_segment: \"enterprise\",\n      rating: null,\n      created_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()\n    },\n    {\n      id: `demo_${Date.now()}_5`,\n      text: \"Performance is great after the last update. Pages load noticeably faster!\",\n      source: \"app_store_review\",\n      customer_segment: \"consumer\",\n      rating: 5,\n      created_at: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString()\n    }\n  ];\n}\n\nconsole.log(`Collected ${rawItems.length} raw feedback items`);\n\nreturn rawItems.map(item => ({ json: item }));"
+      },
+      "id": "collect-feedback",
+      "name": "Collect Feedback Sources",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [560, 280]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Normalise feedback to a consistent schema\n// Handles different source formats\n\nconst item = $input.first().json;\n\n// Generate a stable ID if missing\nconst id = item.id || item.uid || item.feedback_id || item.response_id ||\n  `fb_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;\n\n// Normalise text — combine text fields from various sources\nconst text = (\n  item.text ||\n  item.message ||\n  item.body ||\n  item.comment ||\n  item.review ||\n  item.content ||\n  item.feedback ||\n  [item.question_1, item.question_2, item.question_3].filter(Boolean).join(' ')\n).trim();\n\nif (!text || text.length < 5) {\n  // Skip items with no meaningful content\n  return [];\n}\n\n// Normalise source\nconst sourceRaw = (item.source || item.channel || item.form_name || 'unknown').toLowerCase();\nconst sourceMap = {\n  typeform: 'typeform', surveymonkey: 'survey', google_forms: 'survey',\n  intercom: 'support', zendesk: 'support', freshdesk: 'support', support_email: 'support',\n  app_store_review: 'app_review', play_store_review: 'app_review',\n  github_issue: 'github', github_discussion: 'github',\n  in_app_survey: 'in_app', in_app_feedback: 'in_app',\n  csv: 'csv', webhook: 'webhook',\n};\nconst source = sourceMap[sourceRaw] || sourceRaw;\n\n// Normalise rating (0–10 scale)\nlet rating = null;\nif (item.rating !== null && item.rating !== undefined) {\n  const raw = parseFloat(item.rating);\n  if (!isNaN(raw)) {\n    // Detect scale and normalise to 0–10\n    if (raw <= 1) rating = Math.round(raw * 10);\n    else if (raw <= 5) rating = Math.round(raw * 2);\n    else if (raw <= 10) rating = Math.round(raw);\n  }\n}\n\n// Normalise segment\nconst segmentRaw = (item.customer_segment || item.plan || item.tier || 'unknown').toLowerCase();\nconst segments = ['enterprise', 'growth', 'startup', 'consumer', 'free', 'trial'];\nconst segment = segments.find(s => segmentRaw.includes(s)) || 'unknown';\n\n// Create deduplication hash\nconst normalizedText = text.toLowerCase().replace(/\\s+/g, ' ').trim();\nconst hashInput = `${source}:${normalizedText.substring(0, 200)}`;\n// Simple hash (SHA-256 would require crypto — using a fast polynomial hash)\nlet dedupHash = 0;\nfor (let i = 0; i < hashInput.length; i++) {\n  dedupHash = ((dedupHash << 5) - dedupHash) + hashInput.charCodeAt(i);\n  dedupHash |= 0;\n}\ndedupHash = Math.abs(dedupHash).toString(36);\n\nreturn [{\n  json: {\n    id,\n    text,\n    source,\n    source_raw: sourceRaw,\n    customer_segment: segment,\n    rating,\n    created_at: item.created_at || item.timestamp || item.submitted_at || new Date().toISOString(),\n    received_at: new Date().toISOString(),\n    dedup_hash: dedupHash,\n    char_count: text.length,\n  }\n}];"
+      },
+      "id": "normalize-feedback",
+      "name": "Normalise to Common Schema",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [780, 280]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Deduplicate feedback items within the configured time window\n// In the basic stack, we use an in-memory check for this run.\n// In the advanced stack, query PostgreSQL for existing hashes.\n\n// Collect all items from this run\nconst items = $input.all().map(i => i.json);\n\n// In-memory dedup for this run\nconst seenHashes = new Set();\nconst unique = [];\nconst duplicates = [];\n\nfor (const item of items) {\n  if (seenHashes.has(item.dedup_hash)) {\n    duplicates.push(item.id);\n  } else {\n    seenHashes.add(item.dedup_hash);\n    unique.push(item);\n  }\n}\n\nconsole.log(`Dedup: ${unique.length} unique, ${duplicates.length} duplicates from ${items.length} total`);\n\n// Return unique items for classification\nreturn unique.map(item => ({ json: item }));"
+      },
+      "id": "deduplicate",
+      "name": "Deduplicate (within run)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1000, 280]
+    },
+    {
+      "parameters": {
+        "batchSize": 10,
+        "options": {}
+      },
+      "id": "batch-for-classification",
+      "name": "Batch: 10 Items for AI",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [1220, 280]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare batch for the LLM Classifier subworkflow\nconst batchItems = $input.all().map(i => i.json);\n\nreturn [{\n  json: {\n    mode: 'feedback',\n    items: batchItems.map(item => ({\n      id: item.id,\n      text: item.text,\n      metadata: {\n        source: item.source,\n        customer_segment: item.customer_segment,\n        rating: item.rating,\n        created_at: item.created_at,\n      }\n    }))\n  }\n}];"
+      },
+      "id": "prepare-batch",
+      "name": "Prepare Batch for Classifier",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1440, 280]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "expression",
+          "value": "LLM_CLASSIFIER_WORKFLOW_ID"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "mode": "={{ $json.mode }}",
+            "items": "={{ $json.items }}"
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "call-classifier",
+      "name": "Call: LLM Classifier",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 2,
+      "position": [1660, 280]
+    },
+    {
+      "parameters": {
+        "content": "⚙️ **Configure subworkflow ID**\nAfter importing the LLM Classifier subworkflow, copy its ID from the URL (e.g., `abc123`) and replace `LLM_CLASSIFIER_WORKFLOW_ID` in the 'Call: LLM Classifier' node above.",
+        "height": 120,
+        "width": 360,
+        "color": 4
+      },
+      "id": "sticky-classifier-id",
+      "name": "Configure Classifier ID",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [1600, 160]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Merge classification results with original feedback items\n// The classifier returns { results: [{id, classification, confidence, reasoning}] }\n\nconst classifierOutput = $input.first().json;\nconst results = classifierOutput.results || [];\n\n// Build a map for fast lookup\nconst classMap = new Map(results.map(r => [r.id, r]));\n\n// We need to join with the original normalised items\n// They're available in the batch node's input\nconst originalItems = $('Batch: 10 Items for AI').all().map(i => i.json);\n\nconst classified = originalItems.map(item => {\n  const classResult = classMap.get(item.id);\n  return {\n    ...item,\n    classification: classResult?.classification || null,\n    confidence: classResult?.confidence || 0,\n    reasoning: classResult?.reasoning || '',\n    classified_at: new Date().toISOString(),\n  };\n});\n\nreturn classified.map(item => ({ json: item }));"
+      },
+      "id": "merge-classifications",
+      "name": "Merge Classifications with Items",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1880, 280]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Aggregate all classified items and generate a product insights report\n\nconst allItems = $input.all().map(i => i.json);\n\nconst periodStart = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();\nconst periodEnd = new Date().toISOString();\n\n// Group by problem category\nconst byCategory = {};\nconst bySegment = {};\nconst featureRequests = [];\nconst bugReports = [];\nconst criticalItems = [];\nconst quotes = [];\n\nfor (const item of allItems) {\n  const cls = item.classification || {};\n  const cat = cls.problem_category || 'other';\n  const seg = item.customer_segment || 'unknown';\n\n  // Category grouping\n  if (!byCategory[cat]) byCategory[cat] = [];\n  byCategory[cat].push(item);\n\n  // Segment grouping\n  if (!bySegment[seg]) bySegment[seg] = [];\n  bySegment[seg].push(item);\n\n  // Feature requests\n  if (cls.is_feature_request) featureRequests.push(item);\n\n  // Bug reports\n  if (cls.is_bug_report) bugReports.push(item);\n\n  // Critical/urgent\n  if (cls.urgency === 'critical' || cls.urgency === 'high') criticalItems.push(item);\n\n  // Key quotes\n  if (cls.key_quote && item.confidence > 0.7) {\n    quotes.push({\n      quote: cls.key_quote,\n      source: item.source,\n      segment: item.customer_segment,\n      category: cat,\n    });\n  }\n}\n\n// Top problems by frequency\nconst topProblems = Object.entries(byCategory)\n  .sort((a, b) => b[1].length - a[1].length)\n  .slice(0, 5)\n  .map(([category, items]) => ({\n    category,\n    count: items.length,\n    affected_segments: [...new Set(items.map(i => i.customer_segment))],\n    avg_confidence: (items.reduce((s, i) => s + i.confidence, 0) / items.length).toFixed(2),\n    urgency_breakdown: items.reduce((acc, i) => {\n      const u = i.classification?.urgency || 'unknown';\n      acc[u] = (acc[u] || 0) + 1;\n      return acc;\n    }, {}),\n  }));\n\n// Affected segments summary\nconst segmentSummary = Object.entries(bySegment).map(([seg, items]) => ({\n  segment: seg,\n  total_feedback: items.length,\n  top_issues: Object.entries(\n    items.reduce((acc, i) => {\n      const cat = i.classification?.problem_category || 'other';\n      acc[cat] = (acc[cat] || 0) + 1;\n      return acc;\n    }, {})\n  ).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k, v]) => `${k} (${v})`),\n}));\n\nconst report = {\n  meta: {\n    generated_at: new Date().toISOString(),\n    period_start: periodStart,\n    period_end: periodEnd,\n    total_feedback_items: allItems.length,\n    items_classified: allItems.filter(i => i.classification).length,\n    company: process.env.COMPANY_NAME || 'Your Company',\n  },\n  top_repeated_problems: topProblems,\n  emerging_problems: topProblems.filter(p => p.count === 1).slice(0, 3),\n  important_quotes: quotes.slice(0, 5),\n  feature_requests: featureRequests.slice(0, 10).map(i => ({\n    text: i.text.substring(0, 200),\n    segment: i.customer_segment,\n    source: i.source,\n    confidence: i.confidence,\n  })),\n  possible_bugs: bugReports.slice(0, 5).map(i => ({\n    text: i.text.substring(0, 200),\n    segment: i.customer_segment,\n    urgency: i.classification?.urgency || 'unknown',\n    confidence: i.confidence,\n  })),\n  affected_segments: segmentSummary,\n  critical_and_urgent: criticalItems.length,\n  recommendations: [\n    topProblems[0] ? `Prioritise fixing ${topProblems[0].category} — ${topProblems[0].count} reports, affecting ${topProblems[0].affected_segments.join(', ')}` : null,\n    bugReports.length > 0 ? `Investigate ${bugReports.length} potential bug report(s) before next release` : null,\n    featureRequests.length > 0 ? `Add ${featureRequests.length} feature request(s) to the backlog for review` : null,\n  ].filter(Boolean),\n};\n\nconsole.log(`Report generated: ${allItems.length} items, ${topProblems.length} top problems, ${featureRequests.length} feature requests`);\n\nreturn [{ json: report }];"
+      },
+      "id": "generate-report",
+      "name": "Generate Product Insights Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2100, 280]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "expression",
+          "value": "HUMAN_APPROVAL_WORKFLOW_ID"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "title": "Approve: Weekly Feedback Insights Report — {{ $json.meta.company }}",
+            "summary": "{{ $json.meta.total_feedback_items }} feedback items analysed. Top problem: {{ $json.top_repeated_problems[0]?.category }}. {{ $json.critical_and_urgent }} critical/urgent items. {{ $json.feature_requests?.length }} feature requests.",
+            "details": "={{ $json }}",
+            "approver_email": "={{ $env.NOTIFICATION_EMAIL_TO || 'team@example.com' }}",
+            "timeout_hours": 24
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "request-approval",
+      "name": "Request Human Approval",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 2,
+      "position": [2320, 280]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "approval-check",
+              "leftValue": "={{ $json.approved }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equal"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "check-approval",
+      "name": "Was it Approved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [2540, 280]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format the approved report as a notification message\nconst approval = $input.first().json;\nconst report = $('Generate Product Insights Report').first().json;\n\nconst topProbs = report.top_repeated_problems.slice(0, 3)\n  .map((p, i) => `${i + 1}. **${p.category}** — ${p.count} reports (${p.affected_segments.join(', ')})`)\n  .join('\\n');\n\nconst featReqs = report.feature_requests.slice(0, 3)\n  .map((r, i) => `${i + 1}. \"${r.text.substring(0, 100)}...\" — ${r.segment}`)\n  .join('\\n');\n\nconst bugs = report.possible_bugs.slice(0, 2)\n  .map((b, i) => `${i + 1}. \"${b.text.substring(0, 100)}...\" (${b.urgency})`)\n  .join('\\n');\n\nconst body = `\n📊 **Weekly Product Insights — ${report.meta.company}**\n📅 Period: ${report.meta.period_start.substring(0, 10)} → ${report.meta.period_end.substring(0, 10)}\n📝 Items analysed: ${report.meta.total_feedback_items}\n\n**🔴 Top Problems:**\n${topProbs || 'None identified'}\n\n**💡 Feature Requests (${report.feature_requests.length} total):**\n${featReqs || 'None this week'}\n\n**🐛 Possible Bugs (${report.possible_bugs.length} total):**\n${bugs || 'None this week'}\n\n**✅ Recommendations:**\n${report.recommendations.map((r, i) => `${i + 1}. ${r}`).join('\\n')}\n`.trim();\n\nreturn [{\n  json: {\n    channel: process.env.NOTIFICATION_CHANNEL || 'email',\n    title: `Weekly Product Insights — ${report.meta.company}`,\n    body,\n    urgency: report.critical_and_urgent > 0 ? 'high' : 'medium',\n    metadata: { report_period: report.meta.period_start }\n  }\n}];"
+      },
+      "id": "format-notification",
+      "name": "Format Report Notification",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2760, 180]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "expression",
+          "value": "NOTIFICATION_ROUTER_WORKFLOW_ID"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "channel": "={{ $json.channel }}",
+            "title": "={{ $json.title }}",
+            "body": "={{ $json.body }}",
+            "urgency": "={{ $json.urgency }}",
+            "metadata": "={{ $json.metadata }}"
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "send-notification",
+      "name": "Send via Notification Router",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 2,
+      "position": [2980, 180]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Log rejection or timeout\nconst approval = $input.first().json;\nconsole.log(`Report ${approval.decision}: ${approval.comment || 'no comment'}`);\nreturn [{ json: { logged: true, decision: approval.decision, at: new Date().toISOString() } }];"
+      },
+      "id": "log-rejection",
+      "name": "Log: Rejected or Timeout",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2760, 380]
+    }
+  ],
+  "connections": {
+    "Weekly Schedule Trigger": {
+      "main": [
+        [{ "node": "Collect Feedback Sources", "type": "main", "index": 0 }]
+      ]
+    },
+    "Manual Trigger (for testing)": {
+      "main": [
+        [{ "node": "Collect Feedback Sources", "type": "main", "index": 0 }]
+      ]
+    },
+    "Webhook: Receive Feedback": {
+      "main": [
+        [{ "node": "Collect Feedback Sources", "type": "main", "index": 0 }]
+      ]
+    },
+    "Collect Feedback Sources": {
+      "main": [
+        [{ "node": "Normalise to Common Schema", "type": "main", "index": 0 }]
+      ]
+    },
+    "Normalise to Common Schema": {
+      "main": [
+        [{ "node": "Deduplicate (within run)", "type": "main", "index": 0 }]
+      ]
+    },
+    "Deduplicate (within run)": {
+      "main": [
+        [{ "node": "Batch: 10 Items for AI", "type": "main", "index": 0 }]
+      ]
+    },
+    "Batch: 10 Items for AI": {
+      "main": [
+        [{ "node": "Prepare Batch for Classifier", "type": "main", "index": 0 }]
+      ]
+    },
+    "Prepare Batch for Classifier": {
+      "main": [
+        [{ "node": "Call: LLM Classifier", "type": "main", "index": 0 }]
+      ]
+    },
+    "Call: LLM Classifier": {
+      "main": [
+        [{ "node": "Merge Classifications with Items", "type": "main", "index": 0 }]
+      ]
+    },
+    "Merge Classifications with Items": {
+      "main": [
+        [{ "node": "Generate Product Insights Report", "type": "main", "index": 0 }]
+      ]
+    },
+    "Generate Product Insights Report": {
+      "main": [
+        [{ "node": "Request Human Approval", "type": "main", "index": 0 }]
+      ]
+    },
+    "Request Human Approval": {
+      "main": [
+        [{ "node": "Was it Approved?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Was it Approved?": {
+      "main": [
+        [{ "node": "Format Report Notification", "type": "main", "index": 0 }],
+        [{ "node": "Log: Rejected or Timeout", "type": "main", "index": 0 }]
+      ]
+    },
+    "Format Report Notification": {
+      "main": [
+        [{ "node": "Send via Notification Router", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "saveExecutionProgress": true,
+    "errorWorkflow": ""
+  },
+  "meta": {
+    "n8nVersion": "2.30.0",
+    "description": "Collects customer feedback from multiple sources, normalises, deduplicates, classifies with AI, generates a product insights report, requires human approval, then routes to configured channels.",
+    "tags": ["feedback", "product", "ai", "weekly-report"]
+  }
+}

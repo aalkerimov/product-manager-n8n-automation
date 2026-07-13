@@ -1,0 +1,44 @@
+{
+  "workflow_id": "weekly-product-brief",
+  "configuration": {
+    "BRIEF_SCHEDULE": {
+      "default": "0 8 * * 5",
+      "description": "Cron: every Friday at 08:00"
+    },
+    "BRIEF_PERIOD_DAYS": {
+      "default": "7",
+      "description": "How many days back to collect data for the brief"
+    },
+    "BRIEF_INCLUDE_GITHUB": {
+      "default": "true",
+      "description": "Set to false to skip GitHub data collection"
+    },
+    "GITHUB_OWNER": {
+      "default": "your-org",
+      "description": "GitHub organization or username"
+    },
+    "GITHUB_REPO": {
+      "default": "your-repo",
+      "description": "GitHub repository name"
+    },
+    "AI_MODEL_SMART": {
+      "default": "gpt-4o",
+      "description": "Model for brief generation (use a strong model for quality)"
+    },
+    "BRIEF_RECIPIENTS": {
+      "default": "cto@yourcompany.com,product@yourcompany.com",
+      "description": "Comma-separated list of brief recipients"
+    },
+    "COMPANY_NAME": {
+      "default": "Acme Inc",
+      "description": "Company name shown in brief header"
+    }
+  },
+  "n8n_credentials_required": [
+    { "name": "OpenAI API", "type": "openAiApi", "required": true },
+    { "name": "SMTP Email", "type": "smtp", "required": true },
+    { "name": "GitHub API", "type": "githubApi", "required": false },
+    { "name": "Google Sheets OAuth2", "type": "googleSheetsOAuth2Api", "required": false },
+    { "name": "Slack API", "type": "slackApi", "required": false }
+  ]
+}

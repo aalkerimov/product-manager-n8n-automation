@@ -1,0 +1,129 @@
+{
+  "interview_id": "int_sample_001",
+  "participant":  "Maya",
+  "role":         "Head of Operations",
+  "company":      "Streamline Corp",
+  "segment":      "enterprise",
+  "date":         "2025-01-10",
+  "processed_at": "2025-01-10T14:30:00Z",
+  "artefacts": {
+    "problems": [
+      {
+        "text":      "Manual weekly reporting takes 3–4 hours every Monday",
+        "quote":     "It takes about 3–4 hours every week. And honestly, by the time the report is done, some of the data is already outdated.",
+        "frequency": "recurring",
+        "severity":  "high"
+      },
+      {
+        "text":      "Data inconsistency between tools causes wasted meeting time",
+        "quote":     "We spend another hour in the meeting trying to reconcile the numbers instead of making decisions.",
+        "frequency": "recurring",
+        "severity":  "high"
+      },
+      {
+        "text":      "Decision lag — leadership using 1-week-old data",
+        "quote":     "We're making decisions in Thursday leadership meetings based on Monday data.",
+        "frequency": "recurring",
+        "severity":  "critical"
+      }
+    ],
+    "motivations": [
+      {
+        "text":  "Reduce manual analyst time so they can do higher-value work",
+        "quote": "My best analyst is spending 4 hours every Monday doing work that a computer should do."
+      },
+      {
+        "text":  "Share real-time data with the board without manual effort",
+        "quote": "I want to be able to share it with my board without any manual work."
+      }
+    ],
+    "current_alternatives": [
+      {
+        "name":           "Zapier",
+        "why_used":       "Automate connections between tools",
+        "why_inadequate": "Kept breaking when tools updated their APIs"
+      },
+      {
+        "name":           "BI Tool (unnamed)",
+        "why_used":       "Dashboard and reporting",
+        "why_inadequate": "Required a dedicated data engineer; not realistic for a team of 12"
+      },
+      {
+        "name":           "Manual spreadsheet",
+        "why_used":       "Current default — most reliable they've found",
+        "why_inadequate": "3–4 hours per week, data is stale by the time it's ready"
+      }
+    ],
+    "key_quotes": [
+      {
+        "text":    "It takes about 3–4 hours every week. And honestly, by the time the report is done, some of the data is already outdated.",
+        "context": "Describing current reporting process",
+        "theme":   "manual work / data freshness"
+      },
+      {
+        "text":    "We're making decisions in Thursday leadership meetings based on Monday data. That's almost a week old.",
+        "context": "Explaining the business impact of slow reporting",
+        "theme":   "decision quality"
+      },
+      {
+        "text":    "I just want one dashboard that updates automatically and shows me the 5–6 numbers I actually care about.",
+        "context": "Describing ideal solution",
+        "theme":   "simplicity / automation"
+      },
+      {
+        "text":    "The last two tools we tried required 3-month implementation projects, and they both failed.",
+        "context": "Explaining skepticism about new tools",
+        "theme":   "implementation risk"
+      },
+      {
+        "text":    "If you can solve that, I'll be your biggest advocate.",
+        "context": "Closing statement about urgency of the problem",
+        "theme":   "buying signal / urgency"
+      }
+    ],
+    "objections": [
+      {
+        "text":  "IT security review required for any data integration",
+        "quote": "Any data integration needs to go through a security review."
+      },
+      {
+        "text":  "Skepticism about fast implementation promises based on past failures",
+        "quote": "I'm very skeptical of anything that promises it'll be up in a week."
+      },
+      {
+        "text":  "Cost scrutiny — board will challenge additional tool spend",
+        "quote": "Our board will ask why we're paying for another tool."
+      }
+    ],
+    "opportunities": [
+      {
+        "text":       "Automated multi-source dashboard with 5–6 configurable KPIs",
+        "confidence": "high",
+        "evidence":   "Explicitly described as the ideal solution. Named 5 specific metrics."
+      },
+      {
+        "text":       "Board-ready reporting export — no manual formatting",
+        "confidence": "medium",
+        "evidence":   "Maya specifically mentioned sharing with the board as a key requirement."
+      }
+    ],
+    "segment_signals": [
+      {
+        "signal":      "IT security review required before adoption",
+        "implication": "Enterprise segment — needs SOC 2, SSO, and IT approval flow"
+      },
+      {
+        "signal":      "Team of 12 — no dedicated data engineer",
+        "implication": "Must be self-service; complexity is a disqualifier"
+      }
+    ],
+    "recommended_follow_ups": [
+      "Ask for a list of the 5–6 metrics Maya tracks to understand exact data model",
+      "Understand the IT security review process and timeline",
+      "Explore whether she has budget authority or needs board approval"
+    ],
+    "overall_sentiment": "negative",
+    "themes": ["reporting", "data-integration", "manual-work", "decision-quality", "enterprise-security"]
+  },
+  "evidence_link": "Source: interview with Maya (Head of Operations, Streamline Corp) on 2025-01-10 via Grain"
+}

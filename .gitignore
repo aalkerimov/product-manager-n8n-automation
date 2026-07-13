@@ -1,0 +1,43 @@
+# .gitignore for Product & Founder Automation OS
+
+# Environment files — NEVER commit these
+.env
+.env.local
+.env.production
+
+# n8n local data (if running n8n locally without Docker)
+~/.n8n/
+.n8n/
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Docker volumes (if not using named volumes)
+postgres_data/
+n8n_data/
+
+# Build outputs
+dist/
+build/
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp

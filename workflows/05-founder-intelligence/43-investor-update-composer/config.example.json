@@ -1,0 +1,6 @@
+{
+  "NOTIFICATION_EMAIL_TO": "founder@yourcompany.com",
+  "EMAIL_FROM": "noreply@yourcompany.com",
+  "AI_MODEL_SMART": "gpt-4o",
+  "AI_MODEL_FAST": "gpt-4o-mini"
+}

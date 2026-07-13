@@ -1,0 +1,82 @@
+{
+  "_comment": "Copy this file's values into your .env file. See .env.example for all variables.",
+  "workflow_id": "customer-feedback-brain",
+  "configuration": {
+    "FEEDBACK_WEBHOOK_PATH": {
+      "default": "/webhook/feedback",
+      "description": "The URL path for the feedback intake webhook",
+      "required": false
+    },
+    "FEEDBACK_REPORT_SCHEDULE": {
+      "default": "0 9 * * 1",
+      "description": "Cron expression for the weekly report. Default: every Monday at 09:00",
+      "required": false
+    },
+    "FEEDBACK_CLASSIFICATION_THRESHOLD": {
+      "default": "0.6",
+      "description": "Minimum AI confidence score (0–1) to include a classification in the report",
+      "required": false
+    },
+    "FEEDBACK_DEDUP_WINDOW_HOURS": {
+      "default": "168",
+      "description": "Hours to look back for duplicate feedback (7 days = 168 hours)",
+      "required": false
+    },
+    "FEEDBACK_SEGMENTS": {
+      "default": "enterprise,growth,startup,consumer",
+      "description": "Comma-separated list of customer segments for classification",
+      "required": false
+    },
+    "FEEDBACK_PRODUCT_AREAS": {
+      "default": "onboarding,billing,core-product,integrations,performance,support",
+      "description": "Comma-separated list of product areas for classification",
+      "required": false
+    },
+    "AI_MODEL_FAST": {
+      "default": "gpt-4o-mini",
+      "description": "AI model for classification. Cheaper models work well here.",
+      "required": true
+    },
+    "NOTIFICATION_EMAIL_TO": {
+      "default": "pm@yourcompany.com",
+      "description": "Email address to send the weekly report to (after approval)",
+      "required": true
+    },
+    "COMPANY_NAME": {
+      "default": "Acme Inc",
+      "description": "Your company name, included in the report header",
+      "required": false
+    }
+  },
+  "n8n_credentials_required": [
+    {
+      "name": "OpenAI API",
+      "type": "openAiApi",
+      "required": true,
+      "purpose": "AI classification and report generation"
+    },
+    {
+      "name": "SMTP Email",
+      "type": "smtp",
+      "required": true,
+      "purpose": "Sending approval emails and the final report"
+    },
+    {
+      "name": "Google Sheets OAuth2",
+      "type": "googleSheetsOAuth2Api",
+      "required": false,
+      "purpose": "Basic stack: storing feedback items and reports"
+    },
+    {
+      "name": "Slack API",
+      "type": "slackApi",
+      "required": false,
+      "purpose": "Advanced stack: sending reports to Slack channels"
+    }
+  ],
+  "subworkflow_ids_to_configure": [
+    "LLM_CLASSIFIER_WORKFLOW_ID",
+    "HUMAN_APPROVAL_WORKFLOW_ID",
+    "NOTIFICATION_ROUTER_WORKFLOW_ID"
+  ]
+}

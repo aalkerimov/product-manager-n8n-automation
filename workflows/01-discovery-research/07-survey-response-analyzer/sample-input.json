@@ -1,0 +1,11 @@
+{
+  "survey_id": "surv_q1_nps_2025",
+  "survey_name": "Q1 2025 NPS + Open-text Survey",
+  "responses": [
+    { "segment": "enterprise", "answers": { "nps_score": 8, "what_works": "Dashboard is fast and reliable", "what_to_improve": "Better CSV export options", "would_recommend": true } },
+    { "segment": "startup",    "answers": { "nps_score": 6, "what_works": "Easy to set up workflows", "what_to_improve": "Onboarding is confusing for new team members", "would_recommend": false } },
+    { "segment": "enterprise", "answers": { "nps_score": 4, "what_works": "API is powerful", "what_to_improve": "We need SSO — IT blocked our rollout", "would_recommend": false } },
+    { "segment": "growth",     "answers": { "nps_score": 9, "what_works": "Integrations work great, saved us 5h/week", "what_to_improve": "Could use better mobile experience", "would_recommend": true } },
+    { "segment": "startup",    "answers": { "nps_score": 7, "what_works": "Affordable pricing", "what_to_improve": "Docs could be more detailed with examples", "would_recommend": true } }
+  ]
+}

@@ -1,0 +1,53 @@
+{
+  "_description": "Configuration reference for 04 — User Interview Processor. Copy values to your .env file.",
+  "required": {
+    "NOTIFICATION_EMAIL_TO": {
+      "value": "YOUR_EMAIL",
+      "description": "Email address to receive approval requests and processed artefacts",
+      "example": "pm@yourcompany.com"
+    },
+    "AI_MODEL_SMART": {
+      "value": "gpt-4o",
+      "description": "OpenAI model for artefact extraction. gpt-4o gives best quality; gpt-4o-mini is cheaper.",
+      "example": "gpt-4o"
+    }
+  },
+  "optional": {
+    "NOTIFICATION_CHANNEL": {
+      "value": "email",
+      "description": "Where to send the final artefact: email | slack | telegram | all",
+      "example": "slack"
+    },
+    "SLACK_CHANNEL_RESEARCH": {
+      "value": "YOUR_SLACK_CHANNEL_ID",
+      "description": "Slack channel ID for research team notifications",
+      "example": "C01234ABCDE"
+    },
+    "INTERVIEW_APPROVAL_TIMEOUT_HOURS": {
+      "value": "48",
+      "description": "Hours before approval times out and artefact is discarded",
+      "example": "24"
+    }
+  },
+  "advanced": {
+    "INTERVIEW_MAX_TRANSCRIPT_CHARS": {
+      "value": "15000",
+      "description": "Maximum transcript characters sent to AI. Longer transcripts are truncated.",
+      "example": "12000"
+    },
+    "INTERVIEW_PII_REDACT": {
+      "value": "false",
+      "description": "Set to true to run transcript through PII Redaction subworkflow before AI processing",
+      "example": "true"
+    }
+  },
+  "n8n_credentials_required": [
+    { "name": "OpenAI API",    "type": "openAiApi",  "required": true,  "purpose": "AI artefact extraction" },
+    { "name": "SMTP Email",    "type": "smtp",       "required": true,  "purpose": "Approval emails" },
+    { "name": "Slack API",     "type": "slackApi",   "required": false, "purpose": "Research channel notifications" }
+  ],
+  "subworkflows_required": [
+    { "id": "HUMAN_APPROVAL_WORKFLOW_ID",     "name": "Human Approval Gate",   "node": "Request Human Approval" },
+    { "id": "NOTIFICATION_ROUTER_WORKFLOW_ID","name": "Notification Router",    "node": "Send Research Artefact" }
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "workflow_id": "30",
+  "workflow_name": "Pricing Signal Collector",
+  "status": "success",
+  "message": "Email sent to NOTIFICATION_EMAIL_TO",
+  "processed_at": "2025-01-13T10:01:00.000Z"
+}

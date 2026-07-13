@@ -1,0 +1,154 @@
+{
+  "meta": {
+    "id": "05",
+    "name": "Research Repository Updater",
+    "description": "Normalize interviews, surveys, support conversations, and notes into a searchable research repository with consistent tags.",
+    "category": "Discovery & Research",
+    "status": "beta",
+    "version": "1.0.0",
+    "testedN8nVersion": "2.30.0",
+    "difficulty": "intermediate",
+    "setupTime": "25 min",
+    "estimatedMonthlyCost": "$0.02–0.10 per item",
+    "requiredIntegrations": ["OpenAI API", "Google Sheets OR Notion OR Airtable"],
+    "optionalIntegrations": ["Slack API", "SMTP Email"],
+    "triggerType": "webhook",
+    "inputTypes": ["interview JSON", "survey response", "support ticket", "note"],
+    "outputTypes": ["normalized research item", "tagged repository entry"],
+    "aiRequired": true,
+    "humanApproval": false,
+    "selfHosted": true,
+    "n8nCloud": true,
+    "tags": ["research", "repository", "tagging", "normalization"]
+  },
+  "name": "05 – Research Repository Updater",
+  "nodes": [
+    {
+      "id": "node-setup",
+      "name": "⚙️ SETUP",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-480, -320],
+      "parameters": {
+        "content": "## 05 — Research Repository Updater\n\n**Required:**\n- OpenAI API credential\n- Google Sheets credential + RESEARCH_SHEET_ID\n\n**Optional:**\n- SLACK_CHANNEL_RESEARCH for new-item notifications\n\n**Status:** Beta — statically validated.",
+        "height": 280,
+        "width": 360,
+        "color": 7
+      }
+    },
+    {
+      "id": "node-webhook",
+      "name": "Webhook — Receive Research Item",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-200, -20],
+      "parameters": {
+        "path": "research-repository",
+        "httpMethod": "POST",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "webhookId": "research-repository-webhook"
+    },
+    {
+      "id": "node-manual",
+      "name": "Manual Trigger (Testing)",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [-200, 100],
+      "parameters": {}
+    },
+    {
+      "id": "node-normalise",
+      "name": "Normalise Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [60, 40],
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body || $input.first().json;\nconst validTypes = ['interview','survey','support','note','review','document','other'];\nconst item = {\n  id:        body.id        || `res_${Date.now()}`,\n  type:      validTypes.includes(body.type) ? body.type : 'other',\n  source:    body.source    || 'manual',\n  content:   (body.content || body.text || body.transcript || '').slice(0,8000),\n  segment:   body.segment   || 'unknown',\n  date:      body.date      || new Date().toISOString().slice(0,10),\n  author:    body.author    || 'anonymous',\n  tags:      body.tags      || [],\n  metadata:  body.metadata  || {},\n};\nreturn [{ json: item }];"
+      }
+    },
+    {
+      "id": "node-tag",
+      "name": "AI Tagging and Summary",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.7,
+      "position": [300, 40],
+      "parameters": {
+        "resource": "text",
+        "operation": "message",
+        "model": { "__rl": true, "value": "={{ $env.AI_MODEL_FAST || 'gpt-4o-mini' }}", "mode": "id" },
+        "messages": {
+          "values": [
+            {
+              "role": "system",
+              "content": "You are a research librarian normalizing product research items. Return valid JSON only."
+            },
+            {
+              "role": "user",
+              "content": "Normalize this research item.\n\nType: {{ $json.type }}\nSource: {{ $json.source }}\nSegment: {{ $json.segment }}\nContent:\n{{ $json.content }}\n\nReturn JSON with:\n{\n  \"summary\": \"1-2 sentence summary of the item\",\n  \"themes\": [\"3-7 topic tags\"],\n  \"sentiment\": \"positive|neutral|negative\",\n  \"key_insight\": \"single most important insight\",\n  \"problems_mentioned\": [\"...\"],\n  \"product_areas\": [\"onboarding\",\"billing\",etc],\n  \"confidence\": 0.0-1.0\n}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "credentials": { "openAiApi": { "id": "OPENAI_CREDENTIAL_ID", "name": "OpenAI API" } }
+    },
+    {
+      "id": "node-merge",
+      "name": "Merge into Repository Item",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [540, 40],
+      "parameters": {
+        "jsCode": "const item = $('Normalise Input').first().json;\nlet ai;\ntry { ai = JSON.parse(($input.first().json.message?.content||'{}').replace(/```json|```/g,'').trim()); }\ncatch { ai = {}; }\nreturn [{ json: { ...item, summary: ai.summary||'', themes: [...(item.tags||[]),...(ai.themes||[])], sentiment: ai.sentiment||'neutral', key_insight: ai.key_insight||'', problems_mentioned: ai.problems_mentioned||[], product_areas: ai.product_areas||[], ai_confidence: ai.confidence||0, added_to_repository_at: new Date().toISOString() } }];"
+      }
+    },
+    {
+      "id": "node-save",
+      "name": "Save to Research Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [780, -60],
+      "parameters": {
+        "operation":    "append",
+        "documentId":   { "__rl": true, "value": "={{ $env.RESEARCH_SHEET_ID }}", "mode": "id" },
+        "sheetName":    { "__rl": true, "value": "Repository", "mode": "name" },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": []
+        },
+        "options": {}
+      },
+      "credentials": { "googleSheetsOAuth2Api": { "id": "SHEETS_CREDENTIAL_ID", "name": "Google Sheets OAuth2" } }
+    },
+    {
+      "id": "node-notify",
+      "name": "Notify Research Team",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [780, 100],
+      "parameters": {
+        "operation": "message",
+        "channel":   "={{ $env.SLACK_CHANNEL_RESEARCH || '#research' }}",
+        "text":      "📚 New research item added: *{{ $('Merge into Repository Item').first().json.summary }}*\n_Type:_ {{ $('Merge into Repository Item').first().json.type }} | _Segment:_ {{ $('Merge into Repository Item').first().json.segment }}\n_Themes:_ {{ $('Merge into Repository Item').first().json.themes.join(', ') }}",
+        "otherOptions": {}
+      },
+      "credentials": { "slackApi": { "id": "SLACK_CREDENTIAL_ID", "name": "Slack API" } }
+    }
+  ],
+  "connections": {
+    "Webhook — Receive Research Item": { "main": [[{ "node": "Normalise Input", "type": "main", "index": 0 }]] },
+    "Manual Trigger (Testing)":        { "main": [[{ "node": "Normalise Input", "type": "main", "index": 0 }]] },
+    "Normalise Input":                 { "main": [[{ "node": "AI Tagging and Summary", "type": "main", "index": 0 }]] },
+    "AI Tagging and Summary":          { "main": [[{ "node": "Merge into Repository Item", "type": "main", "index": 0 }]] },
+    "Merge into Repository Item":      { "main": [[{ "node": "Save to Research Sheet", "type": "main", "index": 0 }, { "node": "Notify Research Team", "type": "main", "index": 0 }]] }
+  },
+  "pinData": {},
+  "settings": { "executionOrder": "v1", "saveManualExecutions": true },
+  "tags": [{ "name": "discovery" }, { "name": "research" }],
+  "triggerCount": 1,
+  "updatedAt": "2025-01-13T00:00:00.000Z",
+  "versionId": "05-v1.0.0"
+}

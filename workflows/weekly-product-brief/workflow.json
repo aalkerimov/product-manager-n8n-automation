@@ -1,0 +1,406 @@
+{
+  "name": "Weekly Product Brief",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 📋 Weekly Product Brief\n\n**Setup checklist:**\n1. ✅ Create credential `OpenAI API`\n2. ✅ Create credential `GitHub API` if using GitHub data (optional)\n3. ✅ Create credential `SMTP Email` or `Slack API` for sending\n4. ✅ Set environment variables (GITHUB_OWNER, GITHUB_REPO, BRIEF_RECIPIENTS)\n5. ✅ For weekly metrics: add a row to your Google Sheet each week\n\n**How it works:**\n1. Collects GitHub PRs/commits from the past week (if configured)\n2. Reads manual data from Google Sheets (metrics, blockers, decisions)\n3. Reads recent feedback insights (if Customer Feedback Brain has run)\n4. Sends all data to AI to generate a structured product brief\n5. Requires human approval before sending\n6. Sends the brief to configured recipients\n\n**Data sources:**\n- 📦 GitHub: merged PRs + commits\n- 📊 Google Sheets: metrics, blockers, decisions\n- 🧠 Feedback Brain: top insights (optional)\n- ✍️ Manual input: anything you type in",
+        "height": 460,
+        "width": 540,
+        "color": 6
+      },
+      "id": "sticky-wpb-setup",
+      "name": "📌 Setup Instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, -300]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "={{ $env.BRIEF_SCHEDULE || '0 8 * * 5' }}"
+            }
+          ]
+        }
+      },
+      "id": "schedule-wpb",
+      "name": "Weekly Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 100]
+    },
+    {
+      "parameters": {},
+      "id": "manual-wpb",
+      "name": "Manual Trigger (for testing)",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 280]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Calculate the period for this brief\nconst periodDays = parseInt(process.env.BRIEF_PERIOD_DAYS || '7');\nconst periodEnd = new Date();\nconst periodStart = new Date(periodEnd.getTime() - periodDays * 24 * 60 * 60 * 1000);\n\nreturn [{\n  json: {\n    period_start: periodStart.toISOString(),\n    period_end: periodEnd.toISOString(),\n    period_days: periodDays,\n    period_label: `${periodStart.toISOString().substring(0, 10)} → ${periodEnd.toISOString().substring(0, 10)}`,\n    company: process.env.COMPANY_NAME || 'Your Company',\n    include_github: process.env.BRIEF_INCLUDE_GITHUB !== 'false',\n    github_owner: process.env.GITHUB_OWNER || '',\n    github_repo: process.env.GITHUB_REPO || '',\n  }\n}];"
+      },
+      "id": "init-brief-period",
+      "name": "Initialise Brief Period",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 180]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "github-enabled",
+              "leftValue": "={{ $json.include_github }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equal"
+              }
+            },
+            {
+              "id": "github-owner-set",
+              "leftValue": "={{ $json.github_owner }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "check-github-config",
+      "name": "GitHub Configured?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [720, 180]
+    },
+    {
+      "parameters": {
+        "resource": "pullRequest",
+        "operation": "getAll",
+        "owner": {
+          "__rl": true,
+          "mode": "expression",
+          "value": "={{ $('Initialise Brief Period').first().json.github_owner }}"
+        },
+        "repository": {
+          "__rl": true,
+          "mode": "expression",
+          "value": "={{ $('Initialise Brief Period').first().json.github_repo }}"
+        },
+        "returnAll": false,
+        "limit": 50,
+        "filters": {
+          "state": "closed"
+        },
+        "additionalParameters": {}
+      },
+      "id": "fetch-github-prs",
+      "name": "Fetch GitHub PRs (merged)",
+      "type": "n8n-nodes-base.github",
+      "typeVersion": 1.1,
+      "position": [940, 100],
+      "credentials": {
+        "githubApi": {
+          "id": "GITHUB_CREDENTIAL_ID",
+          "name": "GitHub API"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "jsCode": "// Filter to PRs merged within the brief period\nconst prs = $input.all().map(i => i.json);\nconst period = $('Initialise Brief Period').first().json;\nconst periodStart = new Date(period.period_start);\n\nconst mergedThisWeek = prs\n  .filter(pr => {\n    if (!pr.merged_at) return false;\n    return new Date(pr.merged_at) >= periodStart;\n  })\n  .map(pr => ({\n    number: pr.number,\n    title: pr.title,\n    author: pr.user?.login,\n    merged_at: pr.merged_at,\n    labels: (pr.labels || []).map(l => l.name),\n    url: pr.html_url,\n  }));\n\nconsole.log(`GitHub: ${mergedThisWeek.length} PRs merged this period`);\n\nreturn [{ json: { github_prs: mergedThisWeek, source: 'github' } }];"
+      },
+      "id": "filter-merged-prs",
+      "name": "Filter Merged PRs This Period",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1160, 100]
+    },
+    {
+      "parameters": {
+        "jsCode": "// GitHub not configured — return empty GitHub data\nreturn [{ json: { github_prs: [], source: 'github_skipped' } }];"
+      },
+      "id": "skip-github",
+      "name": "Skip GitHub (not configured)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [940, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Collect manual data — in production this reads from Google Sheets\n// This demo uses embedded sample data\n\n// TODO (production): Replace with a Google Sheets 'Get Many' node\n// to read the current week's row from your metrics sheet\n\nconst manualData = {\n  shipped: [\n    \"Dark mode released to all users\",\n    \"API response time reduced by 35% after CDN optimisation\",\n    \"New onboarding checklist launched\"\n  ],\n  metric_changes: [\n    { metric: \"Weekly Active Users\", previous: 1240, current: 1380, change_pct: 11.3, trend: \"up\" },\n    { metric: \"Avg. Session Duration\", previous: \"4m 12s\", current: \"4m 38s\", change_pct: 10.3, trend: \"up\" },\n    { metric: \"Support tickets opened\", previous: 87, current: 62, change_pct: -28.7, trend: \"down\" }\n  ],\n  customer_insights: [\n    \"5 enterprise customers requested bulk export — follow up with Sales\",\n    \"Onboarding completion rate up 15% after checklist launch\"\n  ],\n  blockers: [\n    { blocker: \"Design review for v2 billing page\", owner: \"Design team\", due: \"2025-01-20\" },\n    { blocker: \"Legal approval for new ToS\", owner: \"Legal\", due: \"2025-01-25\" }\n  ],\n  scope_changes: [\n    \"SSO feature moved from Q1 to Q2 due to security review\"\n  ],\n  risks: [\n    \"Dependency on third-party payment provider — they announced pricing changes\"\n  ],\n  decisions_required: [\n    { question: \"Sunset the legacy CSV export format?\", context: \"Only 3% of users use it, high maintenance cost\", deadline: \"2025-01-24\" }\n  ],\n  priorities_next_week: [\n    \"Finish v2 billing page (unblocked once design review done)\",\n    \"Start SSO vendor evaluation\",\n    \"Review and prioritise the 15 new feature requests from feedback report\"\n  ]\n};\n\nreturn [{ json: { manual_data: manualData, source: 'manual' } }];"
+      },
+      "id": "collect-manual-data",
+      "name": "Collect Manual Data (Sheets)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1160, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Merge all data sources into a single brief input\nconst githubData = $('Filter Merged PRs This Period').first()?.json ||\n                   $('Skip GitHub (not configured)').first()?.json ||\n                   { github_prs: [] };\n\nconst manualData = $('Collect Manual Data (Sheets)').first().json.manual_data;\nconst period = $('Initialise Brief Period').first().json;\n\n// Build the AI prompt input\nconst briefInput = {\n  period: period.period_label,\n  company: period.company,\n  github_prs_merged: githubData.github_prs || [],\n  shipped: manualData.shipped || [],\n  metric_changes: manualData.metric_changes || [],\n  customer_insights: manualData.customer_insights || [],\n  blockers: manualData.blockers || [],\n  scope_changes: manualData.scope_changes || [],\n  risks: manualData.risks || [],\n  decisions_required: manualData.decisions_required || [],\n  priorities_next_week: manualData.priorities_next_week || [],\n};\n\nconsole.log(`Merging data: ${briefInput.github_prs_merged.length} PRs, ${briefInput.shipped.length} shipped, ${briefInput.blockers.length} blockers`);\n\nreturn [{ json: briefInput }];"
+      },
+      "id": "merge-data-sources",
+      "name": "Merge All Data Sources",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1380, 200]
+    },
+    {
+      "parameters": {
+        "resource": "chat",
+        "operation": "complete",
+        "modelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "={{ $env.AI_MODEL_SMART || 'gpt-4o' }}"
+        },
+        "messages": {
+          "values": [
+            {
+              "role": "system",
+              "content": "You are a senior product manager writing a concise, actionable weekly product brief for a startup leadership team.\n\nWrite in a clear, direct style. No fluff. Every sentence should be useful.\n\nGiven the weekly data, produce a structured brief in this exact JSON format:\n{\n  \"executive_summary\": \"2-3 sentences max\",\n  \"what_shipped\": [\"item 1\", \"item 2\"],\n  \"important_metric_changes\": [{\"metric\": \"\", \"change\": \"\", \"significance\": \"\"}],\n  \"customer_insights\": [\"insight 1\"],\n  \"current_blockers\": [{\"blocker\": \"\", \"owner\": \"\", \"urgency\": \"high|medium|low\"}],\n  \"scope_changes\": [\"change 1\"],\n  \"risks\": [{\"risk\": \"\", \"likelihood\": \"high|medium|low\", \"mitigation\": \"\"}],\n  \"decisions_required\": [{\"question\": \"\", \"context\": \"\", \"deadline\": \"\"}],\n  \"priorities_next_week\": [\"priority 1\", \"priority 2\"],\n  \"overall_health\": \"green|yellow|red\",\n  \"health_reasoning\": \"1 sentence\"\n}\n\nRespond ONLY with the JSON object. No extra text."
+            },
+            {
+              "role": "user",
+              "content": "Here is this week's product data:\n\n{{ JSON.stringify($json, null, 2) }}"
+            }
+          ]
+        },
+        "simplifyOutput": false,
+        "options": {
+          "temperature": 0.2,
+          "maxTokens": 3000,
+          "responseFormat": "json_object"
+        }
+      },
+      "id": "generate-brief-ai",
+      "name": "Generate Brief with AI",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.7,
+      "position": [1600, 200],
+      "credentials": {
+        "openAiApi": {
+          "id": "OPENAI_CREDENTIAL_ID",
+          "name": "OpenAI API"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse AI response and enrich with metadata\nconst aiResponse = $input.first().json;\nconst period = $('Initialise Brief Period').first().json;\n\nlet rawContent;\ntry {\n  rawContent = aiResponse?.message?.content ||\n               aiResponse?.choices?.[0]?.message?.content ||\n               aiResponse?.content ||\n               JSON.stringify(aiResponse);\n} catch (e) {\n  throw new Error('Could not extract AI response content');\n}\n\nlet brief;\ntry {\n  brief = typeof rawContent === 'string' ? JSON.parse(rawContent) : rawContent;\n} catch (e) {\n  throw new Error(`Could not parse AI brief JSON: ${e.message}`);\n}\n\n// Enrich with metadata\nbrief.meta = {\n  period: period.period_label,\n  company: period.company,\n  generated_at: new Date().toISOString(),\n  n8n_version: '2.30.0',\n};\n\nconst healthEmoji = { green: '🟢', yellow: '🟡', red: '🔴' }[brief.overall_health] || '⚪';\nbrief.health_emoji = healthEmoji;\n\nconsole.log(`Brief generated: health=${brief.overall_health}, ${brief.what_shipped?.length} shipped, ${brief.decisions_required?.length} decisions needed`);\n\nreturn [{ json: brief }];"
+      },
+      "id": "parse-brief",
+      "name": "Parse and Enrich Brief",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1820, 200]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "expression",
+          "value": "HUMAN_APPROVAL_WORKFLOW_ID"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "title": "Approve: Weekly Product Brief — {{ $json.meta.company }} {{ $json.meta.period }}",
+            "summary": "{{ $json.health_emoji }} {{ $json.overall_health?.toUpperCase() }}: {{ $json.executive_summary }}",
+            "details": "={{ $json }}",
+            "approver_email": "={{ $env.NOTIFICATION_EMAIL_TO || 'team@example.com' }}",
+            "timeout_hours": 12
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "request-brief-approval",
+      "name": "Request Human Approval",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 2,
+      "position": [2040, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "brief-approval-check",
+              "leftValue": "={{ $json.approved }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equal"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "check-brief-approval",
+      "name": "Was it Approved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [2260, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format the brief as a notification message\nconst approval = $input.first().json;\nconst brief = $('Parse and Enrich Brief').first().json;\n\nconst shipped = (brief.what_shipped || []).map((s, i) => `${i + 1}. ${s}`).join('\\n');\nconst blockers = (brief.current_blockers || []).map(b => `• ${b.blocker} (${b.urgency})`).join('\\n');\nconst decisions = (brief.decisions_required || []).map(d => `• ${d.question} — deadline: ${d.deadline}`).join('\\n');\nconst priorities = (brief.priorities_next_week || []).map((p, i) => `${i + 1}. ${p}`).join('\\n');\n\nconst metricLines = (brief.important_metric_changes || []).map(m => `• ${m.metric}: ${m.change} — ${m.significance}`).join('\\n');\n\nconst body = `\n${brief.health_emoji} **Weekly Product Brief — ${brief.meta.company}**\n📅 ${brief.meta.period}\n\n**Executive Summary:**\n${brief.executive_summary}\n\n**What Shipped:**\n${shipped || 'Nothing merged this week'}\n\n**Key Metrics:**\n${metricLines || 'No metric changes logged'}\n\n**Customer Insights:**\n${(brief.customer_insights || []).map(i => `• ${i}`).join('\\n') || 'None this week'}\n\n**Blockers:**\n${blockers || 'No blockers 🎉'}\n\n**Decisions Required:**\n${decisions || 'No decisions pending'}\n\n**Next Week Priorities:**\n${priorities}\n`.trim();\n\nreturn [{\n  json: {\n    channel: process.env.NOTIFICATION_CHANNEL || 'email',\n    title: `${brief.health_emoji} Weekly Brief — ${brief.meta.company} ${brief.meta.period}`,\n    body,\n    urgency: brief.overall_health === 'red' ? 'high' : brief.overall_health === 'yellow' ? 'medium' : 'low',\n    metadata: { period: brief.meta.period }\n  }\n}];"
+      },
+      "id": "format-brief-notification",
+      "name": "Format Brief Notification",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2480, 100]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "expression",
+          "value": "NOTIFICATION_ROUTER_WORKFLOW_ID"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "channel": "={{ $json.channel }}",
+            "title": "={{ $json.title }}",
+            "body": "={{ $json.body }}",
+            "urgency": "={{ $json.urgency }}",
+            "metadata": "={{ $json.metadata }}"
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "send-brief",
+      "name": "Send via Notification Router",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 2,
+      "position": [2700, 100]
+    },
+    {
+      "parameters": {
+        "jsCode": "const approval = $input.first().json;\nconsole.log(`Brief ${approval.decision}: ${approval.comment || 'no comment'}`);\nreturn [{ json: { logged: true, decision: approval.decision } }];"
+      },
+      "id": "log-brief-rejection",
+      "name": "Log: Rejected or Timeout",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2480, 300]
+    }
+  ],
+  "connections": {
+    "Weekly Schedule Trigger": {
+      "main": [
+        [{ "node": "Initialise Brief Period", "type": "main", "index": 0 }]
+      ]
+    },
+    "Manual Trigger (for testing)": {
+      "main": [
+        [{ "node": "Initialise Brief Period", "type": "main", "index": 0 }]
+      ]
+    },
+    "Initialise Brief Period": {
+      "main": [
+        [{ "node": "GitHub Configured?", "type": "main", "index": 0 }]
+      ]
+    },
+    "GitHub Configured?": {
+      "main": [
+        [{ "node": "Fetch GitHub PRs (merged)", "type": "main", "index": 0 }],
+        [{ "node": "Skip GitHub (not configured)", "type": "main", "index": 0 }]
+      ]
+    },
+    "Fetch GitHub PRs (merged)": {
+      "main": [
+        [{ "node": "Filter Merged PRs This Period", "type": "main", "index": 0 }]
+      ]
+    },
+    "Filter Merged PRs This Period": {
+      "main": [
+        [{ "node": "Merge All Data Sources", "type": "main", "index": 0 }]
+      ]
+    },
+    "Skip GitHub (not configured)": {
+      "main": [
+        [{ "node": "Merge All Data Sources", "type": "main", "index": 0 }]
+      ]
+    },
+    "Collect Manual Data (Sheets)": {
+      "main": [
+        [{ "node": "Merge All Data Sources", "type": "main", "index": 0 }]
+      ]
+    },
+    "Merge All Data Sources": {
+      "main": [
+        [{ "node": "Generate Brief with AI", "type": "main", "index": 0 }]
+      ]
+    },
+    "Generate Brief with AI": {
+      "main": [
+        [{ "node": "Parse and Enrich Brief", "type": "main", "index": 0 }]
+      ]
+    },
+    "Parse and Enrich Brief": {
+      "main": [
+        [{ "node": "Request Human Approval", "type": "main", "index": 0 }]
+      ]
+    },
+    "Request Human Approval": {
+      "main": [
+        [{ "node": "Was it Approved?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Was it Approved?": {
+      "main": [
+        [{ "node": "Format Brief Notification", "type": "main", "index": 0 }],
+        [{ "node": "Log: Rejected or Timeout", "type": "main", "index": 0 }]
+      ]
+    },
+    "Format Brief Notification": {
+      "main": [
+        [{ "node": "Send via Notification Router", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "saveExecutionProgress": true,
+    "errorWorkflow": ""
+  },
+  "meta": {
+    "n8nVersion": "2.30.0",
+    "description": "Generates a structured weekly product brief by combining GitHub activity, manual metrics, customer insights, and blockers. Requires human approval before sending to the team.",
+    "tags": ["product-brief", "weekly", "github", "ai"]
+  }
+}

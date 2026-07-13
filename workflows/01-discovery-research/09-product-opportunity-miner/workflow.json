@@ -1,0 +1,186 @@
+{
+  "meta": {
+    "id": "09",
+    "name": "Product Opportunity Miner",
+    "description": "Analyze feedback, research, usage patterns, and market signals to produce evidence-backed product opportunities with confidence scores.",
+    "category": "Discovery & Research",
+    "status": "beta",
+    "version": "1.0.0",
+    "testedN8nVersion": "2.30.0",
+    "difficulty": "advanced",
+    "setupTime": "30 min",
+    "estimatedMonthlyCost": "$0.20–1.00",
+    "requiredIntegrations": ["OpenAI API", "SMTP Email", "Google Sheets"],
+    "optionalIntegrations": ["Slack API", "Linear API"],
+    "triggerType": "schedule",
+    "inputTypes": ["research repository", "feedback data", "usage signals"],
+    "outputTypes": ["opportunity report", "ranked opportunity list"],
+    "aiRequired": true,
+    "humanApproval": true,
+    "selfHosted": true,
+    "n8nCloud": true,
+    "tags": ["opportunity", "discovery", "synthesis", "research", "strategy"]
+  },
+  "name": "09 – Product Opportunity Miner",
+  "nodes": [
+    {
+      "id": "node-setup",
+      "name": "⚙️ SETUP",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-480, -320],
+      "parameters": {
+        "content": "## 09 — Product Opportunity Miner\n\n**Required:**\n- OpenAI API credential\n- Google Sheets credential\n- RESEARCH_SHEET_ID (your research repository from workflow 05)\n- NOTIFICATION_EMAIL_TO\n\n**Tip:** Run after updating your research repository. Reads the last 90 days of research items.\n\n**Schedule:** Monthly (first Monday of the month).\n**Status:** Beta.",
+        "height": 320,
+        "width": 380,
+        "color": 7
+      }
+    },
+    {
+      "id": "node-schedule",
+      "name": "Monthly Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [-200, -20],
+      "parameters": {
+        "rule": { "interval": [{ "field": "cronExpression", "expression": "0 9 1-7 * 1" }] }
+      }
+    },
+    {
+      "id": "node-manual",
+      "name": "Manual Trigger (Testing)",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [-200, 100],
+      "parameters": {}
+    },
+    {
+      "id": "node-load-research",
+      "name": "Load Research Repository",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [60, 40],
+      "parameters": {
+        "operation":  "read",
+        "documentId": { "__rl": true, "value": "={{ $env.RESEARCH_SHEET_ID }}", "mode": "id" },
+        "sheetName":  { "__rl": true, "value": "Repository", "mode": "name" },
+        "options":    {}
+      },
+      "credentials": { "googleSheetsOAuth2Api": { "id": "SHEETS_CREDENTIAL_ID", "name": "Google Sheets OAuth2" } }
+    },
+    {
+      "id": "node-aggregate",
+      "name": "Aggregate Evidence",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [300, 40],
+      "parameters": {
+        "jsCode": "const cutoff = new Date();\ncutoff.setDate(cutoff.getDate() - 90);\nconst items = $input.all().map(i => i.json).filter(i => !i.date || new Date(i.date) >= cutoff);\n// Aggregate themes and problems\nconst themeCount = {};\nconst problemList = [];\nfor (const item of items) {\n  const themes = Array.isArray(item.themes) ? item.themes : (item.themes||'').split(',').map(t=>t.trim());\n  for (const t of themes) { if (t) themeCount[t] = (themeCount[t]||0) + 1; }\n  if (Array.isArray(item.problems_mentioned)) problemList.push(...item.problems_mentioned);\n}\nconst topThemes = Object.entries(themeCount).sort((a,b)=>b[1]-a[1]).slice(0,20).map(([t,c])=>({theme:t,count:c}));\nreturn [{ json: { total_items: items.length, period_days: 90, top_themes: topThemes, problems: problemList.slice(0,100), raw_sample: items.slice(0,30) } }];"
+      }
+    },
+    {
+      "id": "node-mine",
+      "name": "Mine Opportunities (AI)",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.7,
+      "position": [540, 40],
+      "parameters": {
+        "resource": "text",
+        "operation": "message",
+        "model": { "__rl": true, "value": "={{ $env.AI_MODEL_SMART || 'gpt-4o' }}", "mode": "id" },
+        "messages": {
+          "values": [
+            { "role": "system", "content": "You are a senior product strategist identifying product opportunities from research evidence. Be conservative — only propose opportunities with clear evidence. Never invent data. Return valid JSON only." },
+            {
+              "role": "user",
+              "content": "Analyze this research evidence from the last {{ $json.period_days }} days ({{ $json.total_items }} items).\n\nTop themes by frequency:\n{{ JSON.stringify($json.top_themes, null, 2) }}\n\nProblems mentioned:\n{{ JSON.stringify($json.problems.slice(0,50), null, 2) }}\n\nSample items:\n{{ JSON.stringify($json.raw_sample.slice(0,10), null, 2) }}\n\nReturn JSON:\n{\n  \"opportunities\": [{\n    \"title\": str,\n    \"description\": str,\n    \"evidence_strength\": \"weak|moderate|strong\",\n    \"confidence\": 0.0-1.0,\n    \"evidence_count\": num,\n    \"affected_segments\": [str],\n    \"themes\": [str],\n    \"market_size_signal\": \"niche|significant|large\",\n    \"effort_signal\": \"low|medium|high\",\n    \"supporting_evidence\": [str],\n    \"assumptions_to_validate\": [str]\n  }],\n  \"research_gaps\": [str],\n  \"period_summary\": str\n}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "credentials": { "openAiApi": { "id": "OPENAI_CREDENTIAL_ID", "name": "OpenAI API" } }
+    },
+    {
+      "id": "node-parse",
+      "name": "Build Opportunity Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [780, 40],
+      "parameters": {
+        "jsCode": "let ai;\ntry { ai = JSON.parse(($input.first().json.message?.content||'{}').replace(/```json|```/g,'').trim()); }\ncatch { ai = { opportunities:[] }; }\nconst sorted = (ai.opportunities||[]).sort((a,b) => (b.confidence||0)-(a.confidence||0));\nreturn [{ json: { generated_at: new Date().toISOString(), total_items_analyzed: $('Aggregate Evidence').first().json.total_items, period_days: 90, opportunities: sorted, research_gaps: ai.research_gaps||[], period_summary: ai.period_summary||'' } }];"
+      }
+    },
+    {
+      "id": "node-approve",
+      "name": "Request Human Approval",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 2,
+      "position": [1020, 40],
+      "parameters": {
+        "workflowId": { "__rl": true, "value": "HUMAN_APPROVAL_WORKFLOW_ID", "mode": "id" },
+        "mode": "each",
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "title":          "Approve: Product Opportunity Report",
+            "summary":        "{{ $json.opportunities.length }} opportunities identified from {{ $json.total_items_analyzed }} research items. Top: {{ $json.opportunities[0]?.title || 'N/A' }} (confidence: {{ $json.opportunities[0]?.confidence || 0 }})",
+            "details":        "={{ $json }}",
+            "approver_email": "={{ $env.NOTIFICATION_EMAIL_TO }}",
+            "timeout_hours":  72
+          }
+        }
+      }
+    },
+    {
+      "id": "node-check",
+      "name": "Approved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [1260, 40],
+      "parameters": {
+        "conditions": {
+          "conditions": [{ "leftValue": "={{ $json.approved }}", "rightValue": true, "operator": { "type": "boolean", "operation": "true" } }]
+        }
+      }
+    },
+    {
+      "id": "node-send",
+      "name": "Send Opportunity Report",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 2,
+      "position": [1500, -20],
+      "parameters": {
+        "workflowId": { "__rl": true, "value": "NOTIFICATION_ROUTER_WORKFLOW_ID", "mode": "id" },
+        "mode": "each",
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "channel": "={{ $env.NOTIFICATION_CHANNEL || 'email' }}",
+            "title":   "💡 Product Opportunities: {{ $('Build Opportunity Report').first().json.opportunities.length }} found",
+            "body":    "Monthly opportunity mining complete. {{ $('Build Opportunity Report').first().json.opportunities.length }} opportunities with evidence. Review the attached report and add strong ones to your roadmap.",
+            "urgency": "low"
+          }
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Monthly Schedule":           { "main": [[{ "node": "Load Research Repository", "type": "main", "index": 0 }]] },
+    "Manual Trigger (Testing)":   { "main": [[{ "node": "Load Research Repository", "type": "main", "index": 0 }]] },
+    "Load Research Repository":   { "main": [[{ "node": "Aggregate Evidence",         "type": "main", "index": 0 }]] },
+    "Aggregate Evidence":          { "main": [[{ "node": "Mine Opportunities (AI)",    "type": "main", "index": 0 }]] },
+    "Mine Opportunities (AI)":    { "main": [[{ "node": "Build Opportunity Report",   "type": "main", "index": 0 }]] },
+    "Build Opportunity Report":   { "main": [[{ "node": "Request Human Approval",     "type": "main", "index": 0 }]] },
+    "Request Human Approval":     { "main": [[{ "node": "Approved?",                  "type": "main", "index": 0 }]] },
+    "Approved?": {
+      "main": [[{ "node": "Send Opportunity Report", "type": "main", "index": 0 }], []]
+    }
+  },
+  "pinData": {},
+  "settings": { "executionOrder": "v1", "saveManualExecutions": true },
+  "tags": [{ "name": "discovery" }, { "name": "strategy" }],
+  "triggerCount": 1,
+  "updatedAt": "2025-01-13T00:00:00.000Z",
+  "versionId": "09-v1.0.0"
+}

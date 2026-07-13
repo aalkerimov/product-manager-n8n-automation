@@ -1,0 +1,1 @@
+{ "survey_name": "Test Survey", "responses": [{ "segment": "startup", "answers": { "nps_score": 7, "what_works": "Easy to use", "what_to_improve": "Need better export" } }] }

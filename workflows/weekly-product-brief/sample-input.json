@@ -1,0 +1,22 @@
+{
+  "trigger": "manual",
+  "period": "2025-01-06 → 2025-01-13",
+  "github_prs_merged": 3,
+  "manual_data": {
+    "shipped": [
+      "Dark mode released to all users",
+      "API response time reduced by 35%",
+      "New onboarding checklist"
+    ],
+    "metrics": [
+      { "name": "Weekly Active Users", "previous": 1240, "current": 1380 },
+      { "name": "Support tickets", "previous": 87, "current": 62 }
+    ],
+    "blockers": [
+      { "blocker": "Design review for billing page", "owner": "Design team" }
+    ],
+    "decisions_required": [
+      { "question": "Sunset legacy CSV export?", "deadline": "2025-01-24" }
+    ]
+  }
+}

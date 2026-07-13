@@ -1,0 +1,149 @@
+{
+  "meta": {
+    "id": "08",
+    "name": "Review and Community Monitor",
+    "description": "Collect product reviews and community discussions, classify issues, detect emerging topics, and notify the team about important changes.",
+    "category": "Discovery & Research",
+    "status": "beta",
+    "version": "1.0.0",
+    "testedN8nVersion": "2.30.0",
+    "difficulty": "intermediate",
+    "setupTime": "20 min",
+    "estimatedMonthlyCost": "$0.05–0.20",
+    "requiredIntegrations": ["OpenAI API"],
+    "optionalIntegrations": ["Slack API", "SMTP Email", "HTTP Request (RSS/API feeds)"],
+    "triggerType": "schedule",
+    "inputTypes": ["review URLs", "RSS feeds", "community post webhooks"],
+    "outputTypes": ["classified issue report", "emerging topic alert"],
+    "aiRequired": true,
+    "humanApproval": false,
+    "selfHosted": true,
+    "n8nCloud": true,
+    "tags": ["reviews", "community", "monitoring", "sentiment", "product"]
+  },
+  "name": "08 – Review and Community Monitor",
+  "nodes": [
+    {
+      "id": "node-setup",
+      "name": "⚙️ SETUP",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-480, -320],
+      "parameters": {
+        "content": "## 08 — Review and Community Monitor\n\n**Configure RSS/API sources in the Code node 'Load Sources'.**\n\nSupported sources:\n- App Store / Google Play RSS\n- Product Hunt discussions (RSS)\n- Reddit posts (RSS)\n- G2 / Trustpilot (manual export JSON)\n- Any webhook with { text, source, url } payload\n\n**Required:** OpenAI API credential\n**Schedule:** Every 12 hours by default\n**Status:** Beta.",
+        "height": 320,
+        "width": 380,
+        "color": 7
+      }
+    },
+    {
+      "id": "node-schedule",
+      "name": "Every 12 Hours",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [-200, -20],
+      "parameters": {
+        "rule": { "interval": [{ "field": "hours", "hoursInterval": 12 }] }
+      }
+    },
+    {
+      "id": "node-manual",
+      "name": "Manual Trigger (Testing)",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [-200, 100],
+      "parameters": {}
+    },
+    {
+      "id": "node-sources",
+      "name": "Load Configured Sources",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [60, 40],
+      "parameters": {
+        "jsCode": "// Configure your sources here\nconst sources = [\n  // { type: 'rss', name: 'App Store Reviews', url: 'https://rss.applemarketingtools.com/api/v2/us/apps/YOUR_APP_ID/reviews/most-recent.rss' },\n  // { type: 'rss', name: 'Product Hunt', url: 'https://www.producthunt.com/feed?q=YOUR_PRODUCT' },\n  // { type: 'rss', name: 'Reddit', url: 'https://www.reddit.com/r/YOUR_SUBREDDIT/new/.rss' },\n  {\n    type: 'sample',\n    name: 'Sample Reviews (Testing)',\n    items: [\n      { text: 'The new dashboard is much faster. Loving the update!', source: 'app_store', url: 'https://example.com/review/1', date: new Date().toISOString().slice(0,10) },\n      { text: 'Keeps crashing when I try to export to CSV. Very frustrating.', source: 'google_play', url: 'https://example.com/review/2', date: new Date().toISOString().slice(0,10) },\n      { text: 'Competitor X just released a bulk import feature that we desperately need here too', source: 'reddit', url: 'https://example.com/review/3', date: new Date().toISOString().slice(0,10) },\n    ]\n  }\n];\nconst allItems = [];\nfor (const src of sources) {\n  if (src.type === 'sample') { allItems.push(...src.items); }\n  // Add RSS parsing here if needed\n}\nreturn allItems.map(item => ({ json: item }));"
+      }
+    },
+    {
+      "id": "node-classify",
+      "name": "Classify Items (AI)",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.7,
+      "position": [300, 40],
+      "parameters": {
+        "resource": "text",
+        "operation": "message",
+        "model": { "__rl": true, "value": "={{ $env.AI_MODEL_FAST || 'gpt-4o-mini' }}", "mode": "id" },
+        "messages": {
+          "values": [
+            { "role": "system", "content": "Classify product reviews and community posts. Return JSON only." },
+            {
+              "role": "user",
+              "content": "Classify this item:\nSource: {{ $json.source }}\nText: {{ $json.text }}\n\nReturn JSON:\n{ \"category\": \"bug|feature_request|complaint|compliment|competitive_intel|question|other\", \"sentiment\": \"positive|neutral|negative\", \"urgency\": \"low|medium|high\", \"topic\": \"one key topic label\", \"is_emerging_signal\": true|false, \"importance_score\": 1-10, \"summary\": \"one sentence\" }"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "credentials": { "openAiApi": { "id": "OPENAI_CREDENTIAL_ID", "name": "OpenAI API" } }
+    },
+    {
+      "id": "node-parse",
+      "name": "Merge Classification",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [540, 40],
+      "parameters": {
+        "jsCode": "const original = $('Load Configured Sources').first().json;\nlet cls;\ntry { cls = JSON.parse(($input.first().json.message?.content||'{}').replace(/```json|```/g,'').trim()); }\ncatch { cls = {}; }\nreturn [{ json: { ...original, ...cls, classified_at: new Date().toISOString() } }];"
+      }
+    },
+    {
+      "id": "node-filter-important",
+      "name": "Filter: High Importance",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [780, 40],
+      "parameters": {
+        "conditions": {
+          "conditions": [{ "leftValue": "={{ $json.importance_score }}", "rightValue": 6, "operator": { "type": "number", "operation": "gte" } }]
+        }
+      }
+    },
+    {
+      "id": "node-alert",
+      "name": "Send Alert",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 2,
+      "position": [1020, -60],
+      "parameters": {
+        "workflowId": { "__rl": true, "value": "NOTIFICATION_ROUTER_WORKFLOW_ID", "mode": "id" },
+        "mode": "each",
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "channel": "={{ $env.NOTIFICATION_CHANNEL || 'slack' }}",
+            "title":   "⚠️ Review Alert: {{ $json.topic }} (score: {{ $json.importance_score }}/10)",
+            "body":    "{{ $json.category }} from {{ $json.source }}\n\n{{ $json.text }}\n\nSentiment: {{ $json.sentiment }} | Urgency: {{ $json.urgency }}\n{{ $json.url }}",
+            "urgency": "={{ $json.urgency }}"
+          }
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Every 12 Hours":             { "main": [[{ "node": "Load Configured Sources", "type": "main", "index": 0 }]] },
+    "Manual Trigger (Testing)":   { "main": [[{ "node": "Load Configured Sources", "type": "main", "index": 0 }]] },
+    "Load Configured Sources":    { "main": [[{ "node": "Classify Items (AI)",      "type": "main", "index": 0 }]] },
+    "Classify Items (AI)":        { "main": [[{ "node": "Merge Classification",      "type": "main", "index": 0 }]] },
+    "Merge Classification":       { "main": [[{ "node": "Filter: High Importance",   "type": "main", "index": 0 }]] },
+    "Filter: High Importance": {
+      "main": [[{ "node": "Send Alert", "type": "main", "index": 0 }], []]
+    }
+  },
+  "pinData": {},
+  "settings": { "executionOrder": "v1", "saveManualExecutions": true },
+  "tags": [{ "name": "reviews" }, { "name": "monitoring" }],
+  "triggerCount": 1,
+  "updatedAt": "2025-01-13T00:00:00.000Z",
+  "versionId": "08-v1.0.0"
+}

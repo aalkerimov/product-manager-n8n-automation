@@ -1,0 +1,10 @@
+[
+  { "text": "I really wish there was a bulk export to CSV feature", "segment": "enterprise", "source": "intercom", "vote_count": 12 },
+  { "text": "Bulk data export would save us hours every week", "segment": "enterprise", "source": "typeform", "vote_count": 8 },
+  { "text": "Can you add a CSV export button to the reports page?", "segment": "growth", "source": "in_app_survey", "vote_count": 5 },
+  { "text": "We need SSO / SAML support. Our IT department won't approve without it.", "segment": "enterprise", "source": "support_email", "vote_count": 15 },
+  { "text": "Single sign-on with Okta would be a dealbreaker if you don't have it", "segment": "enterprise", "source": "sales_call", "vote_count": 3 },
+  { "text": "Mobile app for iOS would be great for reviewing dashboards on the go", "segment": "startup", "source": "app_store_review", "vote_count": 7 },
+  { "text": "Dark mode please!", "segment": "consumer", "source": "twitter", "vote_count": 22 },
+  { "text": "Can you add keyboard shortcuts? I use this tool every day", "segment": "startup", "source": "in_app_survey", "vote_count": 9 }
+]

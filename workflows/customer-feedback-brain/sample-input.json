@@ -1,0 +1,66 @@
+[
+  {
+    "id": "fb_sample_001",
+    "text": "The onboarding flow is really confusing. I spent 45 minutes just trying to connect my first integration and gave up.",
+    "source": "typeform",
+    "customer_segment": "startup",
+    "rating": 2,
+    "created_at": "2025-01-13T09:15:00Z"
+  },
+  {
+    "id": "fb_sample_002",
+    "text": "Billing page doesn't show invoice history for the last 3 months. This is a major blocker for our finance team's monthly reconciliation.",
+    "source": "support_email",
+    "customer_segment": "enterprise",
+    "rating": null,
+    "created_at": "2025-01-12T14:30:00Z"
+  },
+  {
+    "id": "fb_sample_003",
+    "text": "Would really love a bulk import feature for contacts. We have about 5000 records to migrate and manual entry isn't realistic.",
+    "source": "in_app_survey",
+    "customer_segment": "growth",
+    "rating": 4,
+    "created_at": "2025-01-11T11:00:00Z"
+  },
+  {
+    "id": "fb_sample_004",
+    "text": "The API rate limit documentation says 100 req/min but the actual limit seems to be 50. Took us a day to debug this.",
+    "source": "github_issue",
+    "customer_segment": "enterprise",
+    "rating": null,
+    "created_at": "2025-01-10T16:45:00Z"
+  },
+  {
+    "id": "fb_sample_005",
+    "text": "Performance is noticeably better after the last update. Pages load much faster and the dashboard feels snappy now.",
+    "source": "app_store_review",
+    "customer_segment": "consumer",
+    "rating": 5,
+    "created_at": "2025-01-09T08:20:00Z"
+  },
+  {
+    "id": "fb_sample_006",
+    "text": "Onboarding is confusing — couldn't figure out how to set up the first workflow without watching a YouTube tutorial.",
+    "source": "intercom",
+    "customer_segment": "startup",
+    "rating": 3,
+    "created_at": "2025-01-08T17:10:00Z"
+  },
+  {
+    "id": "fb_sample_007",
+    "text": "The export to CSV feature is broken. It downloads an empty file every time I try.",
+    "source": "zendesk",
+    "customer_segment": "enterprise",
+    "rating": 1,
+    "created_at": "2025-01-07T13:00:00Z"
+  },
+  {
+    "id": "fb_sample_008",
+    "text": "Please add SSO support. Our IT policy requires it and we can't roll this out company-wide without it.",
+    "source": "typeform",
+    "customer_segment": "enterprise",
+    "rating": null,
+    "created_at": "2025-01-07T10:30:00Z"
+  }
+]

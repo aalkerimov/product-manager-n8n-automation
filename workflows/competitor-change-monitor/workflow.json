@@ -1,0 +1,365 @@
+{
+  "name": "Competitor Change Monitor",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 🔍 Competitor Change Monitor\n\n**Setup checklist:**\n1. ✅ Create credential `OpenAI API`\n2. ✅ Create credential `SMTP Email` or `Slack API` for notifications\n3. ✅ Create credential `Google Sheets OAuth2` if using basic stack for snapshots\n4. ✅ Set `COMPETITOR_PAGES_CONFIG` in .env with your competitor URLs\n5. ✅ Set `COMPETITOR_CHANGE_IMPORTANCE_THRESHOLD` (default: 6 out of 10)\n\n**How it works:**\n1. Reads competitor pages config from environment\n2. Fetches each page via HTTP\n3. Strips HTML to plain text\n4. Compares with the previous snapshot stored in Sheets/DB\n5. If a meaningful diff is found, sends to AI for impact analysis\n6. Only notifies if the importance score ≥ threshold\n7. Stores the new snapshot for next comparison\n\n**Rate limit:** 2-second delay between page fetches to avoid IP blocks.",
+        "height": 400,
+        "width": 520,
+        "color": 6
+      },
+      "id": "sticky-ccm-setup",
+      "name": "📌 Setup Instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, -260]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "={{ $env.COMPETITOR_CHECK_SCHEDULE || '0 */6 * * *' }}"
+            }
+          ]
+        }
+      },
+      "id": "schedule-ccm",
+      "name": "Schedule: Every 6 Hours",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 100]
+    },
+    {
+      "parameters": {},
+      "id": "manual-ccm",
+      "name": "Manual Trigger (for testing)",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 280]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse competitor pages from environment variable\n// Format: JSON array of {company, url, type}\n\nlet pages;\ntry {\n  const raw = process.env.COMPETITOR_PAGES_CONFIG;\n  if (raw) {\n    pages = JSON.parse(raw);\n  } else {\n    // Default sample pages for testing (replace with real ones)\n    pages = [\n      {\n        \"company\": \"Example Rival\",\n        \"url\": \"https://example.com\",\n        \"type\": \"homepage\",\n        \"note\": \"Replace this with a real competitor URL\"\n      }\n    ];\n  }\n} catch (e) {\n  throw new Error(`Could not parse COMPETITOR_PAGES_CONFIG: ${e.message}. Expected a JSON array.`);\n}\n\nif (!Array.isArray(pages) || pages.length === 0) {\n  throw new Error('COMPETITOR_PAGES_CONFIG must be a non-empty JSON array');\n}\n\nconsole.log(`Loaded ${pages.length} competitor page(s) to monitor`);\n\nreturn pages.map((page, index) => ({\n  json: {\n    ...page,\n    page_index: index,\n    check_id: `check_${Date.now()}_${index}`,\n    fetch_at: new Date().toISOString(),\n  }\n}));"
+      },
+      "id": "load-config",
+      "name": "Load Competitor Pages Config",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [480, 180]
+    },
+    {
+      "parameters": {
+        "amount": 2,
+        "unit": "seconds"
+      },
+      "id": "rate-limit-delay",
+      "name": "Rate Limit: 2s Delay",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [700, 180]
+    },
+    {
+      "parameters": {
+        "content": "⏱️ **Rate limiting**\nThe 2-second delay prevents IP rate-limiting by target servers. Increase for aggressive sites or decrease for internal testing.",
+        "height": 100,
+        "width": 300,
+        "color": 4
+      },
+      "id": "sticky-rate-limit",
+      "name": "Rate Limit Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [640, 60]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "options": {
+          "timeout": 30000,
+          "redirect": {
+            "redirect": {
+              "followRedirects": true,
+              "maxRedirects": 5
+            }
+          },
+          "response": {
+            "response": {
+              "fullResponse": false,
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "id": "fetch-page",
+      "name": "Fetch Competitor Page",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [920, 180],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "jsCode": "// Strip HTML and normalise page content to plain text\nconst pageData = $input.first().json;\nconst competitorMeta = $('Load Competitor Pages Config').first().json;\n\n// Get the HTML body\nlet html = typeof pageData === 'string' ? pageData : JSON.stringify(pageData);\n\n// Strip HTML tags\nlet text = html\n  .replace(/<script[^>]*>[\\s\\S]*?<\\/script>/gi, ' ')  // remove scripts\n  .replace(/<style[^>]*>[\\s\\S]*?<\\/style>/gi, ' ')    // remove styles\n  .replace(/<[^>]+>/g, ' ')                             // remove all HTML tags\n  .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&')      // decode entities\n  .replace(/&lt;/g, '<').replace(/&gt;/g, '>')\n  .replace(/&quot;/g, '\"').replace(/&#39;/g, \"'\")\n  .replace(/\\s+/g, ' ')                                 // collapse whitespace\n  .trim();\n\n// Truncate to avoid excessive storage/AI costs\nconst MAX_CHARS = 8000;\nif (text.length > MAX_CHARS) {\n  text = text.substring(0, MAX_CHARS) + '... [truncated]';\n}\n\n// Create a hash for change detection\nlet hash = 0;\nfor (let i = 0; i < text.length; i++) {\n  hash = ((hash << 5) - hash) + text.charCodeAt(i);\n  hash |= 0;\n}\nhash = Math.abs(hash).toString(36);\n\nreturn [{\n  json: {\n    company: competitorMeta.company,\n    url: competitorMeta.url,\n    page_type: competitorMeta.type,\n    content_text: text,\n    content_hash: hash,\n    char_count: text.length,\n    captured_at: new Date().toISOString(),\n    check_id: competitorMeta.check_id,\n  }\n}];"
+      },
+      "id": "strip-html",
+      "name": "Strip HTML → Plain Text + Hash",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1140, 180]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Retrieve the previous snapshot for this URL\n// BASIC STACK: We store previous snapshot in memory (in-workflow state via global variable)\n// For persistent storage, use Google Sheets or PostgreSQL\n\n// In production: replace this stub with a Google Sheets or DB lookup\n// For demo purposes, we simulate a previous snapshot\n\nconst current = $input.first().json;\n\n// Simulate a previous snapshot (in production: read from storage)\n// If the URL has never been seen, previousHash will be null and we'll store the first snapshot\nconst simulatedPreviousText = `Previous version of ${current.company} ${current.page_type} page. Pricing starts at $49/month.`;\nlet simulatedPreviousHash = 0;\nfor (let i = 0; i < simulatedPreviousText.length; i++) {\n  simulatedPreviousHash = ((simulatedPreviousHash << 5) - simulatedPreviousHash) + simulatedPreviousText.charCodeAt(i);\n  simulatedPreviousHash |= 0;\n}\nsimulatedPreviousHash = Math.abs(simulatedPreviousHash).toString(36);\n\n// TODO (production): Query your storage here\n// const previousSnapshot = await queryGoogleSheets(current.url);\nconst previousSnapshot = {\n  content_text: simulatedPreviousText,\n  content_hash: simulatedPreviousHash,\n  captured_at: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),\n};\n\nconst hasChanged = previousSnapshot.content_hash !== current.content_hash;\nconst diffLength = Math.abs(current.content_text.length - previousSnapshot.content_text.length);\n\nconsole.log(`${current.company} ${current.page_type}: hasChanged=${hasChanged}, hashDiff=${previousSnapshot.content_hash}→${current.content_hash}`);\n\nreturn [{\n  json: {\n    ...current,\n    previous_text: previousSnapshot.content_text,\n    previous_hash: previousSnapshot.content_hash,\n    previous_captured_at: previousSnapshot.captured_at,\n    has_changed: hasChanged,\n    diff_length: diffLength,\n    is_first_snapshot: !previousSnapshot.content_hash,\n  }\n}];"
+      },
+      "id": "get-previous-snapshot",
+      "name": "Get Previous Snapshot",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1360, 180]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "changed-check",
+              "leftValue": "={{ $json.has_changed }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equal"
+              }
+            },
+            {
+              "id": "first-snapshot-check",
+              "leftValue": "={{ $json.is_first_snapshot }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "equal"
+              }
+            },
+            {
+              "id": "min-diff-check",
+              "leftValue": "={{ $json.diff_length }}",
+              "rightValue": "={{ parseInt($env.COMPETITOR_DIFF_MIN_CHARS || '100') }}",
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "check-if-changed",
+      "name": "Meaningful Change?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [1580, 180]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare the change data for AI analysis\nconst item = $input.first().json;\n\n// Create a simple text diff (first/last differences)\nconst prevWords = new Set(item.previous_text.split(' '));\nconst currWords = new Set(item.content_text.split(' '));\n\nconst addedWords = [...currWords].filter(w => !prevWords.has(w)).slice(0, 50).join(', ');\nconst removedWords = [...prevWords].filter(w => !currWords.has(w)).slice(0, 50).join(', ');\n\nconst changeDescription = `\nCOMPANY: ${item.company}\nPAGE TYPE: ${item.page_type}\nURL: ${item.url}\n\nPREVIOUS CONTENT (first 1000 chars):\n${item.previous_text.substring(0, 1000)}\n\nCURRENT CONTENT (first 1000 chars):\n${item.content_text.substring(0, 1000)}\n\nNEW WORDS/PHRASES: ${addedWords.substring(0, 300)}\nREMOVED WORDS/PHRASES: ${removedWords.substring(0, 300)}\n`.trim();\n\nreturn [{\n  json: {\n    mode: 'competitor',\n    items: [{\n      id: item.check_id,\n      text: changeDescription,\n      metadata: {\n        company: item.company,\n        page_type: item.page_type,\n        url: item.url,\n        previous_hash: item.previous_hash,\n        new_hash: item.content_hash,\n      }\n    }],\n    // Pass through for later use\n    _snapshot: item,\n  }\n}];"
+      },
+      "id": "prepare-diff-for-ai",
+      "name": "Prepare Change for AI Analysis",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1800, 100]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "expression",
+          "value": "LLM_CLASSIFIER_WORKFLOW_ID"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "mode": "={{ $json.mode }}",
+            "items": "={{ $json.items }}"
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "analyze-change",
+      "name": "Call: LLM Classifier (competitor mode)",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 2,
+      "position": [2020, 100]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "importance-check",
+              "leftValue": "={{ $json.results?.[0]?.classification?.importance_score }}",
+              "rightValue": "={{ parseInt($env.COMPETITOR_CHANGE_IMPORTANCE_THRESHOLD || '6') }}",
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "check-importance",
+      "name": "Importance ≥ Threshold?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [2240, 100]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format the competitor change notification\nconst classifierOutput = $input.first().json;\nconst snapshot = $('Prepare Change for AI Analysis').first().json._snapshot;\nconst result = classifierOutput.results?.[0] || {};\nconst cls = result.classification || {};\n\nconst importanceEmoji = cls.importance_score >= 8 ? '🚨' : cls.importance_score >= 6 ? '⚠️' : 'ℹ️';\n\nconst body = `\n${importanceEmoji} **Competitor Change Detected**\n\n**Company:** ${snapshot.company}\n**Page:** ${snapshot.page_type} — ${snapshot.url}\n**Importance:** ${cls.importance_score}/10\n**Change type:** ${cls.change_type || 'unknown'}\n\n**Possible reason:**\n${cls.possible_reason || 'Unknown'}\n\n**Product impact:**\n${cls.product_impact || 'See details'}\n\n**Recommended response:**\n${cls.recommended_response || 'Review the change and assess impact'}\n\n**Detected at:** ${snapshot.captured_at}\n`.trim();\n\nreturn [{\n  json: {\n    channel: process.env.NOTIFICATION_CHANNEL || 'email',\n    title: `${importanceEmoji} Competitor change: ${snapshot.company} ${snapshot.page_type}`,\n    body,\n    urgency: cls.importance_score >= 8 ? 'high' : 'medium',\n    metadata: {\n      company: snapshot.company,\n      url: snapshot.url,\n      importance_score: cls.importance_score,\n      change_type: cls.change_type,\n    }\n  }\n}];"
+      },
+      "id": "format-change-notification",
+      "name": "Format Change Notification",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2460, 0]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "expression",
+          "value": "NOTIFICATION_ROUTER_WORKFLOW_ID"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "channel": "={{ $json.channel }}",
+            "title": "={{ $json.title }}",
+            "body": "={{ $json.body }}",
+            "urgency": "={{ $json.urgency }}",
+            "metadata": "={{ $json.metadata }}"
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "send-change-notification",
+      "name": "Send via Notification Router",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 2,
+      "position": [2680, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Save new snapshot (basic stack: log; advanced: write to DB/Sheets)\nconst snapshot = $input.first().json;\nconsole.log(`Snapshot saved for ${snapshot.company} ${snapshot.page_type}: hash=${snapshot.content_hash}`);\n// TODO (production): Write snapshot to Google Sheets or PostgreSQL\nreturn [{ json: { saved: true, company: snapshot.company, hash: snapshot.content_hash } }];"
+      },
+      "id": "save-new-snapshot",
+      "name": "Save New Snapshot",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1800, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Below threshold — log and skip notification\nconst classifierOutput = $input.first().json;\nconst result = classifierOutput.results?.[0] || {};\nconsole.log(`Change below threshold: importance=${result.classification?.importance_score || 'unknown'} < ${process.env.COMPETITOR_CHANGE_IMPORTANCE_THRESHOLD || 6}`);\nreturn [{ json: { skipped: true, reason: 'below_threshold', importance: result.classification?.importance_score } }];"
+      },
+      "id": "skip-low-importance",
+      "name": "Skip: Below Threshold",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2460, 200]
+    }
+  ],
+  "connections": {
+    "Schedule: Every 6 Hours": {
+      "main": [
+        [{ "node": "Load Competitor Pages Config", "type": "main", "index": 0 }]
+      ]
+    },
+    "Manual Trigger (for testing)": {
+      "main": [
+        [{ "node": "Load Competitor Pages Config", "type": "main", "index": 0 }]
+      ]
+    },
+    "Load Competitor Pages Config": {
+      "main": [
+        [{ "node": "Rate Limit: 2s Delay", "type": "main", "index": 0 }]
+      ]
+    },
+    "Rate Limit: 2s Delay": {
+      "main": [
+        [{ "node": "Fetch Competitor Page", "type": "main", "index": 0 }]
+      ]
+    },
+    "Fetch Competitor Page": {
+      "main": [
+        [{ "node": "Strip HTML → Plain Text + Hash", "type": "main", "index": 0 }]
+      ]
+    },
+    "Strip HTML → Plain Text + Hash": {
+      "main": [
+        [{ "node": "Get Previous Snapshot", "type": "main", "index": 0 }]
+      ]
+    },
+    "Get Previous Snapshot": {
+      "main": [
+        [{ "node": "Meaningful Change?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Meaningful Change?": {
+      "main": [
+        [{ "node": "Prepare Change for AI Analysis", "type": "main", "index": 0 }],
+        [{ "node": "Save New Snapshot", "type": "main", "index": 0 }]
+      ]
+    },
+    "Prepare Change for AI Analysis": {
+      "main": [
+        [{ "node": "Call: LLM Classifier (competitor mode)", "type": "main", "index": 0 }]
+      ]
+    },
+    "Call: LLM Classifier (competitor mode)": {
+      "main": [
+        [{ "node": "Importance ≥ Threshold?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Importance ≥ Threshold?": {
+      "main": [
+        [{ "node": "Format Change Notification", "type": "main", "index": 0 }],
+        [{ "node": "Skip: Below Threshold", "type": "main", "index": 0 }]
+      ]
+    },
+    "Format Change Notification": {
+      "main": [
+        [{ "node": "Send via Notification Router", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "saveExecutionProgress": true,
+    "errorWorkflow": ""
+  },
+  "meta": {
+    "n8nVersion": "2.30.0",
+    "description": "Monitors configured competitor pages every 6 hours, detects meaningful content changes, analyses importance with AI, and sends notifications only when importance >= configured threshold.",
+    "tags": ["competitor", "monitoring", "ai", "alerts"]
+  }
+}
