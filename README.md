@@ -55,20 +55,13 @@ Three reusable building blocks are called by the main workflows — **import the
 
 ## 53 Workflows
 
-### 00 — Foundations *(start here)*
-
-Three flagship end-to-end workflows — the best place to start. Each is fully self-contained and demonstrates the complete pattern used across the OS.
+### 01 — Discovery & Research
 
 | # | Workflow | What it does |
 |---|---|---|
 | 01 | Customer Feedback Brain | Collects feedback from any source, classifies it, and generates a weekly insights report |
 | 02 | Competitor Change Monitor | Detects meaningful changes on competitor pages and delivers an AI-analysed alert |
-| 03 | Weekly Product Brief | Combines tickets, metrics, feedback, and blockers into a single concise weekly update |
-
-### 01 — Discovery & Research
-
-| # | Workflow | What it does |
-|---|---|---|
+| 03 | Weekly Product Brief | Combines tickets, metrics, feedback, and blockers into one concise weekly update |
 | 04 | User Interview Processor | Turns transcripts into structured problems, quotes, and segments |
 | 05 | Research Repository Updater | Normalises interviews, surveys, and notes into a tagged repository |
 | 06 | Feature Request Analyzer | Deduplicates requests, estimates frequency, maps to problems |
@@ -262,11 +255,12 @@ product-manager-n8n-automation/
 │   ├── human-approval/             # Human approval gate via email
 │   └── notification-router/        # Route to Slack / Email / Telegram
 ├── workflows/
-│   ├── 00-foundations/             # Start here — 3 flagship end-to-end workflows
+│   ├── 01-discovery-research/      # Workflows 01-10
 │   │   ├── 01-customer-feedback-brain/
 │   │   ├── 02-competitor-change-monitor/
-│   │   └── 03-weekly-product-brief/
-│   ├── 01-discovery-research/      # Workflows 04-10
+│   │   ├── 03-weekly-product-brief/
+│   │   ├── 04-user-interview-processor/
+│   │   └── ...
 │   ├── 02-planning-execution/      # Workflows 11-20
 │   ├── 03-growth-metrics/          # Workflows 21-30
 │   ├── 04-customer-feedback/       # Workflows 31-40
