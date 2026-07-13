@@ -9,7 +9,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![n8n version](https://img.shields.io/badge/n8n-2.30.0%2B-orange)](https://n8n.io)
-[![Workflows](https://img.shields.io/badge/workflows-50-blue)](#workflows)
+[![Workflows](https://img.shields.io/badge/workflows-53-blue)](#workflows)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 [![Made by Arthur Kerimov](https://img.shields.io/badge/made%20by-Arthur%20Kerimov-blueviolet)](https://arthurkerimov.com)
 
@@ -54,6 +54,16 @@ Three reusable building blocks are called by the main workflows — **import the
 ---
 
 ## 53 Workflows
+
+### 00 — Foundations *(start here)*
+
+Three flagship end-to-end workflows — the best place to start. Each is fully self-contained and demonstrates the complete pattern used across the OS.
+
+| # | Workflow | What it does |
+|---|---|---|
+| 01 | Customer Feedback Brain | Collects feedback from any source, classifies it, and generates a weekly insights report |
+| 02 | Competitor Change Monitor | Detects meaningful changes on competitor pages and delivers an AI-analysed alert |
+| 03 | Weekly Product Brief | Combines tickets, metrics, feedback, and blockers into a single concise weekly update |
 
 ### 01 — Discovery & Research
 
@@ -252,6 +262,10 @@ product-manager-n8n-automation/
 │   ├── human-approval/             # Human approval gate via email
 │   └── notification-router/        # Route to Slack / Email / Telegram
 ├── workflows/
+│   ├── 00-foundations/             # Start here — 3 flagship end-to-end workflows
+│   │   ├── 01-customer-feedback-brain/
+│   │   ├── 02-competitor-change-monitor/
+│   │   └── 03-weekly-product-brief/
 │   ├── 01-discovery-research/      # Workflows 04-10
 │   ├── 02-planning-execution/      # Workflows 11-20
 │   ├── 03-growth-metrics/          # Workflows 21-30
