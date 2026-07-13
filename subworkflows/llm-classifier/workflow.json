@@ -1,130 +1,178 @@
-{
-  "name": "Subworkflow: LLM Classifier",
-  "nodes": [
-    {
-      "parameters": {
-        "content": "## 🤖 LLM Classifier Subworkflow\n\n**Purpose:** Classifies batches of text items using an OpenAI-compatible API.\n\n**Setup:**\n1. Create an OpenAI credential named exactly `OpenAI API`\n2. Set `AI_MODEL_FAST` and `AI_MODEL_SMART` in your environment\n3. This subworkflow is called by main workflows — do not trigger it manually in production\n\n**Input (from calling workflow):**\n```json\n{\n  \"mode\": \"feedback | competitor | brief\",\n  \"items\": [{\"id\": \"...\", \"text\": \"...\", \"metadata\": {}}]\n}\n```\n\n**Output:**\n```json\n{\n  \"results\": [{\"id\": \"...\", \"classification\": {}, \"confidence\": 0.85, \"reasoning\": \"...\"}]\n}\n```",
-        "height": 360,
-        "width": 500,
-        "color": 7
-      },
-      "id": "sticky-llm-setup",
-      "name": "Setup Instructions",
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [0, -200]
-    },
-    {
-      "parameters": {},
-      "id": "trigger-llm",
-      "name": "When Called by Another Workflow",
-      "type": "n8n-nodes-base.executeWorkflowTrigger",
-      "typeVersion": 1,
-      "position": [240, 100]
-    },
-    {
-      "parameters": {
-        "jsCode": "// Validate and parse the input from the calling workflow\nconst input = $input.first().json;\n\nif (!input.mode || !Array.isArray(input.items)) {\n  throw new Error('LLM Classifier: Input must have { mode, items[] }');\n}\n\nconst mode = input.mode;\nconst items = input.items;\n\n// Build mode-specific system prompts\nconst systemPrompts = {\n  feedback: `You are a product intelligence analyst. Classify each customer feedback item.\n\nFor each item, respond with a JSON object:\n{\n  \"id\": \"<same id as input>\",\n  \"problem_category\": \"<billing|onboarding|performance|feature-request|bug|support|compliment|other>\",\n  \"sentiment\": \"<positive|negative|neutral|mixed>\",\n  \"urgency\": \"<critical|high|medium|low>\",\n  \"customer_segment\": \"<enterprise|growth|startup|consumer|unknown>\",\n  \"product_area\": \"<from the list: onboarding,billing,core-product,integrations,performance,support,other>\",\n  \"is_feature_request\": <true|false>,\n  \"is_bug_report\": <true|false>,\n  \"key_quote\": \"<the most impactful 1-2 sentences from the text>\",\n  \"confidence\": <0.0-1.0>,\n  \"reasoning\": \"<1-2 sentences explaining your classification>\"\n}\n\nRespond ONLY with a JSON array of these objects. No extra text.`,\n\n  competitor: `You are a competitive intelligence analyst. Analyze the following change detected on a competitor's website.\n\nFor each item, respond with a JSON object:\n{\n  \"id\": \"<same id as input>\",\n  \"change_type\": \"<pricing|feature|positioning|hiring|content|design|partnership|other>\",\n  \"importance_score\": <1-10>,\n  \"possible_reason\": \"<why did they make this change, in 1-2 sentences>\",\n  \"product_impact\": \"<how this could affect your product strategy, in 1-2 sentences>\",\n  \"recommended_response\": \"<what your team should consider doing, in 1-2 sentences>\",\n  \"confidence\": <0.0-1.0>,\n  \"reasoning\": \"<1-2 sentences explaining your analysis>\"\n}\n\nRespond ONLY with a JSON array of these objects. No extra text.`,\n\n  brief: `You are a product manager writing a concise executive brief.\n\nFor each item (a data point from the week), respond with a JSON object:\n{\n  \"id\": \"<same id as input>\",\n  \"category\": \"<shipped|metric|insight|blocker|risk|decision|priority>\",\n  \"priority\": <1-10>,\n  \"summary\": \"<one sentence summary>\",\n  \"impact\": \"<business impact, 1 sentence>\",\n  \"action_required\": <true|false>,\n  \"confidence\": <0.0-1.0>,\n  \"reasoning\": \"<1-2 sentences>\"\n}\n\nRespond ONLY with a JSON array of these objects. No extra text.`\n};\n\nconst systemPrompt = systemPrompts[mode];\nif (!systemPrompt) {\n  throw new Error(`LLM Classifier: Unknown mode '${mode}'. Use feedback, competitor, or brief.`);\n}\n\n// Format items for the user message\nconst userMessage = JSON.stringify(\n  items.map(item => ({ id: item.id, text: item.text, metadata: item.metadata || {} })),\n  null,\n  2\n);\n\nreturn [{\n  json: {\n    mode,\n    items,\n    systemPrompt,\n    userMessage,\n    model: mode === 'feedback' || mode === 'brief'\n      ? (process.env.AI_MODEL_FAST || 'gpt-4o-mini')\n      : (process.env.AI_MODEL_SMART || 'gpt-4o'),\n    itemCount: items.length,\n  }\n}];"
-      },
-      "id": "build-prompt",
-      "name": "Build Classification Prompt",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [460, 100]
-    },
-    {
-      "parameters": {
-        "resource": "chat",
-        "operation": "complete",
-        "modelId": {
-          "__rl": true,
-          "mode": "list",
-          "value": "={{ $json.model }}"
-        },
-        "messages": {
-          "values": [
-            {
-              "role": "system",
-              "content": "={{ $json.systemPrompt }}"
-            },
-            {
-              "role": "user",
-              "content": "={{ $json.userMessage }}"
-            }
-          ]
-        },
-        "simplifyOutput": false,
-        "options": {
-          "temperature": 0.3,
-          "maxTokens": 4096,
-          "responseFormat": "json_object"
-        }
-      },
-      "id": "call-llm",
-      "name": "Call AI: Classify Items",
-      "type": "@n8n/n8n-nodes-langchain.openAi",
-      "typeVersion": 1.7,
-      "position": [680, 100],
-      "credentials": {
-        "openAiApi": {
-          "id": "OPENAI_CREDENTIAL_ID",
-          "name": "OpenAI API"
-        }
-      },
-      "retryOnFail": true,
-      "maxTries": 3,
-      "waitBetweenTries": 2000
-    },
-    {
-      "parameters": {
-        "jsCode": "// Parse the AI response and validate it\nconst aiResponse = $input.first().json;\nconst originalData = $('Build Classification Prompt').first().json;\n\nlet rawContent;\ntry {\n  // The response format depends on the model and n8n version\n  rawContent = aiResponse?.message?.content ||\n               aiResponse?.choices?.[0]?.message?.content ||\n               aiResponse?.content ||\n               JSON.stringify(aiResponse);\n} catch (e) {\n  throw new Error('LLM Classifier: Could not extract content from AI response');\n}\n\nlet classifications;\ntry {\n  const parsed = typeof rawContent === 'string' ? JSON.parse(rawContent) : rawContent;\n  // The AI may return an array directly or wrapped in a key\n  classifications = Array.isArray(parsed) ? parsed : (parsed.results || parsed.items || [parsed]);\n} catch (e) {\n  throw new Error(`LLM Classifier: Failed to parse AI JSON response: ${e.message}\\nRaw: ${String(rawContent).substring(0, 200)}`);\n}\n\n// Map results back to original items by ID\nconst resultMap = new Map(classifications.map(c => [c.id, c]));\n\nconst results = originalData.items.map(item => {\n  const classification = resultMap.get(item.id);\n  if (!classification) {\n    return {\n      id: item.id,\n      classification: null,\n      confidence: 0,\n      reasoning: 'No classification returned by AI',\n      error: true,\n    };\n  }\n  return {\n    id: item.id,\n    classification,\n    confidence: parseFloat(classification.confidence) || 0,\n    reasoning: classification.reasoning || '',\n    error: false,\n  };\n});\n\nreturn [{\n  json: {\n    mode: originalData.mode,\n    results,\n    total: results.length,\n    classified: results.filter(r => !r.error).length,\n    failed: results.filter(r => r.error).length,\n  }\n}];"
-      },
-      "id": "parse-response",
-      "name": "Parse and Validate AI Response",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [900, 100]
-    },
-    {
-      "parameters": {
-        "jsCode": "// Error handler — log the error and return a safe fallback\nconst error = $input.first().json;\nconst errorMessage = error?.message || String(error) || 'Unknown error';\n\nconsole.error(`LLM Classifier error: ${errorMessage}`);\n\n// Return a safe empty result so calling workflows can handle the failure gracefully\nreturn [{\n  json: {\n    mode: 'unknown',\n    results: [],\n    total: 0,\n    classified: 0,\n    failed: 0,\n    error: true,\n    errorMessage,\n  }\n}];"
-      },
-      "id": "error-handler",
-      "name": "Handle Error: Return Safe Fallback",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [900, 300]
-    }
-  ],
-  "connections": {
-    "When Called by Another Workflow": {
-      "main": [
-        [{ "node": "Build Classification Prompt", "type": "main", "index": 0 }]
-      ]
-    },
-    "Build Classification Prompt": {
-      "main": [
-        [{ "node": "Call AI: Classify Items", "type": "main", "index": 0 }]
-      ]
-    },
-    "Call AI: Classify Items": {
-      "main": [
-        [{ "node": "Parse and Validate AI Response", "type": "main", "index": 0 }]
-      ],
-      "error": [
-        [{ "node": "Handle Error: Return Safe Fallback", "type": "main", "index": 0 }]
-      ]
-    }
-  },
-  "settings": {
-    "executionOrder": "v1",
-    "saveManualExecutions": true,
-    "saveExecutionProgress": true,
-    "errorWorkflow": ""
-  },
-  "meta": {
-    "n8nVersion": "2.30.0",
-    "description": "Shared subworkflow: classifies text items using an OpenAI-compatible API. Supports feedback, competitor, and brief modes. Called by main workflows.",
-    "tags": ["subworkflow", "ai", "classification"]
-  }
+﻿{
+    "name":  "01 - LLM Classifier (Shared Subworkflow)",
+    "nodes":  [
+                  {
+                      "parameters":  {
+                                         "content":  "## ðŸ¤– LLM Classifier Subworkflow\n\n**Purpose:** Classifies batches of text items using an OpenAI-compatible API.\n\n**Setup:**\n1. Create an OpenAI credential named exactly `OpenAI API`\n2. Set `AI_MODEL_FAST` and `AI_MODEL_SMART` in your environment\n3. This subworkflow is called by main workflows â€” do not trigger it manually in production\n\n**Input (from calling workflow):**\n```json\n{\n  \"mode\": \"feedback | competitor | brief\",\n  \"items\": [{\"id\": \"...\", \"text\": \"...\", \"metadata\": {}}]\n}\n```\n\n**Output:**\n```json\n{\n  \"results\": [{\"id\": \"...\", \"classification\": {}, \"confidence\": 0.85, \"reasoning\": \"...\"}]\n}\n```",
+                                         "height":  360,
+                                         "width":  500,
+                                         "color":  7
+                                     },
+                      "id":  "sticky-llm-setup",
+                      "name":  "Setup Instructions",
+                      "type":  "n8n-nodes-base.stickyNote",
+                      "typeVersion":  1,
+                      "position":  [
+                                       0,
+                                       -200
+                                   ]
+                  },
+                  {
+                      "parameters":  {
+
+                                     },
+                      "id":  "trigger-llm",
+                      "name":  "When Called by Another Workflow",
+                      "type":  "n8n-nodes-base.executeWorkflowTrigger",
+                      "typeVersion":  1,
+                      "position":  [
+                                       240,
+                                       100
+                                   ]
+                  },
+                  {
+                      "parameters":  {
+                                         "jsCode":  "// Validate and parse the input from the calling workflow\nconst input = $input.first().json;\n\nif (!input.mode || !Array.isArray(input.items)) {\n  throw new Error(\u0027LLM Classifier: Input must have { mode, items[] }\u0027);\n}\n\nconst mode = input.mode;\nconst items = input.items;\n\n// Build mode-specific system prompts\nconst systemPrompts = {\n  feedback: `You are a product intelligence analyst. Classify each customer feedback item.\n\nFor each item, respond with a JSON object:\n{\n  \"id\": \"\u003csame id as input\u003e\",\n  \"problem_category\": \"\u003cbilling|onboarding|performance|feature-request|bug|support|compliment|other\u003e\",\n  \"sentiment\": \"\u003cpositive|negative|neutral|mixed\u003e\",\n  \"urgency\": \"\u003ccritical|high|medium|low\u003e\",\n  \"customer_segment\": \"\u003centerprise|growth|startup|consumer|unknown\u003e\",\n  \"product_area\": \"\u003cfrom the list: onboarding,billing,core-product,integrations,performance,support,other\u003e\",\n  \"is_feature_request\": \u003ctrue|false\u003e,\n  \"is_bug_report\": \u003ctrue|false\u003e,\n  \"key_quote\": \"\u003cthe most impactful 1-2 sentences from the text\u003e\",\n  \"confidence\": \u003c0.0-1.0\u003e,\n  \"reasoning\": \"\u003c1-2 sentences explaining your classification\u003e\"\n}\n\nRespond ONLY with a JSON array of these objects. No extra text.`,\n\n  competitor: `You are a competitive intelligence analyst. Analyze the following change detected on a competitor\u0027s website.\n\nFor each item, respond with a JSON object:\n{\n  \"id\": \"\u003csame id as input\u003e\",\n  \"change_type\": \"\u003cpricing|feature|positioning|hiring|content|design|partnership|other\u003e\",\n  \"importance_score\": \u003c1-10\u003e,\n  \"possible_reason\": \"\u003cwhy did they make this change, in 1-2 sentences\u003e\",\n  \"product_impact\": \"\u003chow this could affect your product strategy, in 1-2 sentences\u003e\",\n  \"recommended_response\": \"\u003cwhat your team should consider doing, in 1-2 sentences\u003e\",\n  \"confidence\": \u003c0.0-1.0\u003e,\n  \"reasoning\": \"\u003c1-2 sentences explaining your analysis\u003e\"\n}\n\nRespond ONLY with a JSON array of these objects. No extra text.`,\n\n  brief: `You are a product manager writing a concise executive brief.\n\nFor each item (a data point from the week), respond with a JSON object:\n{\n  \"id\": \"\u003csame id as input\u003e\",\n  \"category\": \"\u003cshipped|metric|insight|blocker|risk|decision|priority\u003e\",\n  \"priority\": \u003c1-10\u003e,\n  \"summary\": \"\u003cone sentence summary\u003e\",\n  \"impact\": \"\u003cbusiness impact, 1 sentence\u003e\",\n  \"action_required\": \u003ctrue|false\u003e,\n  \"confidence\": \u003c0.0-1.0\u003e,\n  \"reasoning\": \"\u003c1-2 sentences\u003e\"\n}\n\nRespond ONLY with a JSON array of these objects. No extra text.`\n};\n\nconst systemPrompt = systemPrompts[mode];\nif (!systemPrompt) {\n  throw new Error(`LLM Classifier: Unknown mode \u0027${mode}\u0027. Use feedback, competitor, or brief.`);\n}\n\n// Format items for the user message\nconst userMessage = JSON.stringify(\n  items.map(item =\u003e ({ id: item.id, text: item.text, metadata: item.metadata || {} })),\n  null,\n  2\n);\n\nreturn [{\n  json: {\n    mode,\n    items,\n    systemPrompt,\n    userMessage,\n    model: mode === \u0027feedback\u0027 || mode === \u0027brief\u0027\n      ? (process.env.AI_MODEL_FAST || \u0027gpt-4o-mini\u0027)\n      : (process.env.AI_MODEL_SMART || \u0027gpt-4o\u0027),\n    itemCount: items.length,\n  }\n}];"
+                                     },
+                      "id":  "build-prompt",
+                      "name":  "Build Classification Prompt",
+                      "type":  "n8n-nodes-base.code",
+                      "typeVersion":  2,
+                      "position":  [
+                                       460,
+                                       100
+                                   ]
+                  },
+                  {
+                      "parameters":  {
+                                         "resource":  "chat",
+                                         "operation":  "complete",
+                                         "modelId":  {
+                                                         "__rl":  true,
+                                                         "mode":  "list",
+                                                         "value":  "={{ $json.model }}"
+                                                     },
+                                         "messages":  {
+                                                          "values":  [
+                                                                         {
+                                                                             "role":  "system",
+                                                                             "content":  "={{ $json.systemPrompt }}"
+                                                                         },
+                                                                         {
+                                                                             "role":  "user",
+                                                                             "content":  "={{ $json.userMessage }}"
+                                                                         }
+                                                                     ]
+                                                      },
+                                         "simplifyOutput":  false,
+                                         "options":  {
+                                                         "temperature":  0.3,
+                                                         "maxTokens":  4096,
+                                                         "responseFormat":  "json_object"
+                                                     }
+                                     },
+                      "id":  "call-llm",
+                      "name":  "Call AI: Classify Items",
+                      "type":  "@n8n/n8n-nodes-langchain.openAi",
+                      "typeVersion":  1.7,
+                      "position":  [
+                                       680,
+                                       100
+                                   ],
+                      "credentials":  {
+                                          "openAiApi":  {
+                                                            "id":  "OPENAI_CREDENTIAL_ID",
+                                                            "name":  "OpenAI API"
+                                                        }
+                                      },
+                      "retryOnFail":  true,
+                      "maxTries":  3,
+                      "waitBetweenTries":  2000
+                  },
+                  {
+                      "parameters":  {
+                                         "jsCode":  "// Parse the AI response and validate it\nconst aiResponse = $input.first().json;\nconst originalData = $(\u0027Build Classification Prompt\u0027).first().json;\n\nlet rawContent;\ntry {\n  // The response format depends on the model and n8n version\n  rawContent = aiResponse?.message?.content ||\n               aiResponse?.choices?.[0]?.message?.content ||\n               aiResponse?.content ||\n               JSON.stringify(aiResponse);\n} catch (e) {\n  throw new Error(\u0027LLM Classifier: Could not extract content from AI response\u0027);\n}\n\nlet classifications;\ntry {\n  const parsed = typeof rawContent === \u0027string\u0027 ? JSON.parse(rawContent) : rawContent;\n  // The AI may return an array directly or wrapped in a key\n  classifications = Array.isArray(parsed) ? parsed : (parsed.results || parsed.items || [parsed]);\n} catch (e) {\n  throw new Error(`LLM Classifier: Failed to parse AI JSON response: ${e.message}\\nRaw: ${String(rawContent).substring(0, 200)}`);\n}\n\n// Map results back to original items by ID\nconst resultMap = new Map(classifications.map(c =\u003e [c.id, c]));\n\nconst results = originalData.items.map(item =\u003e {\n  const classification = resultMap.get(item.id);\n  if (!classification) {\n    return {\n      id: item.id,\n      classification: null,\n      confidence: 0,\n      reasoning: \u0027No classification returned by AI\u0027,\n      error: true,\n    };\n  }\n  return {\n    id: item.id,\n    classification,\n    confidence: parseFloat(classification.confidence) || 0,\n    reasoning: classification.reasoning || \u0027\u0027,\n    error: false,\n  };\n});\n\nreturn [{\n  json: {\n    mode: originalData.mode,\n    results,\n    total: results.length,\n    classified: results.filter(r =\u003e !r.error).length,\n    failed: results.filter(r =\u003e r.error).length,\n  }\n}];"
+                                     },
+                      "id":  "parse-response",
+                      "name":  "Parse and Validate AI Response",
+                      "type":  "n8n-nodes-base.code",
+                      "typeVersion":  2,
+                      "position":  [
+                                       900,
+                                       100
+                                   ]
+                  },
+                  {
+                      "parameters":  {
+                                         "jsCode":  "// Error handler â€” log the error and return a safe fallback\nconst error = $input.first().json;\nconst errorMessage = error?.message || String(error) || \u0027Unknown error\u0027;\n\nconsole.error(`LLM Classifier error: ${errorMessage}`);\n\n// Return a safe empty result so calling workflows can handle the failure gracefully\nreturn [{\n  json: {\n    mode: \u0027unknown\u0027,\n    results: [],\n    total: 0,\n    classified: 0,\n    failed: 0,\n    error: true,\n    errorMessage,\n  }\n}];"
+                                     },
+                      "id":  "error-handler",
+                      "name":  "Handle Error: Return Safe Fallback",
+                      "type":  "n8n-nodes-base.code",
+                      "typeVersion":  2,
+                      "position":  [
+                                       900,
+                                       300
+                                   ]
+                  }
+              ],
+    "connections":  {
+                        "When Called by Another Workflow":  {
+                                                                "main":  [
+                                                                             [
+                                                                                 {
+                                                                                     "node":  "Build Classification Prompt",
+                                                                                     "type":  "main",
+                                                                                     "index":  0
+                                                                                 }
+                                                                             ]
+                                                                         ]
+                                                            },
+                        "Build Classification Prompt":  {
+                                                            "main":  [
+                                                                         [
+                                                                             {
+                                                                                 "node":  "Call AI: Classify Items",
+                                                                                 "type":  "main",
+                                                                                 "index":  0
+                                                                             }
+                                                                         ]
+                                                                     ]
+                                                        },
+                        "Call AI: Classify Items":  {
+                                                        "main":  [
+                                                                     [
+                                                                         {
+                                                                             "node":  "Parse and Validate AI Response",
+                                                                             "type":  "main",
+                                                                             "index":  0
+                                                                         }
+                                                                     ]
+                                                                 ],
+                                                        "error":  [
+                                                                      [
+                                                                          {
+                                                                              "node":  "Handle Error: Return Safe Fallback",
+                                                                              "type":  "main",
+                                                                              "index":  0
+                                                                          }
+                                                                      ]
+                                                                  ]
+                                                    }
+                    },
+    "settings":  {
+                     "executionOrder":  "v1",
+                     "saveManualExecutions":  true,
+                     "saveExecutionProgress":  true,
+                     "errorWorkflow":  ""
+                 },
+    "meta":  {
+                 "n8nVersion":  "2.30.0",
+                 "description":  "Shared subworkflow: classifies text items using an OpenAI-compatible API. Supports feedback, competitor, and brief modes. Called by main workflows.",
+                 "tags":  [
+                              "subworkflow",
+                              "ai",
+                              "classification"
+                          ]
+             }
 }

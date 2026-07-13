@@ -1,263 +1,375 @@
-{
-  "name": "Subworkflow: Notification Router",
-  "nodes": [
-    {
-      "parameters": {
-        "content": "## 📣 Notification Router\n\n**Purpose:** Routes a notification to one or more channels (Slack, email, Telegram) based on configuration.\n\n**Setup:**\n1. Create credentials for each channel you want to use:\n   - Slack: credential named `Slack API`\n   - Email: credential named `SMTP Email`\n   - Telegram: credential named `Telegram API`\n2. Set environment variables:\n   - `SLACK_CHANNEL_ALERTS` e.g. `#product-alerts`\n   - `NOTIFICATION_EMAIL_TO` e.g. `team@example.com`\n   - `TELEGRAM_CHAT_ID` e.g. `123456789`\n\n**Input:**\n```json\n{\n  \"channel\": \"slack | email | telegram | all\",\n  \"title\": \"string\",\n  \"body\": \"string (markdown OK)\",\n  \"urgency\": \"low | medium | high\",\n  \"metadata\": {}\n}\n```",
-        "height": 380,
-        "width": 480,
-        "color": 5
-      },
-      "id": "sticky-router-setup",
-      "name": "Setup Instructions",
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [0, -220]
-    },
-    {
-      "parameters": {},
-      "id": "trigger-router",
-      "name": "When Called by Another Workflow",
-      "type": "n8n-nodes-base.executeWorkflowTrigger",
-      "typeVersion": 1,
-      "position": [240, 100]
-    },
-    {
-      "parameters": {
-        "jsCode": "const input = $input.first().json;\n\nconst channel = (input.channel || 'email').toLowerCase();\nconst urgency = (input.urgency || 'low').toLowerCase();\n\n// Determine which channels to send to\nconst sendToSlack = channel === 'slack' || channel === 'all';\nconst sendToEmail = channel === 'email' || channel === 'all';\nconst sendToTelegram = channel === 'telegram' || channel === 'all';\n\n// Urgency emoji\nconst urgencyEmoji = { high: '🚨', medium: '⚠️', low: 'ℹ️' }[urgency] || 'ℹ️';\n\nreturn [{\n  json: {\n    ...input,\n    sendToSlack,\n    sendToEmail,\n    sendToTelegram,\n    urgencyEmoji,\n    slackChannel: process.env.SLACK_CHANNEL_ALERTS || '#product-alerts',\n    emailTo: process.env.NOTIFICATION_EMAIL_TO || 'team@example.com',\n    telegramChatId: process.env.TELEGRAM_CHAT_ID || 'YOUR_TELEGRAM_CHAT_ID',\n    formattedTitle: `${urgencyEmoji} ${input.title}`,\n  }\n}];"
-      },
-      "id": "prepare-notification",
-      "name": "Prepare Notification",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [460, 100]
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": false,
-            "leftValue": "",
-            "typeValidation": "strict"
-          },
-          "conditions": [
-            {
-              "id": "send-slack-condition",
-              "leftValue": "={{ $json.sendToSlack }}",
-              "rightValue": true,
-              "operator": {
-                "type": "boolean",
-                "operation": "equal"
-              }
-            }
-          ],
-          "combinator": "and"
-        }
-      },
-      "id": "check-slack",
-      "name": "Send to Slack?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.2,
-      "position": [680, 0]
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": false,
-            "leftValue": "",
-            "typeValidation": "strict"
-          },
-          "conditions": [
-            {
-              "id": "send-email-condition",
-              "leftValue": "={{ $json.sendToEmail }}",
-              "rightValue": true,
-              "operator": {
-                "type": "boolean",
-                "operation": "equal"
-              }
-            }
-          ],
-          "combinator": "and"
-        }
-      },
-      "id": "check-email",
-      "name": "Send to Email?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.2,
-      "position": [680, 200]
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": false,
-            "leftValue": "",
-            "typeValidation": "strict"
-          },
-          "conditions": [
-            {
-              "id": "send-telegram-condition",
-              "leftValue": "={{ $json.sendToTelegram }}",
-              "rightValue": true,
-              "operator": {
-                "type": "boolean",
-                "operation": "equal"
-              }
-            }
-          ],
-          "combinator": "and"
-        }
-      },
-      "id": "check-telegram",
-      "name": "Send to Telegram?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.2,
-      "position": [680, 400]
-    },
-    {
-      "parameters": {
-        "select": "channel",
-        "channelId": {
-          "__rl": true,
-          "mode": "expression",
-          "value": "={{ $json.slackChannel }}"
-        },
-        "text": "*{{ $json.formattedTitle }}*\n\n{{ $json.body }}",
-        "otherOptions": {
-          "mrkdwn": true
-        }
-      },
-      "id": "send-slack",
-      "name": "Send to Slack",
-      "type": "n8n-nodes-base.slack",
-      "typeVersion": 2.3,
-      "position": [900, -60],
-      "credentials": {
-        "slackApi": {
-          "id": "SLACK_CREDENTIAL_ID",
-          "name": "Slack API"
-        }
-      },
-      "retryOnFail": true,
-      "maxTries": 3,
-      "waitBetweenTries": 1000
-    },
-    {
-      "parameters": {
-        "sendTo": "={{ $json.emailTo }}",
-        "subject": "={{ $json.formattedTitle }}",
-        "message": "<html><body style=\"font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto; padding: 20px;\">\n<h2>{{ $json.formattedTitle }}</h2>\n<div style=\"white-space: pre-wrap; font-size: 15px; line-height: 1.6;\">{{ $json.body }}</div>\n<hr style=\"margin-top: 30px;\">\n<p style=\"color: #aaa; font-size: 12px;\">Sent by n8n Product & Founder Automation OS at {{ new Date().toISOString() }}</p>\n</body></html>",
-        "options": {}
-      },
-      "id": "send-email",
-      "name": "Send Email",
-      "type": "n8n-nodes-base.emailSend",
-      "typeVersion": 2.1,
-      "position": [900, 200],
-      "credentials": {
-        "smtp": {
-          "id": "SMTP_CREDENTIAL_ID",
-          "name": "SMTP Email"
-        }
-      },
-      "retryOnFail": true,
-      "maxTries": 3,
-      "waitBetweenTries": 1000
-    },
-    {
-      "parameters": {
-        "chatId": "={{ $json.telegramChatId }}",
-        "text": "*{{ $json.formattedTitle }}*\n\n{{ $json.body }}",
-        "additionalFields": {
-          "parse_mode": "Markdown"
-        }
-      },
-      "id": "send-telegram",
-      "name": "Send Telegram",
-      "type": "n8n-nodes-base.telegram",
-      "typeVersion": 1.2,
-      "position": [900, 440],
-      "credentials": {
-        "telegramApi": {
-          "id": "TELEGRAM_CREDENTIAL_ID",
-          "name": "Telegram API"
-        }
-      },
-      "retryOnFail": true,
-      "maxTries": 3,
-      "waitBetweenTries": 1000
-    },
-    {
-      "parameters": {
-        "jsCode": "// Collect results from all channels and return a summary\nconst input = $('Prepare Notification').first().json;\n\nreturn [{\n  json: {\n    sent: true,\n    channels: [\n      ...(input.sendToSlack ? ['slack'] : []),\n      ...(input.sendToEmail ? ['email'] : []),\n      ...(input.sendToTelegram ? ['telegram'] : []),\n    ],\n    title: input.title,\n    urgency: input.urgency,\n    sentAt: new Date().toISOString(),\n  }\n}];"
-      },
-      "id": "summarize-sent",
-      "name": "Return Sent Summary",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [1120, 200]
-    }
-  ],
-  "connections": {
-    "When Called by Another Workflow": {
-      "main": [
-        [{ "node": "Prepare Notification", "type": "main", "index": 0 }]
-      ]
-    },
-    "Prepare Notification": {
-      "main": [
-        [
-          { "node": "Send to Slack?", "type": "main", "index": 0 },
-          { "node": "Send to Email?", "type": "main", "index": 0 },
-          { "node": "Send to Telegram?", "type": "main", "index": 0 }
-        ]
-      ]
-    },
-    "Send to Slack?": {
-      "main": [
-        [{ "node": "Send to Slack", "type": "main", "index": 0 }],
-        [{ "node": "Return Sent Summary", "type": "main", "index": 0 }]
-      ]
-    },
-    "Send to Email?": {
-      "main": [
-        [{ "node": "Send Email", "type": "main", "index": 0 }],
-        [{ "node": "Return Sent Summary", "type": "main", "index": 0 }]
-      ]
-    },
-    "Send to Telegram?": {
-      "main": [
-        [{ "node": "Send Telegram", "type": "main", "index": 0 }],
-        [{ "node": "Return Sent Summary", "type": "main", "index": 0 }]
-      ]
-    },
-    "Send to Slack": {
-      "main": [
-        [{ "node": "Return Sent Summary", "type": "main", "index": 0 }]
-      ]
-    },
-    "Send Email": {
-      "main": [
-        [{ "node": "Return Sent Summary", "type": "main", "index": 0 }]
-      ]
-    },
-    "Send Telegram": {
-      "main": [
-        [{ "node": "Return Sent Summary", "type": "main", "index": 0 }]
-      ]
-    }
-  },
-  "settings": {
-    "executionOrder": "v1",
-    "saveManualExecutions": true,
-    "saveExecutionProgress": true,
-    "errorWorkflow": ""
-  },
-  "meta": {
-    "n8nVersion": "2.30.0",
-    "description": "Shared subworkflow: routes notifications to Slack, email, or Telegram based on the channel parameter. Handles single and multi-channel delivery.",
-    "tags": ["subworkflow", "notifications", "slack", "email", "telegram"]
-  }
+﻿{
+    "name":  "03 - Notification Router (Shared Subworkflow)",
+    "nodes":  [
+                  {
+                      "parameters":  {
+                                         "content":  "## ðŸ“£ Notification Router\n\n**Purpose:** Routes a notification to one or more channels (Slack, email, Telegram) based on configuration.\n\n**Setup:**\n1. Create credentials for each channel you want to use:\n   - Slack: credential named `Slack API`\n   - Email: credential named `SMTP Email`\n   - Telegram: credential named `Telegram API`\n2. Set environment variables:\n   - `SLACK_CHANNEL_ALERTS` e.g. `#product-alerts`\n   - `NOTIFICATION_EMAIL_TO` e.g. `team@example.com`\n   - `TELEGRAM_CHAT_ID` e.g. `123456789`\n\n**Input:**\n```json\n{\n  \"channel\": \"slack | email | telegram | all\",\n  \"title\": \"string\",\n  \"body\": \"string (markdown OK)\",\n  \"urgency\": \"low | medium | high\",\n  \"metadata\": {}\n}\n```",
+                                         "height":  380,
+                                         "width":  480,
+                                         "color":  5
+                                     },
+                      "id":  "sticky-router-setup",
+                      "name":  "Setup Instructions",
+                      "type":  "n8n-nodes-base.stickyNote",
+                      "typeVersion":  1,
+                      "position":  [
+                                       0,
+                                       -220
+                                   ]
+                  },
+                  {
+                      "parameters":  {
+
+                                     },
+                      "id":  "trigger-router",
+                      "name":  "When Called by Another Workflow",
+                      "type":  "n8n-nodes-base.executeWorkflowTrigger",
+                      "typeVersion":  1,
+                      "position":  [
+                                       240,
+                                       100
+                                   ]
+                  },
+                  {
+                      "parameters":  {
+                                         "jsCode":  "const input = $input.first().json;\n\nconst channel = (input.channel || \u0027email\u0027).toLowerCase();\nconst urgency = (input.urgency || \u0027low\u0027).toLowerCase();\n\n// Determine which channels to send to\nconst sendToSlack = channel === \u0027slack\u0027 || channel === \u0027all\u0027;\nconst sendToEmail = channel === \u0027email\u0027 || channel === \u0027all\u0027;\nconst sendToTelegram = channel === \u0027telegram\u0027 || channel === \u0027all\u0027;\n\n// Urgency emoji\nconst urgencyEmoji = { high: \u0027ðŸš¨\u0027, medium: \u0027âš ï¸\u0027, low: \u0027â„¹ï¸\u0027 }[urgency] || \u0027â„¹ï¸\u0027;\n\nreturn [{\n  json: {\n    ...input,\n    sendToSlack,\n    sendToEmail,\n    sendToTelegram,\n    urgencyEmoji,\n    slackChannel: process.env.SLACK_CHANNEL_ALERTS || \u0027#product-alerts\u0027,\n    emailTo: process.env.NOTIFICATION_EMAIL_TO || \u0027team@example.com\u0027,\n    telegramChatId: process.env.TELEGRAM_CHAT_ID || \u0027YOUR_TELEGRAM_CHAT_ID\u0027,\n    formattedTitle: `${urgencyEmoji} ${input.title}`,\n  }\n}];"
+                                     },
+                      "id":  "prepare-notification",
+                      "name":  "Prepare Notification",
+                      "type":  "n8n-nodes-base.code",
+                      "typeVersion":  2,
+                      "position":  [
+                                       460,
+                                       100
+                                   ]
+                  },
+                  {
+                      "parameters":  {
+                                         "conditions":  {
+                                                            "options":  {
+                                                                            "caseSensitive":  false,
+                                                                            "leftValue":  "",
+                                                                            "typeValidation":  "strict"
+                                                                        },
+                                                            "conditions":  [
+                                                                               {
+                                                                                   "id":  "send-slack-condition",
+                                                                                   "leftValue":  "={{ $json.sendToSlack }}",
+                                                                                   "rightValue":  true,
+                                                                                   "operator":  {
+                                                                                                    "type":  "boolean",
+                                                                                                    "operation":  "equal"
+                                                                                                }
+                                                                               }
+                                                                           ],
+                                                            "combinator":  "and"
+                                                        }
+                                     },
+                      "id":  "check-slack",
+                      "name":  "Send to Slack?",
+                      "type":  "n8n-nodes-base.if",
+                      "typeVersion":  2.2,
+                      "position":  [
+                                       680,
+                                       0
+                                   ]
+                  },
+                  {
+                      "parameters":  {
+                                         "conditions":  {
+                                                            "options":  {
+                                                                            "caseSensitive":  false,
+                                                                            "leftValue":  "",
+                                                                            "typeValidation":  "strict"
+                                                                        },
+                                                            "conditions":  [
+                                                                               {
+                                                                                   "id":  "send-email-condition",
+                                                                                   "leftValue":  "={{ $json.sendToEmail }}",
+                                                                                   "rightValue":  true,
+                                                                                   "operator":  {
+                                                                                                    "type":  "boolean",
+                                                                                                    "operation":  "equal"
+                                                                                                }
+                                                                               }
+                                                                           ],
+                                                            "combinator":  "and"
+                                                        }
+                                     },
+                      "id":  "check-email",
+                      "name":  "Send to Email?",
+                      "type":  "n8n-nodes-base.if",
+                      "typeVersion":  2.2,
+                      "position":  [
+                                       680,
+                                       200
+                                   ]
+                  },
+                  {
+                      "parameters":  {
+                                         "conditions":  {
+                                                            "options":  {
+                                                                            "caseSensitive":  false,
+                                                                            "leftValue":  "",
+                                                                            "typeValidation":  "strict"
+                                                                        },
+                                                            "conditions":  [
+                                                                               {
+                                                                                   "id":  "send-telegram-condition",
+                                                                                   "leftValue":  "={{ $json.sendToTelegram }}",
+                                                                                   "rightValue":  true,
+                                                                                   "operator":  {
+                                                                                                    "type":  "boolean",
+                                                                                                    "operation":  "equal"
+                                                                                                }
+                                                                               }
+                                                                           ],
+                                                            "combinator":  "and"
+                                                        }
+                                     },
+                      "id":  "check-telegram",
+                      "name":  "Send to Telegram?",
+                      "type":  "n8n-nodes-base.if",
+                      "typeVersion":  2.2,
+                      "position":  [
+                                       680,
+                                       400
+                                   ]
+                  },
+                  {
+                      "parameters":  {
+                                         "select":  "channel",
+                                         "channelId":  {
+                                                           "__rl":  true,
+                                                           "mode":  "expression",
+                                                           "value":  "={{ $json.slackChannel }}"
+                                                       },
+                                         "text":  "*{{ $json.formattedTitle }}*\n\n{{ $json.body }}",
+                                         "otherOptions":  {
+                                                              "mrkdwn":  true
+                                                          }
+                                     },
+                      "id":  "send-slack",
+                      "name":  "Send to Slack",
+                      "type":  "n8n-nodes-base.slack",
+                      "typeVersion":  2.3,
+                      "position":  [
+                                       900,
+                                       -60
+                                   ],
+                      "credentials":  {
+                                          "slackApi":  {
+                                                           "id":  "SLACK_CREDENTIAL_ID",
+                                                           "name":  "Slack API"
+                                                       }
+                                      },
+                      "retryOnFail":  true,
+                      "maxTries":  3,
+                      "waitBetweenTries":  1000
+                  },
+                  {
+                      "parameters":  {
+                                         "sendTo":  "={{ $json.emailTo }}",
+                                         "subject":  "={{ $json.formattedTitle }}",
+                                         "message":  "\u003chtml\u003e\u003cbody style=\"font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto; padding: 20px;\"\u003e\n\u003ch2\u003e{{ $json.formattedTitle }}\u003c/h2\u003e\n\u003cdiv style=\"white-space: pre-wrap; font-size: 15px; line-height: 1.6;\"\u003e{{ $json.body }}\u003c/div\u003e\n\u003chr style=\"margin-top: 30px;\"\u003e\n\u003cp style=\"color: #aaa; font-size: 12px;\"\u003eSent by n8n Product \u0026 Founder Automation OS at {{ new Date().toISOString() }}\u003c/p\u003e\n\u003c/body\u003e\u003c/html\u003e",
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "id":  "send-email",
+                      "name":  "Send Email",
+                      "type":  "n8n-nodes-base.emailSend",
+                      "typeVersion":  2.1,
+                      "position":  [
+                                       900,
+                                       200
+                                   ],
+                      "credentials":  {
+                                          "smtp":  {
+                                                       "id":  "SMTP_CREDENTIAL_ID",
+                                                       "name":  "SMTP Email"
+                                                   }
+                                      },
+                      "retryOnFail":  true,
+                      "maxTries":  3,
+                      "waitBetweenTries":  1000
+                  },
+                  {
+                      "parameters":  {
+                                         "chatId":  "={{ $json.telegramChatId }}",
+                                         "text":  "*{{ $json.formattedTitle }}*\n\n{{ $json.body }}",
+                                         "additionalFields":  {
+                                                                  "parse_mode":  "Markdown"
+                                                              }
+                                     },
+                      "id":  "send-telegram",
+                      "name":  "Send Telegram",
+                      "type":  "n8n-nodes-base.telegram",
+                      "typeVersion":  1.2,
+                      "position":  [
+                                       900,
+                                       440
+                                   ],
+                      "credentials":  {
+                                          "telegramApi":  {
+                                                              "id":  "TELEGRAM_CREDENTIAL_ID",
+                                                              "name":  "Telegram API"
+                                                          }
+                                      },
+                      "retryOnFail":  true,
+                      "maxTries":  3,
+                      "waitBetweenTries":  1000
+                  },
+                  {
+                      "parameters":  {
+                                         "jsCode":  "// Collect results from all channels and return a summary\nconst input = $(\u0027Prepare Notification\u0027).first().json;\n\nreturn [{\n  json: {\n    sent: true,\n    channels: [\n      ...(input.sendToSlack ? [\u0027slack\u0027] : []),\n      ...(input.sendToEmail ? [\u0027email\u0027] : []),\n      ...(input.sendToTelegram ? [\u0027telegram\u0027] : []),\n    ],\n    title: input.title,\n    urgency: input.urgency,\n    sentAt: new Date().toISOString(),\n  }\n}];"
+                                     },
+                      "id":  "summarize-sent",
+                      "name":  "Return Sent Summary",
+                      "type":  "n8n-nodes-base.code",
+                      "typeVersion":  2,
+                      "position":  [
+                                       1120,
+                                       200
+                                   ]
+                  }
+              ],
+    "connections":  {
+                        "When Called by Another Workflow":  {
+                                                                "main":  [
+                                                                             [
+                                                                                 {
+                                                                                     "node":  "Prepare Notification",
+                                                                                     "type":  "main",
+                                                                                     "index":  0
+                                                                                 }
+                                                                             ]
+                                                                         ]
+                                                            },
+                        "Prepare Notification":  {
+                                                     "main":  [
+                                                                  [
+                                                                      {
+                                                                          "node":  "Send to Slack?",
+                                                                          "type":  "main",
+                                                                          "index":  0
+                                                                      },
+                                                                      {
+                                                                          "node":  "Send to Email?",
+                                                                          "type":  "main",
+                                                                          "index":  0
+                                                                      },
+                                                                      {
+                                                                          "node":  "Send to Telegram?",
+                                                                          "type":  "main",
+                                                                          "index":  0
+                                                                      }
+                                                                  ]
+                                                              ]
+                                                 },
+                        "Send to Slack?":  {
+                                               "main":  [
+                                                            [
+                                                                {
+                                                                    "node":  "Send to Slack",
+                                                                    "type":  "main",
+                                                                    "index":  0
+                                                                }
+                                                            ],
+                                                            [
+                                                                {
+                                                                    "node":  "Return Sent Summary",
+                                                                    "type":  "main",
+                                                                    "index":  0
+                                                                }
+                                                            ]
+                                                        ]
+                                           },
+                        "Send to Email?":  {
+                                               "main":  [
+                                                            [
+                                                                {
+                                                                    "node":  "Send Email",
+                                                                    "type":  "main",
+                                                                    "index":  0
+                                                                }
+                                                            ],
+                                                            [
+                                                                {
+                                                                    "node":  "Return Sent Summary",
+                                                                    "type":  "main",
+                                                                    "index":  0
+                                                                }
+                                                            ]
+                                                        ]
+                                           },
+                        "Send to Telegram?":  {
+                                                  "main":  [
+                                                               [
+                                                                   {
+                                                                       "node":  "Send Telegram",
+                                                                       "type":  "main",
+                                                                       "index":  0
+                                                                   }
+                                                               ],
+                                                               [
+                                                                   {
+                                                                       "node":  "Return Sent Summary",
+                                                                       "type":  "main",
+                                                                       "index":  0
+                                                                   }
+                                                               ]
+                                                           ]
+                                              },
+                        "Send to Slack":  {
+                                              "main":  [
+                                                           [
+                                                               {
+                                                                   "node":  "Return Sent Summary",
+                                                                   "type":  "main",
+                                                                   "index":  0
+                                                               }
+                                                           ]
+                                                       ]
+                                          },
+                        "Send Email":  {
+                                           "main":  [
+                                                        [
+                                                            {
+                                                                "node":  "Return Sent Summary",
+                                                                "type":  "main",
+                                                                "index":  0
+                                                            }
+                                                        ]
+                                                    ]
+                                       },
+                        "Send Telegram":  {
+                                              "main":  [
+                                                           [
+                                                               {
+                                                                   "node":  "Return Sent Summary",
+                                                                   "type":  "main",
+                                                                   "index":  0
+                                                               }
+                                                           ]
+                                                       ]
+                                          }
+                    },
+    "settings":  {
+                     "executionOrder":  "v1",
+                     "saveManualExecutions":  true,
+                     "saveExecutionProgress":  true,
+                     "errorWorkflow":  ""
+                 },
+    "meta":  {
+                 "n8nVersion":  "2.30.0",
+                 "description":  "Shared subworkflow: routes notifications to Slack, email, or Telegram based on the channel parameter. Handles single and multi-channel delivery.",
+                 "tags":  [
+                              "subworkflow",
+                              "notifications",
+                              "slack",
+                              "email",
+                              "telegram"
+                          ]
+             }
 }

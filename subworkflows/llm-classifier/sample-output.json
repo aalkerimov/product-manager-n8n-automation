@@ -1,0 +1,7 @@
+{
+  "workflow_id": "01",
+  "workflow_name": "LLM Classifier",
+  "status": "success",
+  "message": "Subworkflow completed successfully",
+  "processed_at": "2025-01-13T10:01:00.000Z"
+}

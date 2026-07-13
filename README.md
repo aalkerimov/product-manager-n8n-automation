@@ -39,7 +39,21 @@ Every workflow solves a real, repeated problem — the kind that costs founders 
 
 ---
 
-## 50 Workflows
+## Shared Subworkflows
+
+Three reusable building blocks are called by the main workflows — **import them first**.
+
+| Subworkflow | Purpose | Called by |
+|---|---|---|
+| `subworkflows/llm-classifier` | AI text classification — feedback, competitor changes, brief items | Workflows 01, 03, 04-40 |
+| `subworkflows/human-approval` | Pause execution → email approve/reject button → resume on decision or timeout | Workflows 13, 40, 43, 50 |
+| `subworkflows/notification-router` | Route an alert to Slack, Email, Telegram, or all three | Most scheduled workflows |
+
+> **Setup order:** Import the 3 subworkflows first, note their n8n workflow IDs, then paste those IDs into each main workflow that calls them.
+
+---
+
+## 53 Workflows
 
 ### 01 — Discovery & Research
 
@@ -229,8 +243,30 @@ graph TD
 ---
 
 ## Per-workflow file structure
+## Repository Structure
 
-Every workflow ships with 7 files so you can import, test, and customise with confidence:
+```
+product-manager-n8n-automation/
+├── subworkflows/                       # Import these FIRST — called by main workflows
+│   ├── llm-classifier/             # Shared AI classifier (OpenAI)
+│   ├── human-approval/             # Human approval gate via email
+│   └── notification-router/        # Route to Slack / Email / Telegram
+├── workflows/
+│   ├── 01-discovery-research/      # Workflows 04-10
+│   ├── 02-planning-execution/      # Workflows 11-20
+│   ├── 03-growth-metrics/          # Workflows 21-30
+│   ├── 04-customer-feedback/       # Workflows 31-40
+│   └── 05-founder-intelligence/    # Workflows 41-50
+├── docs/
+├── examples/
+├── scripts/
+├── .env.example
+└── docker-compose.yml
+```
+
+### Per-workflow file structure
+
+Every workflow and subworkflow ships with 7 files:
 
 ```
 <id>-<workflow-name>/

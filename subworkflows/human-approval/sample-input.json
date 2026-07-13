@@ -1,0 +1,6 @@
+{
+  "workflow_id": "02",
+  "workflow_name": "Human Approval Gate",
+  "note": "See README for input schema",
+  "triggered_at": "2025-01-13T10:00:00.000Z"
+}

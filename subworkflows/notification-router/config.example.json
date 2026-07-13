@@ -1,0 +1,6 @@
+{
+  "NOTIFICATION_EMAIL_TO": "founder@yourcompany.com",
+  "EMAIL_FROM": "noreply@yourcompany.com",
+  "SLACK_CHANNEL_ALERTS": "#product-alerts",
+  "TELEGRAM_CHAT_ID": "YOUR_TELEGRAM_CHAT_ID"
+}
