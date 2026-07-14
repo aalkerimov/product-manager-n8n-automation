@@ -63,8 +63,8 @@
     },
     {
       "parameters": {
-        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
-        "toEmail": "={{ $env.CALENDAR_AUDIT_EMAIL_TO || 'pm@acme-analytics.com' }}",
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@example.com' }}",
+        "toEmail": "={{ $env.CALENDAR_AUDIT_EMAIL_TO || 'pm@example.com' }}",
         "subject": "=Calendar Audit: {{ $json.metrics.focus_pct }}% focus time{{ $json.metrics.below_threshold ? ' ⚠️ below threshold' : ' ✅' }} — {{ $json.week }}",
         "emailType": "html",
         "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $json.report_text }}</pre>",

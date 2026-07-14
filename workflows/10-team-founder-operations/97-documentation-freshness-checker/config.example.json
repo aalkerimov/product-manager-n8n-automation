@@ -7,7 +7,7 @@
   "configuration": {
     "DOCS_EMAIL_TO": { "default": "", "description": "Doc owners / team recipients", "required": "Required" },
     "DOCS_APPROVER_EMAIL": { "default": "", "description": "Manager approver. Defaults to DOCS_EMAIL_TO.", "required": "Optional" },
-    "NOTIFICATION_EMAIL_FROM": { "default": "automation@acme-analytics.com", "description": "Sender address", "required": "Optional" }
+    "NOTIFICATION_EMAIL_FROM": { "default": "automation@example.com", "description": "Sender address", "required": "Optional" }
   },
   "n8n_credentials_required": [
     { "name": "YOUR_SMTP_CREDENTIAL", "type": "smtp", "required": true, "purpose": "Approval gate and owner notifications" }

@@ -113,8 +113,8 @@
     },
     {
       "parameters": {
-        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
-        "toEmail": "={{ $env.ONE_ON_ONE_EMAIL_TO || 'pm@acme-analytics.com' }}",
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@example.com' }}",
+        "toEmail": "={{ $env.ONE_ON_ONE_EMAIL_TO || 'pm@example.com' }}",
         "subject": "=1:1 Prep: {{ $json.meta.team_member }} — {{ $json.meta.generated_at | slice(0,10) }}",
         "emailType": "html",
         "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $json.report_text }}</pre>",

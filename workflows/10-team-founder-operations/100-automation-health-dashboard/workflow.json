@@ -63,8 +63,8 @@
     },
     {
       "parameters": {
-        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
-        "toEmail": "={{ $env.AUTOMATION_HEALTH_EMAIL_TO || 'founder@acme-analytics.com' }}",
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@example.com' }}",
+        "toEmail": "={{ $env.AUTOMATION_HEALTH_EMAIL_TO || 'founder@example.com' }}",
         "subject": "=Automation Health: {{ $json.metrics.pass_rate }}% pass rate | {{ $json.metrics.total_hours_saved }}h saved — {{ $json.week }}",
         "emailType": "html",
         "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $json.report_text }}</pre>",

@@ -7,7 +7,7 @@
   "configuration": {
     "ONBOARDING_EMAIL_TO": { "default": "", "description": "HR recipients", "required": "Required" },
     "ONBOARDING_APPROVER_EMAIL": { "default": "", "description": "Manager approver. Defaults to ONBOARDING_EMAIL_TO.", "required": "Optional" },
-    "NOTIFICATION_EMAIL_FROM": { "default": "automation@acme-analytics.com", "description": "Sender address", "required": "Optional" }
+    "NOTIFICATION_EMAIL_FROM": { "default": "automation@example.com", "description": "Sender address", "required": "Optional" }
   },
   "n8n_credentials_required": [
     { "name": "YOUR_SMTP_CREDENTIAL", "type": "smtp", "required": true, "purpose": "Approval gate and HR report" }

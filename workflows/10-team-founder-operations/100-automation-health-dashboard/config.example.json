@@ -6,7 +6,7 @@
   "status": "beta",
   "configuration": {
     "AUTOMATION_HEALTH_EMAIL_TO": { "default": "", "description": "Your email (founder/ops lead)", "required": "Required" },
-    "NOTIFICATION_EMAIL_FROM": { "default": "automation@acme-analytics.com", "description": "Sender address", "required": "Optional" }
+    "NOTIFICATION_EMAIL_FROM": { "default": "automation@example.com", "description": "Sender address", "required": "Optional" }
   },
   "n8n_credentials_required": [
     { "name": "YOUR_SMTP_CREDENTIAL", "type": "smtp", "required": true, "purpose": "Health dashboard delivery" }

@@ -121,8 +121,8 @@
     },
     {
       "parameters": {
-        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
-        "toEmail": "={{ $env.WEEKLY_REVIEW_EMAIL_TO || 'founder@acme-analytics.com' }}",
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@example.com' }}",
+        "toEmail": "={{ $env.WEEKLY_REVIEW_EMAIL_TO || 'founder@example.com' }}",
         "subject": "=Weekly Review: {{ $json.reflection.week_headline }} — {{ $json.meta.week }}",
         "emailType": "html",
         "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $json.report_text }}</pre>",

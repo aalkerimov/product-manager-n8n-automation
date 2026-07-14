@@ -121,8 +121,8 @@
     },
     {
       "parameters": {
-        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
-        "toEmail": "={{ $env.NETWORK_EMAIL_TO || 'pm@acme-analytics.com' }}",
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@example.com' }}",
+        "toEmail": "={{ $env.NETWORK_EMAIL_TO || 'pm@example.com' }}",
         "subject": "=APPROVAL REQUIRED: Network Nurturer — {{ $json.meta.outreach_count }} outreach draft{{ $json.meta.outreach_count !== 1 ? 's' : '' }} ready for review",
         "emailType": "html",
         "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $json.report_text }}</pre><p><strong>Review and personalise each draft before sending manually.</strong><br/><a href=\"{{ $execution.resumeUrl }}?decision=approved\">Mark as reviewed</a> | <a href=\"{{ $execution.resumeUrl }}?decision=rejected\">Discard</a></p>",
