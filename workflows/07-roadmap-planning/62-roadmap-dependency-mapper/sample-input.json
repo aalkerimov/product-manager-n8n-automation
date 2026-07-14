@@ -1,0 +1,12 @@
+[
+  { "id": "I001", "title": "Data model v2 refactor", "team": "backend", "estimated_weeks": 6, "status": "in-progress", "depends_on": [], "blocks": ["I002", "I003", "I005"] },
+  { "id": "I002", "title": "API v2 endpoints", "team": "backend", "estimated_weeks": 4, "status": "planned", "depends_on": ["I001"], "blocks": ["I004", "I006"] },
+  { "id": "I003", "title": "Real-time sync engine", "team": "backend", "estimated_weeks": 5, "status": "planned", "depends_on": ["I001"], "blocks": ["I007"] },
+  { "id": "I004", "title": "Mobile app (iOS)", "team": "mobile", "estimated_weeks": 8, "status": "planned", "depends_on": ["I002"], "blocks": ["I008"] },
+  { "id": "I005", "title": "Reporting data pipeline", "team": "data", "estimated_weeks": 3, "status": "planned", "depends_on": ["I001"], "blocks": ["I009"] },
+  { "id": "I006", "title": "SSO integration", "team": "backend", "estimated_weeks": 3, "status": "planned", "depends_on": ["I002"], "blocks": [] },
+  { "id": "I007", "title": "Offline mode support", "team": "mobile", "estimated_weeks": 4, "status": "planned", "depends_on": ["I003"], "blocks": [] },
+  { "id": "I008", "title": "Mobile app (Android)", "team": "mobile", "estimated_weeks": 6, "status": "planned", "depends_on": ["I004"], "blocks": [] },
+  { "id": "I009", "title": "Executive dashboard", "team": "frontend", "estimated_weeks": 4, "status": "planned", "depends_on": ["I005"], "blocks": [] },
+  { "id": "I010", "title": "Self-serve onboarding flow", "team": "frontend", "estimated_weeks": 3, "status": "planned", "depends_on": [], "blocks": [] }
+]

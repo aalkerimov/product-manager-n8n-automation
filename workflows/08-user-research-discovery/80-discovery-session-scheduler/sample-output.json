@@ -1,0 +1,11 @@
+{
+  "_comment": "Deterministic output — schedule is exact given the input.",
+  "sessions": [
+    { "participant_id": "A001", "participant_name": "Participant A", "participant_email": "a@example.com", "participant_timezone": "UTC+2", "suggested_day": "Monday", "researcher_window_utc": "10:00–16:00 UTC", "participant_local_time": "12:00–18:00 UTC+2", "session_duration_minutes": 45, "status": "to_confirm" },
+    { "participant_id": "A003", "participant_name": "Participant C", "participant_email": "c@example.com", "participant_timezone": "UTC+0", "suggested_day": "Monday", "researcher_window_utc": "10:00–16:00 UTC", "participant_local_time": "10:00–16:00 UTC+0", "session_duration_minutes": 45, "status": "to_confirm" },
+    { "participant_id": "A005", "participant_name": "Participant E", "participant_email": "e@example.com", "participant_timezone": "UTC-8", "suggested_day": "Tuesday", "researcher_window_utc": "10:00–16:00 UTC", "participant_local_time": "2:00–8:00 UTC-8", "session_duration_minutes": 45, "status": "to_confirm" }
+  ],
+  "unscheduled": [],
+  "meta": { "scheduled": 3, "unscheduled": 0, "total": 3, "generated_at": "2026-07-14T09:00:00.000Z" },
+  "note": "A005 (UTC-8) window falls outside reasonable hours (2am-8am) — researcher should manually offer alternative: 17:00-18:00 UTC = 09:00-10:00 participant local. The simple timezone algorithm flags this as a limitation."
+}

@@ -1,0 +1,212 @@
+{
+  "name": "Survey Response Analyser",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Survey Response Analyser\n\n**Setup:**\n1. Create YOUR_OPENAI_CREDENTIAL and YOUR_SMTP_CREDENTIAL\n2. Set SURVEY_EMAIL_TO\n3. Feed survey responses via webhook or use embedded sample\n4. LLM identifies themes, sentiment, and top insights from open-text responses\n5. Approval gate before insights are shared",
+        "height": 260,
+        "width": 420,
+        "color": 5
+      },
+      "id": "sticky-setup",
+      "name": "Setup Instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, -260]
+    },
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 200]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "analyse-survey",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook: Survey Export",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 380],
+      "webhookId": "survey-analyse-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "const responses = [\n  { id: 'R001', nps_score: 9, open_text: 'Love the speed and clean UI. The only thing I miss is a Gantt view for longer projects.' },\n  { id: 'R002', nps_score: 3, open_text: 'The onboarding is confusing. I spent two days trying to understand how to set up projects correctly and gave up twice.' },\n  { id: 'R003', nps_score: 8, open_text: 'Really good tool for solo work. Gets harder when your team has 10+ people — too many notifications and no way to silence specific projects.' },\n  { id: 'R004', nps_score: 7, open_text: 'Works well for most things. I wish the mobile app was better — it feels like an afterthought compared to the web version.' },\n  { id: 'R005', nps_score: 10, open_text: 'Best project tool I have used in 10 years. The recurring tasks feature saved us probably 2 hours per week.' },\n  { id: 'R006', nps_score: 4, open_text: 'We signed up as a team of 15 and about half the people still use a spreadsheet. The learning curve is too steep for non-technical folks.' },\n  { id: 'R007', nps_score: 8, open_text: 'Love it but please add Microsoft Teams integration. Our company is all-in on Teams and Slack is not an option.' },\n  { id: 'R008', nps_score: 6, open_text: 'Good features but performance is an issue — the dashboard takes about 4 seconds to load when I have many projects.' },\n  { id: 'R009', nps_score: 9, open_text: 'Switched from Asana and have not looked back. The recurring tasks alone paid for the subscription.' },\n  { id: 'R010', nps_score: 5, open_text: 'I like the concept but the CSV export does not include all fields. We have to manually copy some things over to our reports.' },\n  { id: 'R011', nps_score: 7, open_text: 'Solid product. Would love bulk editing of tasks — right now you have to update one by one which is painful for large projects.' },\n  { id: 'R012', nps_score: 2, open_text: 'The search function is terrible. I cannot find tasks from 3 months ago without scrolling through everything.' },\n  { id: 'R013', nps_score: 9, open_text: 'Excellent support team. Had an issue and it was resolved within an hour. The product itself is intuitive once you get it.' },\n  { id: 'R014', nps_score: 6, open_text: 'Good tool but the pricing is too high for small teams. Would love a cheaper tier for 2-5 person startups.' },\n  { id: 'R015', nps_score: 8, open_text: 'The task dependencies feature is underrated. Once we set those up, our team stopped missing handoffs.' }\n];\nreturn [{ json: { responses, survey_title: 'Product NPS Survey — Q2 2026', question: 'What is the main thing you would like us to improve or add?' } }];"
+      },
+      "id": "load-sample",
+      "name": "Load Sample Responses",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { responses, survey_title, question } = $input.first().json;\n// Compute basic NPS stats without LLM\nconst scores = responses.map(r => r.nps_score).filter(s => typeof s === 'number');\nconst promoters = scores.filter(s => s >= 9).length;\nconst passives = scores.filter(s => s >= 7 && s <= 8).length;\nconst detractors = scores.filter(s => s <= 6).length;\nconst total = scores.length;\nconst nps = total > 0 ? Math.round(((promoters - detractors) / total) * 100) : 0;\n// Prepare LLM prompt\nconst responseText = responses.map(r => `  [${r.id}|NPS:${r.nps_score}] ${r.open_text}`).join('\\n');\nconst system = `You are a UX researcher analysing open-text survey responses. You identify recurring themes, extract actionable insights, and flag critical issues. You quote directly from responses when possible. Return ONLY valid JSON.`;\nconst user = `Analyse these ${total} survey responses for: \"${survey_title}\"\nQuestion: \"${question}\"\n\nNPS stats: Promoters ${promoters} | Passives ${passives} | Detractors ${detractors} | NPS: ${nps}\n\nResponses:\n${responseText}\n\nReturn JSON:\n{\n  \"themes\": [\n    { \"theme\": \"string\", \"sentiment\": \"positive|negative|mixed\", \"frequency\": 4, \"representative_quotes\": [\"string\"], \"response_ids\": [\"R001\"], \"actionable\": true }\n  ],\n  \"top_3_insights\": [\"string — specific, actionable insight with evidence\"],\n  \"critical_issues\": [\"string — things causing detractors that need immediate attention\"],\n  \"delight_signals\": [\"string — things promoters love that should be protected\"],\n  \"feature_requests\": [{ \"request\": \"string\", \"frequency\": 2, \"response_ids\": [\"string\"] }],\n  \"recommended_actions\": [{ \"action\": \"string\", \"priority\": \"high|medium|low\", \"rationale\": \"string\" }]\n}`;\nreturn [{ json: { responses, survey_title, question, nps_stats: { nps, promoters, passives, detractors, total }, system_prompt: system, user_prompt: user } }];"
+      },
+      "id": "compute-stats",
+      "name": "Compute NPS & Prepare Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [740, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.OPENAI_BASE_URL || 'https://api.openai.com' }}/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParameters": {
+          "parameters": [
+            { "name": "model", "value": "={{ $env.AI_MODEL || 'gpt-4o-mini' }}" },
+            { "name": "messages", "value": "=[{\"role\":\"system\",\"content\":\"{{ $json.system_prompt }}\"},{\"role\":\"user\",\"content\":\"{{ $json.user_prompt }}\"}]" },
+            { "name": "temperature", "value": "=0.2" },
+            { "name": "response_format", "value": "={\"type\":\"json_object\"}" }
+          ]
+        },
+        "options": { "timeout": 60000 }
+      },
+      "id": "llm-call",
+      "name": "LLM: Analyse Responses",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [960, 200],
+      "credentials": { "httpHeaderAuth": { "name": "YOUR_OPENAI_CREDENTIAL" } }
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst upstream = $('Compute NPS & Prepare Prompt').first().json;\nlet parsed;\ntry {\n  const c = response.choices?.[0]?.message?.content;\n  if (!c) throw new Error('No content');\n  parsed = JSON.parse(c);\n} catch(e) { return [{ json: { _error: true, reason: e.message } }]; }\nif (!parsed.themes || !Array.isArray(parsed.themes)) return [{ json: { _error: true, reason: 'Missing themes' } }];\nreturn [{ json: { _error: false, analysis: parsed, nps_stats: upstream.nps_stats, meta: { survey_title: upstream.survey_title, total: upstream.nps_stats.total, generated_at: new Date().toISOString() } } }];"
+      },
+      "id": "validate-llm",
+      "name": "Validate LLM Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1180, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "ce", "leftValue": "={{ $json._error }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "error-check",
+      "name": "LLM Error?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1400, 200]
+    },
+    {
+      "parameters": { "assignments": { "assignments": [{ "id": "e1", "name": "status", "value": "error", "type": "string" }] }, "options": {} },
+      "id": "error-handler",
+      "name": "LLM Error Handler",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1600, 100]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { analysis: a, nps_stats: n, meta: m } = $input.first().json;\nconst themeLines = (a.themes||[]).map(t =>\n  `  [${t.sentiment.toUpperCase()}] ${t.theme} (${t.frequency} mentions)${t.actionable?' [ACTIONABLE]':''}\\n  Quotes: ${(t.representative_quotes||[]).map(q=>JSON.stringify(q)).join(', ')}`\n).join('\\n');\nconst report = [\n  `SURVEY ANALYSIS: ${m.survey_title}`,\n  `Generated: ${m.generated_at} | Responses: ${m.total}`,\n  `NPS: ${n.nps} | Promoters: ${n.promoters} | Passives: ${n.passives} | Detractors: ${n.detractors}`,\n  ``,\n  `TOP 3 INSIGHTS:`,\n  (a.top_3_insights||[]).map((i,idx)=>`  ${idx+1}. ${i}`).join('\\n'),\n  ``,\n  `CRITICAL ISSUES (detractor drivers):`,\n  (a.critical_issues||[]).map(i=>`  ✗ ${i}`).join('\\n') || '  (none)',\n  ``,\n  `DELIGHT SIGNALS (protect these):`,\n  (a.delight_signals||[]).map(i=>`  ✓ ${i}`).join('\\n'),\n  ``,\n  `THEMES:`,\n  themeLines,\n  ``,\n  `FEATURE REQUESTS:`,\n  (a.feature_requests||[]).map(f=>`  [${f.frequency}x] ${f.request}`).join('\\n'),\n  ``,\n  `RECOMMENDED ACTIONS:`,\n  (a.recommended_actions||[]).map(ac=>`  [${ac.priority.toUpperCase()}] ${ac.action}\\n    Rationale: ${ac.rationale}`).join('\\n'),\n].join('\\n');\nreturn [{ json: { ...($input.first().json), report_text: report } }];"
+      },
+      "id": "format-analysis",
+      "name": "Format Survey Analysis",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1600, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.SURVEY_APPROVER_EMAIL || $env.SURVEY_EMAIL_TO }}",
+        "subject": "=APPROVAL REQUIRED: Survey Analysis — {{ $json.meta.survey_title }}",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $json.report_text }}</pre><p><a href=\"{{ $execution.resumeUrl }}?decision=approved\">Approve and share</a> | <a href=\"{{ $execution.resumeUrl }}?decision=rejected\">Reject</a></p>",
+        "options": {}
+      },
+      "id": "send-approval",
+      "name": "Send for Approval",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1820, 300],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": { "resume": "webhook", "options": { "webhookSuffix": "/approval" } },
+      "id": "wait-approval",
+      "name": "Wait for Approval",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [2040, 300],
+      "webhookId": "survey-analysis-approval"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "cd", "leftValue": "={{ $json.query?.decision || $json.body?.decision }}", "rightValue": "approved", "operator": { "type": "string", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-decision",
+      "name": "Approved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2260, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.SURVEY_EMAIL_TO || 'product@acme-analytics.com' }}",
+        "subject": "=Survey Analysis: {{ $('Format Survey Analysis').first().json.meta.survey_title }}",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $('Format Survey Analysis').first().json.report_text }}</pre>",
+        "options": {}
+      },
+      "id": "send-analysis",
+      "name": "Share Survey Analysis",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [2480, 200],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": { "assignments": { "assignments": [{ "id": "r1", "name": "status", "value": "rejected", "type": "string" }] }, "options": {} },
+      "id": "log-rejection",
+      "name": "Log Rejection",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2480, 400]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": { "main": [[{ "node": "Load Sample Responses", "type": "main", "index": 0 }]] },
+    "Webhook: Survey Export": { "main": [[{ "node": "Compute NPS & Prepare Prompt", "type": "main", "index": 0 }]] },
+    "Load Sample Responses": { "main": [[{ "node": "Compute NPS & Prepare Prompt", "type": "main", "index": 0 }]] },
+    "Compute NPS & Prepare Prompt": { "main": [[{ "node": "LLM: Analyse Responses", "type": "main", "index": 0 }]] },
+    "LLM: Analyse Responses": { "main": [[{ "node": "Validate LLM Output", "type": "main", "index": 0 }]] },
+    "Validate LLM Output": { "main": [[{ "node": "LLM Error?", "type": "main", "index": 0 }]] },
+    "LLM Error?": { "main": [[{ "node": "LLM Error Handler", "type": "main", "index": 0 }], [{ "node": "Format Survey Analysis", "type": "main", "index": 0 }]] },
+    "Format Survey Analysis": { "main": [[{ "node": "Send for Approval", "type": "main", "index": 0 }]] },
+    "Send for Approval": { "main": [[{ "node": "Wait for Approval", "type": "main", "index": 0 }]] },
+    "Wait for Approval": { "main": [[{ "node": "Approved?", "type": "main", "index": 0 }]] },
+    "Approved?": { "main": [[{ "node": "Share Survey Analysis", "type": "main", "index": 0 }], [{ "node": "Log Rejection", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1", "saveManualExecutions": true, "callerPolicy": "workflowsFromSameOwner", "errorWorkflow": "" },
+  "staticData": null,
+  "tags": ["research", "discovery", "survey", "nps", "beta"],
+  "triggerCount": 0,
+  "updatedAt": "2026-07-14T00:00:00.000Z",
+  "versionId": "72-survey-response-analyser-v0.1.0"
+}

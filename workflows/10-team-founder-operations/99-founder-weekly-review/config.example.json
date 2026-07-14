@@ -1,0 +1,18 @@
+{
+  "_comment": "config.example.json for Founder Weekly Review",
+  "workflow_id": "99-founder-weekly-review",
+  "workflow_name": "Founder Weekly Review",
+  "collection": "10-team-founder-operations",
+  "status": "beta",
+  "configuration": {
+    "WEEKLY_REVIEW_EMAIL_TO": { "default": "", "description": "Your email (founder, personal)", "required": "Required" },
+    "AI_MODEL": { "default": "gpt-4o-mini", "description": "LLM model", "required": "Required" },
+    "OPENAI_BASE_URL": { "default": "https://api.openai.com", "description": "LLM base URL", "required": "Optional" },
+    "NOTIFICATION_EMAIL_FROM": { "default": "automation@acme-analytics.com", "description": "Sender address", "required": "Optional" }
+  },
+  "n8n_credentials_required": [
+    { "name": "YOUR_OPENAI_CREDENTIAL", "type": "httpHeaderAuth", "required": true, "purpose": "Reflection, pattern analysis, coaching question generation" },
+    { "name": "YOUR_SMTP_CREDENTIAL", "type": "smtp", "required": true, "purpose": "Weekly review delivery" }
+  ],
+  "schedule": "Every Friday at 17:00"
+}

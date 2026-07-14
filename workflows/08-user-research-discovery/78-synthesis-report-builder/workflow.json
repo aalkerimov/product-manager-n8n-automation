@@ -1,0 +1,197 @@
+{
+  "name": "Synthesis Report Builder",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Synthesis Report Builder\n\n**Setup:**\n1. Create YOUR_OPENAI_CREDENTIAL and YOUR_SMTP_CREDENTIAL\n2. Set SYNTHESIS_EMAIL_TO\n3. Feed research inputs (interview findings, survey data, usability results)\n4. LLM synthesises cross-study insights into a structured research report\n5. Approval gate before report is distributed",
+        "height": 240,
+        "width": 400,
+        "color": 5
+      },
+      "id": "sticky-setup",
+      "name": "Setup Instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, -240]
+    },
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: {\n  report_title: 'Q3 2026 Onboarding & Adoption Research Synthesis',\n  period: 'Q3 2026',\n  studies: [\n    { study: 'Usability Test — Onboarding v2.3 (July 2026)', type: 'usability', participants: 5, key_findings: ['Task completion rate: 40% for recurring tasks, 60% for project creation, 80% for task assignment', 'Systemic issue: feature discoverability — users look in wrong places for key actions', 'Recurring task option is critically hard to find — 3/5 participants failed', 'Inline editing model is unexpected — users anticipate modal dialogs'] },\n    { study: 'NPS Survey Q2 2026 (n=150)', type: 'survey', participants: 150, key_findings: ['NPS: 40. Promoters driven primarily by recurring tasks value', 'Top detractor drivers: onboarding confusion, team adoption friction, search failure', 'Feature requests by frequency: Teams integration (12%), Gantt view (9%), bulk edit (7%), notification controls (6%)'] },\n    { study: 'Customer Interviews — Switching Study (n=12)', type: 'interviews', participants: 12, key_findings: ['Primary switching trigger: recurring tasks accessibility vs Asana', 'Retention risk: team adoption stalls when non-PM teammates do not see value in week 1', 'Enterprise PMs blocked by missing RBAC and Teams integration at renewal'] },\n    { study: 'Feature Usage Analytics', type: 'analytics', participants: null, key_findings: ['Recurring tasks used by 28% of accounts — 2x NPS, 3x retention for those accounts', 'Task dependencies used by 12% — exclusively Segment C (enterprise)', 'Segment A (1-5 users) median LTV: 4 months. Key churn window: months 2-4'] }\n  ],\n  audience: 'Product, Design, and Engineering leadership',\n  executive_summary_requested: true\n} }];"
+      },
+      "id": "load-sample",
+      "name": "Load Sample Research Inputs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $input.first().json;\nconst studyText = d.studies.map(s => `  Study: ${s.study} (${s.type}${s.participants ? ', n='+s.participants : ''})\\n  Findings:\\n${s.key_findings.map(f=>'    - '+f).join('\\n')}`).join('\\n\\n');\nconst system = `You are a senior UX researcher synthesising findings from multiple research studies into a structured report. You identify patterns that appear across studies, reconcile conflicting findings, prioritise recommendations by impact, and write clearly for product and engineering leadership. Return ONLY valid JSON.`;\nconst user = `Build a research synthesis report for: ${d.report_title}\\nPeriod: ${d.period}\\nAudience: ${d.audience}\\n\\nStudies:\\n${studyText}\\n\\nReturn JSON:\\n{\\n  \"executive_summary\": \"string — 4-5 sentences covering the most important finding and its strategic implication\",\\n  \"cross_study_patterns\": [{ \"pattern\": \"string\", \"confidence\": \"high|medium|low\", \"supporting_studies\": [\"string\"], \"strategic_implication\": \"string\" }],\\n  \"reconciled_findings\": [{ \"topic\": \"string\", \"what_different_studies_say\": \"string\", \"synthesis\": \"string\" }],\\n  \"prioritised_recommendations\": [{ \"recommendation\": \"string\", \"priority\": \"high|medium|low\", \"effort\": \"high|medium|low\", \"evidence_strength\": \"strong|moderate|weak\", \"rationale\": \"string\" }],\\n  \"open_questions\": [\"string — what we still do not know that matters\"],\\n  \"next_studies_suggested\": [{ \"study\": \"string\", \"why\": \"string\" }]\\n}`;\nreturn [{ json: { data: d, system_prompt: system, user_prompt: user } }];"
+      },
+      "id": "prepare-prompt",
+      "name": "Prepare Synthesis Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [740, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.OPENAI_BASE_URL || 'https://api.openai.com' }}/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParameters": {
+          "parameters": [
+            { "name": "model", "value": "={{ $env.AI_MODEL || 'gpt-4o-mini' }}" },
+            { "name": "messages", "value": "=[{\"role\":\"system\",\"content\":\"{{ $json.system_prompt }}\"},{\"role\":\"user\",\"content\":\"{{ $json.user_prompt }}\"}]" },
+            { "name": "temperature", "value": "=0.3" },
+            { "name": "response_format", "value": "={\"type\":\"json_object\"}" }
+          ]
+        },
+        "options": { "timeout": 60000 }
+      },
+      "id": "llm-call",
+      "name": "LLM: Build Synthesis Report",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [960, 200],
+      "credentials": { "httpHeaderAuth": { "name": "YOUR_OPENAI_CREDENTIAL" } }
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst upstream = $('Prepare Synthesis Prompt').first().json;\nlet parsed;\ntry {\n  const c = response.choices?.[0]?.message?.content;\n  if (!c) throw new Error('No content');\n  parsed = JSON.parse(c);\n} catch(e) { return [{ json: { _error: true, reason: e.message } }]; }\nif (!parsed.cross_study_patterns || !Array.isArray(parsed.cross_study_patterns)) return [{ json: { _error: true, reason: 'Missing cross_study_patterns' } }];\nreturn [{ json: { _error: false, report: parsed, meta: { title: upstream.data.report_title, period: upstream.data.period, study_count: upstream.data.studies.length, generated_at: new Date().toISOString() } } }];"
+      },
+      "id": "validate-llm",
+      "name": "Validate LLM Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1180, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "ce", "leftValue": "={{ $json._error }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "error-check",
+      "name": "LLM Error?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1400, 200]
+    },
+    {
+      "parameters": { "assignments": { "assignments": [{ "id": "e1", "name": "status", "value": "error", "type": "string" }] }, "options": {} },
+      "id": "error-handler",
+      "name": "LLM Error Handler",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1600, 100]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { report: r, meta: m } = $input.first().json;\nconst report = [\n  `RESEARCH SYNTHESIS REPORT`,\n  `${m.title}`,\n  `Period: ${m.period} | Studies synthesised: ${m.study_count} | Generated: ${m.generated_at}`,\n  ``,\n  `EXECUTIVE SUMMARY:`,\n  r.executive_summary,\n  ``,\n  `CROSS-STUDY PATTERNS:`,\n  (r.cross_study_patterns||[]).map(p=>`  [${p.confidence.toUpperCase()} confidence] ${p.pattern}\\n  Studies: ${p.supporting_studies.join(', ')}\\n  Implication: ${p.strategic_implication}`).join('\\n\\n'),\n  ``,\n  `RECONCILED FINDINGS:`,\n  (r.reconciled_findings||[]).map(rf=>`  Topic: ${rf.topic}\\n  Studies say: ${rf.what_different_studies_say}\\n  Synthesis: ${rf.synthesis}`).join('\\n\\n'),\n  ``,\n  `PRIORITISED RECOMMENDATIONS:`,\n  (r.prioritised_recommendations||[]).map(rec=>`  [${rec.priority.toUpperCase()} priority | ${rec.effort} effort | ${rec.evidence_strength} evidence] ${rec.recommendation}\\n  Rationale: ${rec.rationale}`).join('\\n\\n'),\n  ``,\n  `OPEN QUESTIONS:`,\n  (r.open_questions||[]).map((q,i)=>`  ${i+1}. ${q}`).join('\\n'),\n  ``,\n  `NEXT STUDIES SUGGESTED:`,\n  (r.next_studies_suggested||[]).map(s=>`  - ${s.study}\\n    Why: ${s.why}`).join('\\n'),\n].join('\\n');\nreturn [{ json: { ...($input.first().json), report_text: report } }];"
+      },
+      "id": "format-report",
+      "name": "Format Synthesis Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1600, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.SYNTHESIS_APPROVER_EMAIL || $env.SYNTHESIS_EMAIL_TO }}",
+        "subject": "=APPROVAL REQUIRED: Research Synthesis — {{ $json.meta.title }}",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $json.report_text }}</pre><p><a href=\"{{ $execution.resumeUrl }}?decision=approved\">Approve and distribute</a> | <a href=\"{{ $execution.resumeUrl }}?decision=rejected\">Reject</a></p>",
+        "options": {}
+      },
+      "id": "send-approval",
+      "name": "Send for Approval",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1820, 300],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": { "resume": "webhook", "options": { "webhookSuffix": "/approval" } },
+      "id": "wait-approval",
+      "name": "Wait for Approval",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [2040, 300],
+      "webhookId": "synthesis-approval"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "cd", "leftValue": "={{ $json.query?.decision || $json.body?.decision }}", "rightValue": "approved", "operator": { "type": "string", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-decision",
+      "name": "Approved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2260, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.SYNTHESIS_EMAIL_TO || 'product@acme-analytics.com' }}",
+        "subject": "=Research Synthesis Report: {{ $('Format Synthesis Report').first().json.meta.title }}",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $('Format Synthesis Report').first().json.report_text }}</pre>",
+        "options": {}
+      },
+      "id": "distribute-report",
+      "name": "Distribute to Leadership",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [2480, 200],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": { "assignments": { "assignments": [{ "id": "r1", "name": "status", "value": "rejected", "type": "string" }] }, "options": {} },
+      "id": "log-rejection",
+      "name": "Log Rejection",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2480, 400]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": { "main": [[{ "node": "Load Sample Research Inputs", "type": "main", "index": 0 }]] },
+    "Load Sample Research Inputs": { "main": [[{ "node": "Prepare Synthesis Prompt", "type": "main", "index": 0 }]] },
+    "Prepare Synthesis Prompt": { "main": [[{ "node": "LLM: Build Synthesis Report", "type": "main", "index": 0 }]] },
+    "LLM: Build Synthesis Report": { "main": [[{ "node": "Validate LLM Output", "type": "main", "index": 0 }]] },
+    "Validate LLM Output": { "main": [[{ "node": "LLM Error?", "type": "main", "index": 0 }]] },
+    "LLM Error?": { "main": [[{ "node": "LLM Error Handler", "type": "main", "index": 0 }], [{ "node": "Format Synthesis Report", "type": "main", "index": 0 }]] },
+    "Format Synthesis Report": { "main": [[{ "node": "Send for Approval", "type": "main", "index": 0 }]] },
+    "Send for Approval": { "main": [[{ "node": "Wait for Approval", "type": "main", "index": 0 }]] },
+    "Wait for Approval": { "main": [[{ "node": "Approved?", "type": "main", "index": 0 }]] },
+    "Approved?": { "main": [[{ "node": "Distribute to Leadership", "type": "main", "index": 0 }], [{ "node": "Log Rejection", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1", "saveManualExecutions": true, "callerPolicy": "workflowsFromSameOwner", "errorWorkflow": "" },
+  "staticData": null,
+  "tags": ["research", "discovery", "synthesis", "report", "beta"],
+  "triggerCount": 0,
+  "updatedAt": "2026-07-14T00:00:00.000Z",
+  "versionId": "78-synthesis-report-builder-v0.1.0"
+}

@@ -1,0 +1,197 @@
+{
+  "name": "Quarterly Planning Assistant",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Quarterly Planning Assistant\n\n**Setup:**\n1. Create YOUR_OPENAI_CREDENTIAL and YOUR_SMTP_CREDENTIAL\n2. Feed context: last quarter actuals, this quarter proposed themes, constraints\n3. LLM produces a structured planning brief: recommended bets, resource allocation, risks\n4. Approval gate before sharing with leadership\n5. Trigger manually at quarter start",
+        "height": 260,
+        "width": 420,
+        "color": 5
+      },
+      "id": "sticky-setup",
+      "name": "Setup Instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, -260]
+    },
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: {\n  quarter: 'Q3 2026',\n  last_quarter_summary: {\n    shipped: ['SSO (SAML 2.0)', 'Bulk CSV export', 'Recurring tasks (partial — deletion behavior deferred)', 'Mobile app beta (iOS)'],\n    missed: ['RBAC (slipped to Q3)', 'Gantt chart view (deprioritised)'],\n    key_learnings: ['Enterprise features (SSO, export) drove 3 new enterprise logo wins', 'Mobile app stickier than expected — 45% of beta users active daily', 'RBAC underestimated — needs 6 engineer-weeks, not 3'],\n    metrics: { arr_end_of_quarter: 1200000, net_new_arr: 180000, churn_pct: 2.1, nps: 42 }\n  },\n  proposed_themes_q3: [\n    { theme: 'Enterprise security', initiatives: ['RBAC (carry-over)', 'Audit log', 'Data retention policy'], rationale: 'Enterprise deals blocked on security checklist' },\n    { theme: 'Mobile GA', initiatives: ['iOS GA from beta', 'Android v1', 'Offline mode'], rationale: 'Mobile stickiness signal — invest to capture retention advantage' },\n    { theme: 'Integrations', initiatives: ['Microsoft Teams', 'Salesforce', 'Zapier connector'], rationale: 'Mid-market deals asking for these integrations' }\n  ],\n  constraints: {\n    headcount: '8 engineers, 1 designer, 1 data engineer',\n    budget_restriction: 'No new infrastructure spend without VP approval',\n    hard_deadlines: ['SOC 2 audit: 2026-09-01 (RBAC and audit log must be done first)']\n  },\n  strategic_context: 'We are executing a mid-market expansion. Enterprise is strategic but secondary. CompetitorX just raised Series C and is moving upmarket — we have 6-12 months before they compete directly in our core segment.'\n} }];"
+      },
+      "id": "load-sample",
+      "name": "Load Sample Planning Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $input.first().json;\nconst system = `You are a senior PM helping a product team structure their quarterly planning. You produce clear, prioritised recommendations. You flag tradeoffs explicitly. You do not pad. Return ONLY valid JSON.`;\nconst lastQ = d.last_quarter_summary;\nconst themes = d.proposed_themes_q3.map(t =>\n  `Theme: ${t.theme}\\n  Initiatives: ${t.initiatives.join(', ')}\\n  Rationale: ${t.rationale}`\n).join('\\n\\n');\nconst user = `Help me plan ${d.quarter}.\n\nLast quarter:\nShipped: ${lastQ.shipped.join(', ')}\nMissed: ${lastQ.missed.join(', ')}\nLearnings: ${lastQ.key_learnings.join(' | ')}\nMetrics: ARR $${(lastQ.metrics.arr_end_of_quarter/1000).toFixed(0)}k | New ARR $${(lastQ.metrics.net_new_arr/1000).toFixed(0)}k | Churn ${lastQ.metrics.churn_pct}% | NPS ${lastQ.metrics.nps}\n\nStrategic context: ${d.strategic_context}\n\nProposed themes for ${d.quarter}:\n${themes}\n\nConstraints: ${JSON.stringify(d.constraints)}\n\nReturn JSON:\n{\n  \"planning_brief_title\": \"string\",\n  \"recommended_bets\": [\n    { \"theme\": \"string\", \"recommended_initiatives\": [\"string\"], \"rationale\": \"string\", \"estimated_capacity_pct\": 40, \"confidence\": \"high|medium|low\" }\n  ],\n  \"tradeoffs\": [\"string — what we are giving up and why it is acceptable\"],\n  \"must_do_this_quarter\": [\"string — non-negotiable items\"],\n  \"suggested_deferral\": [\"string — proposed initiatives to drop or defer\"],\n  \"capacity_allocation\": { \"description\": \"string\", \"breakdown\": [{ \"area\": \"string\", \"pct\": 40 }] },\n  \"key_risks\": [{ \"risk\": \"string\", \"mitigation\": \"string\", \"severity\": \"high|medium|low\" }],\n  \"recommended_okrs\": [{ \"objective\": \"string\", \"key_results\": [\"string\"] }]\n}`;\nreturn [{ json: { data: d, system_prompt: system, user_prompt: user } }];"
+      },
+      "id": "prepare-prompt",
+      "name": "Prepare Planning Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [740, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.OPENAI_BASE_URL || 'https://api.openai.com' }}/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParameters": {
+          "parameters": [
+            { "name": "model", "value": "={{ $env.AI_MODEL || 'gpt-4o' }}" },
+            { "name": "messages", "value": "=[{\"role\":\"system\",\"content\":\"{{ $json.system_prompt }}\"},{\"role\":\"user\",\"content\":\"{{ $json.user_prompt }}\"}]" },
+            { "name": "temperature", "value": "=0.2" },
+            { "name": "response_format", "value": "={\"type\":\"json_object\"}" }
+          ]
+        },
+        "options": { "timeout": 90000 }
+      },
+      "id": "llm-call",
+      "name": "LLM: Generate Planning Brief",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [960, 200],
+      "credentials": { "httpHeaderAuth": { "name": "YOUR_OPENAI_CREDENTIAL" } }
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst upstream = $('Prepare Planning Prompt').first().json;\nlet parsed;\ntry {\n  const c = response.choices?.[0]?.message?.content;\n  if (!c) throw new Error('No content');\n  parsed = JSON.parse(c);\n} catch(e) { return [{ json: { _error: true, reason: e.message } }]; }\nif (!parsed.recommended_bets || !Array.isArray(parsed.recommended_bets)) return [{ json: { _error: true, reason: 'Missing recommended_bets' } }];\nreturn [{ json: { _error: false, brief: parsed, meta: { quarter: upstream.data.quarter, generated_at: new Date().toISOString() } } }];"
+      },
+      "id": "validate-llm",
+      "name": "Validate LLM Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1180, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "ce", "leftValue": "={{ $json._error }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "error-check",
+      "name": "LLM Error?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1400, 200]
+    },
+    {
+      "parameters": { "assignments": { "assignments": [{ "id": "e1", "name": "status", "value": "error", "type": "string" }] }, "options": {} },
+      "id": "error-handler",
+      "name": "LLM Error Handler",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1600, 100]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { brief: b, meta: m } = $input.first().json;\nconst betLines = (b.recommended_bets||[]).map(bt =>\n  `  ${bt.theme} (${bt.estimated_capacity_pct}% capacity, confidence: ${bt.confidence})\\n    Initiatives: ${bt.recommended_initiatives.join(', ')}\\n    Rationale: ${bt.rationale}`\n).join('\\n\\n');\nconst riskLines = (b.key_risks||[]).map(r => `  [${r.severity.toUpperCase()}] ${r.risk}\\n    Mitigation: ${r.mitigation}`).join('\\n');\nconst okrLines = (b.recommended_okrs||[]).map(o => `  O: ${o.objective}\\n  KRs:\\n${o.key_results.map(kr => '    - '+kr).join('\\n')}`).join('\\n\\n');\nconst report = [\n  `QUARTERLY PLANNING BRIEF — ${m.quarter}`,\n  `Generated: ${m.generated_at}`,\n  b.planning_brief_title,\n  ``,\n  `RECOMMENDED BETS:`,\n  betLines,\n  ``,\n  `MUST DO THIS QUARTER:`,\n  (b.must_do_this_quarter||[]).map(i => `  ✓ ${i}`).join('\\n'),\n  ``,\n  `DEFER:`,\n  (b.suggested_deferral||[]).map(i => `  ✗ ${i}`).join('\\n'),\n  ``,\n  `TRADEOFFS:`,\n  (b.tradeoffs||[]).map(t => `  - ${t}`).join('\\n'),\n  ``,\n  `CAPACITY ALLOCATION: ${b.capacity_allocation?.description}`,\n  (b.capacity_allocation?.breakdown||[]).map(br => `  ${br.area}: ${br.pct}%`).join('\\n'),\n  ``,\n  `KEY RISKS:`,\n  riskLines,\n  ``,\n  `RECOMMENDED OKRs:`,\n  okrLines,\n].join('\\n');\nreturn [{ json: { ...($input.first().json), report_text: report } }];"
+      },
+      "id": "format-brief",
+      "name": "Format Planning Brief",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1600, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.PLANNING_APPROVER_EMAIL || 'cpo@acme-analytics.com' }}",
+        "subject": "=APPROVAL REQUIRED: {{ $json.meta.quarter }} Planning Brief",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $json.report_text }}</pre><p><a href=\"{{ $execution.resumeUrl }}?decision=approved\">Approve and share with leadership</a> | <a href=\"{{ $execution.resumeUrl }}?decision=rejected\">Reject</a></p>",
+        "options": {}
+      },
+      "id": "send-approval",
+      "name": "Send for Approval",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1820, 300],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": { "resume": "webhook", "options": { "webhookSuffix": "/approval" } },
+      "id": "wait-approval",
+      "name": "Wait for Approval",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [2040, 300],
+      "webhookId": "qpa-approval"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "cd", "leftValue": "={{ $json.query?.decision || $json.body?.decision }}", "rightValue": "approved", "operator": { "type": "string", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-decision",
+      "name": "Approved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2260, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.PLANNING_EMAIL_TO || 'leadership@acme-analytics.com' }}",
+        "subject": "={{ $('Format Planning Brief').first().json.meta.quarter }} Planning Brief",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $('Format Planning Brief').first().json.report_text }}</pre>",
+        "options": {}
+      },
+      "id": "send-brief",
+      "name": "Share with Leadership",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [2480, 200],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": { "assignments": { "assignments": [{ "id": "r1", "name": "status", "value": "rejected", "type": "string" }] }, "options": {} },
+      "id": "log-rejection",
+      "name": "Log Rejection",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2480, 400]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": { "main": [[{ "node": "Load Sample Planning Context", "type": "main", "index": 0 }]] },
+    "Load Sample Planning Context": { "main": [[{ "node": "Prepare Planning Prompt", "type": "main", "index": 0 }]] },
+    "Prepare Planning Prompt": { "main": [[{ "node": "LLM: Generate Planning Brief", "type": "main", "index": 0 }]] },
+    "LLM: Generate Planning Brief": { "main": [[{ "node": "Validate LLM Output", "type": "main", "index": 0 }]] },
+    "Validate LLM Output": { "main": [[{ "node": "LLM Error?", "type": "main", "index": 0 }]] },
+    "LLM Error?": { "main": [[{ "node": "LLM Error Handler", "type": "main", "index": 0 }], [{ "node": "Format Planning Brief", "type": "main", "index": 0 }]] },
+    "Format Planning Brief": { "main": [[{ "node": "Send for Approval", "type": "main", "index": 0 }]] },
+    "Send for Approval": { "main": [[{ "node": "Wait for Approval", "type": "main", "index": 0 }]] },
+    "Wait for Approval": { "main": [[{ "node": "Approved?", "type": "main", "index": 0 }]] },
+    "Approved?": { "main": [[{ "node": "Share with Leadership", "type": "main", "index": 0 }], [{ "node": "Log Rejection", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1", "saveManualExecutions": true, "callerPolicy": "workflowsFromSameOwner", "errorWorkflow": "" },
+  "staticData": null,
+  "tags": ["roadmap", "planning", "quarterly", "beta"],
+  "triggerCount": 0,
+  "updatedAt": "2026-07-14T00:00:00.000Z",
+  "versionId": "68-quarterly-planning-assistant-v0.1.0"
+}

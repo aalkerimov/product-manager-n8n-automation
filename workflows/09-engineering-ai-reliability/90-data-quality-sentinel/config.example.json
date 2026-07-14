@@ -1,0 +1,18 @@
+{
+  "_comment": "config.example.json for Data Quality Sentinel",
+  "workflow_id": "90-data-quality-sentinel",
+  "workflow_name": "Data Quality Sentinel",
+  "collection": "09-engineering-ai-reliability",
+  "status": "beta",
+  "configuration": {
+    "DATA_QUALITY_EMAIL_TO": { "default": "", "description": "Data engineering recipients", "required": "Required" },
+    "DATA_QUALITY_APPROVER_EMAIL": { "default": "", "description": "PM approver. Defaults to DATA_QUALITY_EMAIL_TO.", "required": "Optional" },
+    "NOTIFICATION_EMAIL_FROM": { "default": "automation@acme-analytics.com", "description": "Sender address", "required": "Optional" }
+  },
+  "n8n_credentials_required": [
+    { "name": "YOUR_SMTP_CREDENTIAL", "type": "smtp", "required": true, "purpose": "Approval and data engineering alert" }
+  ],
+  "ai_required": false,
+  "schedule": "Daily at 07:00",
+  "check_types_supported": ["freshness", "volume", "completeness", "uniqueness"]
+}

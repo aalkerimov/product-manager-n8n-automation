@@ -1,0 +1,8 @@
+{
+  "samples": [
+    { "sample_id": "S001", "workflow": "Bug Triage Assistant", "input": "Dashboard fails to load when user has more than 200 projects. Affects 12 enterprise accounts. Started after v2.4.1 deployment.", "output": { "severity": "P0", "rationale": "Production outage for 12 paying enterprise accounts — dashboard unusable.", "engineering_area": "backend/api", "suggested_owner": "backend engineer" }, "criteria": ["correct P0 severity for production outage", "identifies regression correctly", "specific engineering area", "actionable owner suggestion"] },
+    { "sample_id": "S002", "workflow": "Survey Response Analyser", "input": "NPS survey with 45 responses: 28 promoters (62%), 9 passives (20%), 8 detractors (18%). Top themes from detractors: slow load times (6), missing bulk actions (5).", "output": { "nps": 44, "primary_theme": "Performance concerns centred on load times", "actionable_insight": "Optimise dashboard load time for large projects as highest-priority fix", "sentiment": "mixed-positive" }, "criteria": ["NPS calculation correct (62-18=44)", "connects detractor feedback to specific feature", "actionable insight is specific"] },
+    { "sample_id": "S003", "workflow": "JTBD Extractor", "input": "I just want to get to my dashboard and immediately see what everyone is blocked on, without reading through 40 Slack messages.", "output": { "job": "See blocked work immediately without reading messages", "functional_job": "Get status visibility", "emotional_job": "Feel in control without communication overhead" }, "criteria": ["captures core job accurately", "separates functional from emotional job", "job statement is user-voice, not feature-voice"] }
+  ],
+  "evaluator_model": "gpt-4o-mini"
+}

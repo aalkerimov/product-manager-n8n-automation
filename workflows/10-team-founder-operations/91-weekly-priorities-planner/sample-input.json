@@ -1,0 +1,25 @@
+{
+  "week": "July 14–18, 2026",
+  "role": "Head of Product",
+  "okrs_this_quarter": [
+    "OKR1: Reduce time-to-first-value from 14 days to 7 days (KR: 60% of new signups complete onboarding in ≤7 days)",
+    "OKR2: Improve NPS from 38 to 50 (KR: NPS ≥50 by EoQ)",
+    "OKR3: Launch recurring tasks feature (KR: GA release by July 31)"
+  ],
+  "top_backlog_items": [
+    { "id": "P-412", "title": "Recurring tasks: final QA pass and smoke test", "estimate": "1d", "urgency": "high", "linked_okr": "OKR3" },
+    { "id": "P-421", "title": "Onboarding flow redesign: review Figma mockups with design", "estimate": "2h", "urgency": "high", "linked_okr": "OKR1" },
+    { "id": "P-389", "title": "Write spec for bulk task actions (v1)", "estimate": "3h", "urgency": "medium", "linked_okr": "OKR2" },
+    { "id": "P-401", "title": "Review user research synthesis from Q3 study", "estimate": "1.5h", "urgency": "medium", "linked_okr": "OKR1" },
+    { "id": "P-415", "title": "Stakeholder update deck for board prep", "estimate": "2h", "urgency": "high", "linked_okr": null }
+  ],
+  "committed_deliverables": ["Recurring tasks release notes final draft by Wednesday", "Board deck draft to CEO by Friday"],
+  "key_meetings": [
+    { "day": "Monday", "meeting": "Sprint planning 2h", "type": "engineering" },
+    { "day": "Tuesday", "meeting": "Customer discovery call 1h", "type": "research" },
+    { "day": "Thursday", "meeting": "CEO 1:1 30m", "type": "internal" },
+    { "day": "Friday", "meeting": "Team retro 1h", "type": "team" }
+  ],
+  "focus_hours_available": 20,
+  "last_week_carry_over": "Spec for bulk actions was not started last week"
+}

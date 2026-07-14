@@ -1,0 +1,15 @@
+{
+  "_comment": "config.example.json for Roadmap Dependency Mapper",
+  "workflow_id": "62-roadmap-dependency-mapper",
+  "workflow_name": "Roadmap Dependency Mapper",
+  "collection": "07-roadmap-planning",
+  "status": "beta",
+  "configuration": {
+    "DEPENDENCY_EMAIL_TO": { "default": "", "description": "Report recipient email", "required": "Required" },
+    "NOTIFICATION_EMAIL_FROM": { "default": "automation@acme-analytics.com", "description": "Sender address", "required": "Optional" }
+  },
+  "n8n_credentials_required": [
+    { "name": "YOUR_SMTP_CREDENTIAL", "type": "smtp", "required": true, "purpose": "Deliver dependency report" }
+  ],
+  "notes": "No LLM required. DFS cycle detection + longest path (critical path). In production, connect a Google Sheets read node before Analyse Dependencies."
+}

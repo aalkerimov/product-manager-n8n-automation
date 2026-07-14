@@ -1,0 +1,100 @@
+{
+  "name": "ICP Drift Detector",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## ICP Drift Detector\n\n**Setup:**\n1. Create YOUR_GOOGLE_SHEETS_CREDENTIAL and YOUR_SMTP_CREDENTIAL\n2. Set ICP_SHEET_ID (sheet with your actual won customer data)\n3. Set ICP_DEFINITION env var (your stated ICP: e.g. 'B2B SaaS, 50-200 employees, engineering-led, US/EU')\n4. Set ICP_EMAIL_TO\n5. No LLM needed — statistical comparison\n\n**Flow:** Reads actual won/retained customers → compares attribute distribution against stated ICP → flags divergence → sends report",
+        "height": 300,
+        "width": 460,
+        "color": 6
+      },
+      "id": "sticky-setup",
+      "name": "Setup Instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, -280]
+    },
+    {
+      "parameters": {
+        "rule": { "interval": [{ "field": "cronExpression", "expression": "={{ $env.ICP_SCHEDULE || '0 9 1 * *' }}" }] }
+      },
+      "id": "schedule-trigger",
+      "name": "Monthly Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 100]
+    },
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 280]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": { "value": "={{ $env.ICP_SHEET_ID || 'YOUR_ICP_SHEET_ID' }}", "mode": "id" },
+        "sheetName": { "value": "customers", "mode": "name" },
+        "options": { "headerRow": 1 }
+      },
+      "id": "read-customers",
+      "name": "Read Customer Data from Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [500, 100],
+      "credentials": { "googleSheetsOAuth2Api": { "name": "YOUR_GOOGLE_SHEETS_CREDENTIAL" } }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Sample customer data — 12 records including edge cases.\nconst customers = [\n  { id: 'C001', company: 'Globex Corp', segment: 'enterprise', employees: 1200, industry: 'manufacturing', region: 'US', arr: 24000, status: 'active', months_retained: 18 },\n  { id: 'C002', company: 'Initech LLC', segment: 'smb', employees: 45, industry: 'software', region: 'US', arr: 3600, status: 'active', months_retained: 6 },\n  { id: 'C003', company: 'Umbrella Ltd', segment: 'mid-market', employees: 320, industry: 'healthcare', region: 'EU', arr: 12000, status: 'active', months_retained: 24 },\n  { id: 'C004', company: 'Hooli Inc', segment: 'enterprise', employees: 5000, industry: 'technology', region: 'US', arr: 60000, status: 'churned', months_retained: 8 },\n  { id: 'C005', company: 'Pied Piper', segment: 'startup', employees: 12, industry: 'software', region: 'US', arr: 1200, status: 'active', months_retained: 14 },\n  { id: 'C006', company: 'Dunder Mifflin', segment: 'smb', employees: 90, industry: 'retail', region: 'US', arr: 4800, status: 'active', months_retained: 11 },\n  { id: 'C007', company: 'Vandelay Ind', segment: 'mid-market', employees: 450, industry: 'finance', region: 'EU', arr: 9600, status: 'active', months_retained: 20 },\n  { id: 'C008', company: 'Sterling Cooper', segment: 'enterprise', employees: 2200, industry: 'marketing', region: 'US', arr: 36000, status: 'churned', months_retained: 5 },\n  { id: 'C009', company: 'Wernham Hogg', segment: 'smb', employees: 75, industry: 'logistics', region: 'UK', arr: 2400, status: 'active', months_retained: 9 },\n  { id: 'C010', company: 'Sabre Corp', segment: 'enterprise', employees: 800, industry: 'technology', region: 'US', arr: 18000, status: 'active', months_retained: 30 },\n  { id: 'C011', company: 'Slate Rock', segment: 'smb', employees: 30, industry: 'construction', region: 'US', arr: 2400, status: 'active', months_retained: 4 },\n  { id: 'C012', company: '', segment: '', employees: null, industry: '', region: '', arr: null, status: 'active', months_retained: null }\n];\nreturn customers.map(c => ({ json: c }));"
+      },
+      "id": "load-sample",
+      "name": "Load Sample Customers",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 280]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Aggregate and analyse customer distribution vs stated ICP.\nconst all = $input.all().map(i => i.json);\nconst valid = all.filter(c => c.id && c.segment && c.status);\nconst skipped = all.length - valid.length;\nconst icpDefinition = $env.ICP_DEFINITION || 'B2B SaaS, 50-500 employees, software/technology industry, US or EU, mid-market or SMB segment';\n\n// Compute distributions\nconst countBy = (field) => {\n  const counts = {};\n  for (const c of valid) {\n    const key = String(c[field] || 'unknown');\n    counts[key] = (counts[key] || 0) + 1;\n  }\n  return counts;\n};\n\nconst pct = (count, total) => Math.round((count / total) * 100);\n\nconst total = valid.length;\nconst active = valid.filter(c => c.status === 'active').length;\nconst churned = valid.filter(c => c.status === 'churned').length;\n\nconst segmentDist = countBy('segment');\nconst industryDist = countBy('industry');\nconst regionDist = countBy('region');\n\n// Compute avg employees for active vs churned\nconst avgEmployees = (arr) => {\n  const nums = arr.filter(c => c.employees > 0).map(c => c.employees);\n  return nums.length ? Math.round(nums.reduce((a,b)=>a+b,0)/nums.length) : null;\n};\nconst avgEmpActive = avgEmployees(valid.filter(c => c.status === 'active'));\nconst avgEmpChurned = avgEmployees(valid.filter(c => c.status === 'churned'));\n\n// Flag divergence: check if top segment, top industry, and top region match ICP\nconst topSegment = Object.entries(segmentDist).sort((a,b)=>b[1]-a[1])[0]?.[0];\nconst topIndustry = Object.entries(industryDist).sort((a,b)=>b[1]-a[1])[0]?.[0];\nconst topRegion = Object.entries(regionDist).sort((a,b)=>b[1]-a[1])[0]?.[0];\n\nconst report = [\n  `ICP DRIFT DETECTOR`,\n  `Stated ICP: ${icpDefinition}`,\n  `Run: ${new Date().toISOString()} | Customers analysed: ${valid.length} (${skipped} skipped)`,\n  `Active: ${active} | Churned: ${churned} | Churn rate: ${pct(churned, total)}%`,\n  ``,\n  `SEGMENT DISTRIBUTION (% of total):`,\n  ...Object.entries(segmentDist).map(([k,v]) => `  ${k}: ${pct(v,total)}% (${v} customers)`),\n  ``,\n  `INDUSTRY DISTRIBUTION:`,\n  ...Object.entries(industryDist).map(([k,v]) => `  ${k}: ${pct(v,total)}% (${v} customers)`),\n  ``,\n  `REGION DISTRIBUTION:`,\n  ...Object.entries(regionDist).map(([k,v]) => `  ${k}: ${pct(v,total)}% (${v} customers)`),\n  ``,\n  `EMPLOYEE SIZE:`,\n  `  Active customers avg employees: ${avgEmpActive || 'N/A'}`,\n  `  Churned customers avg employees: ${avgEmpChurned || 'N/A'}`,\n  ``,\n  `DRIFT FLAGS:`,\n  `  Top actual segment: ${topSegment} (ICP target: check stated ICP)`,\n  `  Top actual industry: ${topIndustry} (ICP target: check stated ICP)`,\n  `  Top actual region: ${topRegion} (ICP target: check stated ICP)`,\n  ``,\n  `NOTE: Automated drift scoring requires defining ICP numerically (see README). This report shows raw distributions for human review.`\n].join('\\n');\n\nreturn [{ json: {\n  report_text: report,\n  stats: { total, active, churned, skipped, segmentDist, industryDist, regionDist, avgEmpActive, avgEmpChurned, topSegment, topIndustry, topRegion },\n  icp_definition: icpDefinition,\n  generated_at: new Date().toISOString()\n} }];"
+      },
+      "id": "analyse-distribution",
+      "name": "Analyse Distribution vs ICP",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [780, 200]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.ICP_EMAIL_TO || 'strategy@acme-analytics.com' }}",
+        "subject": "Monthly ICP Drift Report",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $json.report_text }}</pre>",
+        "options": {}
+      },
+      "id": "send-report",
+      "name": "Send ICP Report",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1000, 200],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    }
+  ],
+  "connections": {
+    "Monthly Schedule": { "main": [[{ "node": "Read Customer Data from Sheets", "type": "main", "index": 0 }]] },
+    "Manual Trigger": { "main": [[{ "node": "Load Sample Customers", "type": "main", "index": 0 }]] },
+    "Read Customer Data from Sheets": { "main": [[{ "node": "Analyse Distribution vs ICP", "type": "main", "index": 0 }]] },
+    "Load Sample Customers": { "main": [[{ "node": "Analyse Distribution vs ICP", "type": "main", "index": 0 }]] },
+    "Analyse Distribution vs ICP": { "main": [[{ "node": "Send ICP Report", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1", "saveManualExecutions": true, "callerPolicy": "workflowsFromSameOwner", "errorWorkflow": "" },
+  "staticData": null,
+  "tags": ["strategy", "icp", "customers", "beta"],
+  "triggerCount": 0,
+  "updatedAt": "2026-07-14T00:00:00.000Z",
+  "versionId": "58-icp-drift-detector-v0.1.0"
+}

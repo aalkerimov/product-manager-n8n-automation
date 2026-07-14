@@ -1,0 +1,212 @@
+{
+  "name": "Product Spec Reviewer",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Product Spec Reviewer\n\n**Setup:**\n1. Create YOUR_OPENAI_CREDENTIAL and YOUR_SMTP_CREDENTIAL\n2. Set SPEC_EMAIL_TO (reviewer)\n3. POST your spec to the webhook or use Manual Trigger with sample\n4. LLM reviews against PM best-practice checklist\n5. Review report requires approval before going to the spec author",
+        "height": 260,
+        "width": 420,
+        "color": 5
+      },
+      "id": "sticky-setup",
+      "name": "Setup Instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, -260]
+    },
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 200]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "review-spec",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook: Spec Submission",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 380],
+      "webhookId": "spec-review-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "const spec = {\n  title: 'Recurring Tasks Feature Spec',\n  author: 'Jane Smith',\n  version: '0.3',\n  sections: {\n    problem_statement: 'Users need to schedule tasks that repeat on a regular basis. Currently, they must manually duplicate tasks every week or month, which is time-consuming and error-prone.',\n    user_stories: [\n      'As a project manager, I want to create recurring weekly tasks so that standups and check-ins are scheduled automatically.',\n      'As a team member, I want recurring tasks to appear in my task list on the correct due date without manual intervention.'\n    ],\n    success_metrics: [\n      'Recurring task feature adoption rate > 30% of active users within 60 days',\n      'Reduction in manually duplicated tasks by 40% (measured via duplicate detection heuristic)',\n      'NPS score for task management sub-experience increases by 5 points'\n    ],\n    scope_in: [\n      'Weekly recurrence (every N weeks, specific day of week)',\n      'Monthly recurrence (on a specific date or day of month)',\n      'Option to set an end date or max occurrence count'\n    ],\n    scope_out: [\n      'Custom recurrence rules (e.g., every 3rd Tuesday)',\n      'Subtask recurrence',\n      'Recurrence for projects (only tasks in scope)'\n    ],\n    open_questions: [\n      'What happens to a recurring task if the original is deleted?',\n      'How should subtasks of a recurring parent task be handled?'\n    ],\n    technical_considerations: 'Backend will need a scheduled job to create task instances. Estimated at 3 engineering weeks. Database schema change required.',\n    launch_plan: 'Beta with 5 volunteer customers in week 8. GA in week 10 with in-app tooltip announcement.'\n  }\n};\nreturn [{ json: { spec } }];"
+      },
+      "id": "load-sample",
+      "name": "Load Sample Spec",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { spec } = $input.first().json;\nconst specText = JSON.stringify(spec.sections, null, 2);\nconst system = `You are a senior PM reviewer. You evaluate product specs against a structured PM quality checklist. You give honest, specific feedback. You highlight what is strong and what is missing or unclear. Return ONLY valid JSON.`;\nconst user = `Review this product spec and provide structured feedback:\n\nTitle: ${spec.title}\nAuthor: ${spec.author}\nVersion: ${spec.version}\n\n${specText}\n\nReturn JSON:\n{\n  \"overall_quality\": \"strong|adequate|needs-work|incomplete\",\n  \"checklist\": [\n    { \"item\": \"string — checklist item name\", \"status\": \"pass|partial|fail\", \"comment\": \"string — specific, actionable feedback\" }\n  ],\n  \"strengths\": [\"string\"],\n  \"critical_gaps\": [\"string — must be resolved before engineering picks this up\"],\n  \"suggested_improvements\": [\"string — nice to have before finalising\"],\n  \"ready_for_engineering\": true,\n  \"reviewer_summary\": \"string — 2-3 sentence overall assessment\"\n}`;\nreturn [{ json: { spec, system_prompt: system, user_prompt: user } }];"
+      },
+      "id": "prepare-prompt",
+      "name": "Prepare Review Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [740, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.OPENAI_BASE_URL || 'https://api.openai.com' }}/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParameters": {
+          "parameters": [
+            { "name": "model", "value": "={{ $env.AI_MODEL || 'gpt-4o-mini' }}" },
+            { "name": "messages", "value": "=[{\"role\":\"system\",\"content\":\"{{ $json.system_prompt }}\"},{\"role\":\"user\",\"content\":\"{{ $json.user_prompt }}\"}]" },
+            { "name": "temperature", "value": "=0.2" },
+            { "name": "response_format", "value": "={\"type\":\"json_object\"}" }
+          ]
+        },
+        "options": { "timeout": 60000 }
+      },
+      "id": "llm-call",
+      "name": "LLM: Review Spec",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [960, 200],
+      "credentials": { "httpHeaderAuth": { "name": "YOUR_OPENAI_CREDENTIAL" } }
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst upstream = $('Prepare Review Prompt').first().json;\nlet parsed;\ntry {\n  const c = response.choices?.[0]?.message?.content;\n  if (!c) throw new Error('No content');\n  parsed = JSON.parse(c);\n} catch(e) { return [{ json: { _error: true, reason: e.message } }]; }\nif (!parsed.checklist || !Array.isArray(parsed.checklist)) return [{ json: { _error: true, reason: 'Missing checklist' } }];\nreturn [{ json: { _error: false, review: parsed, meta: { spec_title: upstream.spec.title, author: upstream.spec.author, version: upstream.spec.version, generated_at: new Date().toISOString() } } }];"
+      },
+      "id": "validate-llm",
+      "name": "Validate LLM Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1180, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "ce", "leftValue": "={{ $json._error }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "error-check",
+      "name": "LLM Error?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1400, 200]
+    },
+    {
+      "parameters": { "assignments": { "assignments": [{ "id": "e1", "name": "status", "value": "error", "type": "string" }] }, "options": {} },
+      "id": "error-handler",
+      "name": "LLM Error Handler",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1600, 100]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { review: r, meta: m } = $input.first().json;\nconst checklistLines = (r.checklist||[]).map(c => `  [${c.status.toUpperCase()}] ${c.item}: ${c.comment}`).join('\\n');\nconst report = [\n  `SPEC REVIEW: ${m.spec_title} v${m.version}`,\n  `Author: ${m.author} | Reviewed: ${m.generated_at}`,\n  `Overall quality: ${r.overall_quality?.toUpperCase()} | Ready for engineering: ${r.ready_for_engineering ? 'YES' : 'NO'}`,\n  ``,\n  `REVIEWER SUMMARY: ${r.reviewer_summary}`,\n  ``,\n  `CHECKLIST:`,\n  checklistLines,\n  ``,\n  `STRENGTHS:`,\n  (r.strengths||[]).map(s => `  ✓ ${s}`).join('\\n'),\n  ``,\n  `CRITICAL GAPS (must fix):`,\n  (r.critical_gaps||[]).map(g => `  ✗ ${g}`).join('\\n') || '  (none)',\n  ``,\n  `SUGGESTED IMPROVEMENTS:`,\n  (r.suggested_improvements||[]).map(s => `  → ${s}`).join('\\n') || '  (none)',\n].join('\\n');\nreturn [{ json: { ...($input.first().json), report_text: report } }];"
+      },
+      "id": "format-review",
+      "name": "Format Review Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1600, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.SPEC_EMAIL_TO || 'product@acme-analytics.com' }}",
+        "subject": "=APPROVAL REQUIRED: Spec Review — {{ $json.meta.spec_title }}",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $json.report_text }}</pre><p><a href=\"{{ $execution.resumeUrl }}?decision=approved\">Approve and send to author</a> | <a href=\"{{ $execution.resumeUrl }}?decision=rejected\">Reject — review not suitable</a></p>",
+        "options": {}
+      },
+      "id": "send-approval",
+      "name": "Send for Approval",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1820, 300],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": { "resume": "webhook", "options": { "webhookSuffix": "/approval" } },
+      "id": "wait-approval",
+      "name": "Wait for Approval",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [2040, 300],
+      "webhookId": "spec-reviewer-approval"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "cd", "leftValue": "={{ $json.query?.decision || $json.body?.decision }}", "rightValue": "approved", "operator": { "type": "string", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-decision",
+      "name": "Approved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2260, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.SPEC_AUTHOR_EMAIL || $env.SPEC_EMAIL_TO || 'product@acme-analytics.com' }}",
+        "subject": "=Spec Review Feedback: {{ $('Format Review Report').first().json.meta.spec_title }}",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $('Format Review Report').first().json.report_text }}</pre>",
+        "options": {}
+      },
+      "id": "send-feedback",
+      "name": "Send Feedback to Author",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [2480, 200],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": { "assignments": { "assignments": [{ "id": "r1", "name": "status", "value": "rejected", "type": "string" }] }, "options": {} },
+      "id": "log-rejection",
+      "name": "Log Rejection",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2480, 400]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": { "main": [[{ "node": "Load Sample Spec", "type": "main", "index": 0 }]] },
+    "Webhook: Spec Submission": { "main": [[{ "node": "Prepare Review Prompt", "type": "main", "index": 0 }]] },
+    "Load Sample Spec": { "main": [[{ "node": "Prepare Review Prompt", "type": "main", "index": 0 }]] },
+    "Prepare Review Prompt": { "main": [[{ "node": "LLM: Review Spec", "type": "main", "index": 0 }]] },
+    "LLM: Review Spec": { "main": [[{ "node": "Validate LLM Output", "type": "main", "index": 0 }]] },
+    "Validate LLM Output": { "main": [[{ "node": "LLM Error?", "type": "main", "index": 0 }]] },
+    "LLM Error?": { "main": [[{ "node": "LLM Error Handler", "type": "main", "index": 0 }], [{ "node": "Format Review Report", "type": "main", "index": 0 }]] },
+    "Format Review Report": { "main": [[{ "node": "Send for Approval", "type": "main", "index": 0 }]] },
+    "Send for Approval": { "main": [[{ "node": "Wait for Approval", "type": "main", "index": 0 }]] },
+    "Wait for Approval": { "main": [[{ "node": "Approved?", "type": "main", "index": 0 }]] },
+    "Approved?": { "main": [[{ "node": "Send Feedback to Author", "type": "main", "index": 0 }], [{ "node": "Log Rejection", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1", "saveManualExecutions": true, "callerPolicy": "workflowsFromSameOwner", "errorWorkflow": "" },
+  "staticData": null,
+  "tags": ["roadmap", "planning", "spec", "beta"],
+  "triggerCount": 0,
+  "updatedAt": "2026-07-14T00:00:00.000Z",
+  "versionId": "66-product-spec-reviewer-v0.1.0"
+}

@@ -1,0 +1,18 @@
+{
+  "activity": {
+    "week": "Week of July 7–11, 2026",
+    "deployments": [
+      { "version": "v2.4.1", "date": "July 12", "type": "patch", "summary": "Fixed dashboard timeout for workspaces with 200+ projects. Resolved mobile Safari assignee dropdown reset. Emergency patch triggered by BUG-2041." },
+      { "version": "v2.4.0", "date": "July 8", "type": "minor", "summary": "Shipped custom fields v2 (text, number, date types). Refactored CSV export pipeline. Added project template library." }
+    ],
+    "incidents": [
+      { "id": "INC-089", "severity": "P0", "title": "Dashboard 504 timeout — 12 enterprise accounts", "duration_minutes": 47, "resolved": true, "root_cause": "Missing query limit in dashboard projects endpoint introduced in v2.4.1" }
+    ],
+    "prs_merged": [
+      { "id": "PR-1847", "title": "Migrate auth middleware to async bcrypt", "author": "Backend team", "area": "backend/auth" },
+      { "id": "PR-1851", "title": "Add memoisation to TaskList component", "author": "Frontend team", "area": "frontend/performance" },
+      { "id": "PR-1855", "title": "Add task dependency graph endpoint", "author": "Backend team", "area": "backend/api" }
+    ],
+    "upcoming_this_week": "v2.5.0 planned — includes recurring tasks discoverability redesign (3 FE engineers, estimate 5 days)"
+  }
+}

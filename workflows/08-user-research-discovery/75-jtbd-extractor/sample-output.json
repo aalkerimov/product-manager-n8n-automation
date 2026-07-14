@@ -1,0 +1,27 @@
+{
+  "_comment": "Illustrative LLM output. Actual job statements will vary.",
+  "jtbd": {
+    "jtbd_summary": "The core job is: when leading a team through concurrent projects, provide a single source of truth that eliminates the need to ask for status updates or write manual reports — so the team lead can maintain control and credibility without administrative overhead. Secondary jobs focus on anticipating blockers before they escalate and maintaining a professional reputation for delivery with both their team and their manager.",
+    "functional_jobs": [
+      { "job": "When starting the week, I want to see my entire team's work status in one view, so I can prioritise my time without sending status request messages", "frequency": "daily", "evidence_indexes": [1], "current_solution": "Slack DMs and stand-up meetings", "underserved": true },
+      { "job": "When presenting to my manager or stakeholders, I want to show concrete evidence of team output, so I can demonstrate that the team is delivering value", "frequency": "weekly", "evidence_indexes": [2], "current_solution": "Manual status email or spreadsheet extract", "underserved": true },
+      { "job": "When handing off a project mid-sprint, I want to transfer full context without losing any in-flight state, so the next person can continue without a handoff meeting", "frequency": "occasional", "evidence_indexes": [7], "current_solution": "Confluence page or shared doc", "underserved": true },
+      { "job": "When moving fast, I want to retain an audit trail of what happened, so I can reconstruct decisions if something goes wrong", "frequency": "occasional", "evidence_indexes": [9], "current_solution": "Email threads or manual notes", "underserved": true }
+    ],
+    "emotional_jobs": [
+      { "job": "Feel in control of the project even when working remotely or off-site", "valence": "positive", "evidence_indexes": [4], "product_implication": "Mobile app must support the full status-check flow — not just read-only access" },
+      { "job": "Feel relief from the administrative burden of writing status updates", "valence": "negative", "evidence_indexes": [8], "product_implication": "Auto-generated status summaries or digest emails that eliminate the need to manually compose updates" },
+      { "job": "Feel confident that dependency risks are visible before they cause a missed deadline", "valence": "negative", "evidence_indexes": [3], "product_implication": "Dependency alerts and risk notifications must be proactive, not reactive" }
+    ],
+    "social_jobs": [
+      { "job": "Be perceived as organised and on top of things by their direct team, even during chaotic sprints", "evidence_indexes": [6], "product_implication": "The product's UI itself should reinforce a sense of order — clear visual hierarchy of project health, no clutter" },
+      { "job": "Be perceived as accountable and delivery-focused by their manager and leadership stakeholders", "evidence_indexes": [2, 5], "product_implication": "Export and reporting features are social proof tools — they exist to help the team lead demonstrate credibility upward" }
+    ],
+    "pain_points": [
+      { "pain": "Writing status updates manually is a recurring, low-value task that interrupts actual project work", "severity": "critical", "evidence_indexes": [8] },
+      { "pain": "Dependency failures surface too late — discovered only when a deadline is missed", "severity": "critical", "evidence_indexes": [3] },
+      { "pain": "Project handoff loses context — the new owner starts from scratch or needs a 1-hour sync", "severity": "major", "evidence_indexes": [7] }
+    ]
+  },
+  "meta": { "source": "Customer interviews — switching and onboarding study, July 2026", "persona": "Mid-market team lead (Segment B)", "generated_at": "2026-07-14T09:00:00.000Z" }
+}

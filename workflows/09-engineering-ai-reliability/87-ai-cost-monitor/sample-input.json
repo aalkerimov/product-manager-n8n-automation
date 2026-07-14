@@ -1,0 +1,11 @@
+{
+  "usage_data": [
+    { "workflow": "72-survey-response-analyser", "model": "gpt-4o-mini", "input_tokens": 45200, "output_tokens": 12800, "calls": 34, "period": "week" },
+    { "workflow": "78-synthesis-report-builder", "model": "gpt-4o", "input_tokens": 38000, "output_tokens": 22000, "calls": 8, "period": "week" },
+    { "workflow": "81-bug-triage-assistant", "model": "gpt-4o-mini", "input_tokens": 18600, "output_tokens": 5400, "calls": 42, "period": "week" },
+    { "workflow": "74-persona-generator", "model": "gpt-4o", "input_tokens": 22000, "output_tokens": 14000, "calls": 6, "period": "week" }
+  ],
+  "budget_config": { "weekly_budget_usd": 25.00, "alert_threshold_pct": 80, "per_workflow_budget_usd": 10.00 },
+  "period_start": "2026-07-07",
+  "period_end": "2026-07-13"
+}

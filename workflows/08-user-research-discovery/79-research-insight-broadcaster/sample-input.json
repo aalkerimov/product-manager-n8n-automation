@@ -1,0 +1,15 @@
+{
+  "insight_title": "Recurring tasks: the hidden retention driver",
+  "source_study": "Q3 2026 Research Synthesis",
+  "insight_type": "product_finding",
+  "core_insight": "Recurring tasks is used by only 28% of accounts but drives 2x NPS and 3x retention for those accounts. Critically, usability testing shows 60% of new users fail to find the feature during their first session because it is buried in the date picker with no visual affordance.",
+  "implication": "Making recurring tasks more discoverable in onboarding could be the single highest-ROI product change this quarter.",
+  "confidence": "high",
+  "action_required": true,
+  "audiences": [
+    { "group": "engineering", "summary": "ACTION: Move recurring task button to task header — not inside date picker. Estimated effort: 2 sprints. Directly tied to 3x retention signal.", "urgency": "high" },
+    { "group": "design", "summary": "ACTION: Redesign recurring task entry point. Current: buried in date picker. Proposed: prominent labelled button in task header with clock icon. See usability test report for participant failure clips.", "urgency": "high" },
+    { "group": "company-all-hands", "summary": "INSIGHT: We have a feature that drives 3x customer retention but only 28% of customers use it — because they can't find it. Our top priority this quarter is making it discoverable. That's it. That's the insight.", "urgency": "normal" },
+    { "group": "sales", "summary": "SALES TALKING POINT: Recurring tasks (one of our core features) saves customers 2+ hours per week. In Q3, we are making it more visible in the product so you can demo the value on first contact. Talking point: 'ProjectFlow's recurring tasks saves your team 2 hours per week on average — and it takes 30 seconds to set up.'", "urgency": "normal" }
+  ]
+}

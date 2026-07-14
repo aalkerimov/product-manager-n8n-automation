@@ -1,0 +1,16 @@
+{
+  "_comment": "Illustrative LLM output. Actual output will vary.",
+  "assessment": {
+    "assessed_changes": [
+      { "id": "reg_001", "title": "EU AI Act — High-risk system classification guidelines", "jurisdiction": "EU", "relevance": "high", "affected_product_areas": ["ai-model-outputs", "data-privacy"], "required_action": "Review all AI-powered features against high-risk classification criteria. Escalate to legal. Assess whether employment or credit decision features qualify.", "deadline": "2026-08-06 (implied 90-day EU compliance window)", "confidence": "high" },
+      { "id": "reg_002", "title": "FTC rule on AI-generated endorsements", "jurisdiction": "US", "relevance": "high", "affected_product_areas": ["ai-model-outputs"], "required_action": "Audit any feature that could generate customer-facing reviews or testimonials. Add disclosure labels if AI-generated content is present. Consult legal on enforcement timeline.", "deadline": "~2026-10-08 (90 days from publication)", "confidence": "high" },
+      { "id": "reg_003", "title": "UK ICO automated decision-making guidance", "jurisdiction": "UK", "relevance": "medium", "affected_product_areas": ["ai-model-outputs", "data-privacy"], "required_action": "Identify any decision-making flows that produce legally significant outcomes. Ensure human review option is documented. Update privacy notice if needed.", "deadline": null, "confidence": "medium" },
+      { "id": "reg_004", "title": "California AB-2013 training data transparency", "jurisdiction": "US-CA", "relevance": "medium", "affected_product_areas": ["ai-model-outputs"], "required_action": "Document training data sources for all AI features. Prepare public-facing summary. Effective January 2027.", "deadline": "2027-01-01", "confidence": "high" },
+      { "id": "reg_005", "title": "NIST AI RMF v2.0 — audit trails", "jurisdiction": "US", "relevance": "low", "affected_product_areas": ["ai-model-outputs"], "required_action": "Monitor only. Non-binding, but may influence enterprise customer procurement questionnaires.", "deadline": null, "confidence": "medium" },
+      { "id": "reg_006", "title": "GDPR cookie consent template update", "jurisdiction": "EU", "relevance": "none", "affected_product_areas": [], "required_action": "No action required.", "deadline": null, "confidence": "high" }
+    ],
+    "high_priority_count": 2,
+    "summary": "Two high-priority items this week: the EU AI Act high-risk system guidelines and the FTC AI endorsement rule both directly affect Acme Analytics' AI output features and have near-term compliance deadlines. California AB-2013 adds a January 2027 training data disclosure requirement. Legal review recommended within 5 business days on the two high-priority items."
+  },
+  "meta": { "fetched_at": "2026-07-14T09:00:00.000Z", "total_filtered": 6 }
+}

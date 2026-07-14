@@ -1,0 +1,14 @@
+{
+  "_comment": "Deterministic output. today=2026-07-14. Freshness computed by days_since_update > stale_threshold_days.",
+  "stale": [
+    { "title": "Incident Response Runbook", "owner": "Maria Santos", "category": "operations", "last_updated": "2026-01-10", "stale_threshold_days": 30, "days_since_update": 185, "is_stale": true, "staleness_ratio": 6.17, "severity": "critical" },
+    { "title": "Onboarding Flow Spec", "owner": "Head of Product", "category": "product", "last_updated": "2026-02-20", "stale_threshold_days": 30, "days_since_update": 144, "is_stale": true, "staleness_ratio": 4.8, "severity": "critical" },
+    { "title": "API Authentication Guide", "owner": "Maria Santos", "category": "technical", "last_updated": "2026-04-15", "stale_threshold_days": 60, "days_since_update": 90, "is_stale": true, "staleness_ratio": 1.5, "severity": "stale" },
+    { "title": "Pricing & Packaging Overview", "owner": "Head of Product", "category": "strategy", "last_updated": "2026-05-01", "stale_threshold_days": 60, "days_since_update": 74, "is_stale": true, "staleness_ratio": 1.23, "severity": "stale" }
+  ],
+  "meta": { "total": 7, "stale_count": 4, "critical_count": 2, "fresh_count": 3 },
+  "by_owner": {
+    "Maria Santos": ["Incident Response Runbook", "API Authentication Guide"],
+    "Head of Product": ["Onboarding Flow Spec", "Pricing & Packaging Overview"]
+  }
+}

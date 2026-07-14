@@ -1,0 +1,34 @@
+{
+  "_comment": "Illustrative LLM review output. Actual checklist items and comments will vary.",
+  "review": {
+    "overall_quality": "adequate",
+    "checklist": [
+      { "item": "Problem statement", "status": "pass", "comment": "Clear and user-centric. Identifies the pain (manual duplication) and scale (time-consuming, error-prone)." },
+      { "item": "User stories", "status": "partial", "comment": "Two stories provided, both from the same workflow. Missing: story for admin configuring recurring tasks, story for what happens when a recurring task is missed/overdue." },
+      { "item": "Success metrics", "status": "pass", "comment": "Three measurable metrics with targets and timeframes. The duplicate detection heuristic needs a definition before engineering builds tracking." },
+      { "item": "Scope definition", "status": "pass", "comment": "Clear scope-in and scope-out. Exclusion of custom recurrence rules and subtask recurrence prevents scope creep." },
+      { "item": "Open questions resolved", "status": "fail", "comment": "Both open questions are still open: deletion behavior and subtask handling. These are blocking questions — they affect DB schema design. Must be resolved before engineering begins." },
+      { "item": "Technical feasibility reviewed", "status": "partial", "comment": "3-week estimate provided but not validated by engineering. No mention of timezone handling for recurring tasks — this is a common complexity." },
+      { "item": "Launch plan", "status": "partial", "comment": "Beta plan is reasonable. Missing: rollback plan if beta reveals issues, how beta customers are selected, and what 'GA announcement' means (in-product only, email, etc)." },
+      { "item": "Edge cases addressed", "status": "fail", "comment": "No edge cases documented. Recurring task behavior on: public holidays, team member absence, timezone changes, task reassignment, or archiving a project." }
+    ],
+    "strengths": [
+      "Clear, quantified success metrics with realistic targets",
+      "Explicit scope-out list prevents scope creep",
+      "Beta-first launch approach reduces risk"
+    ],
+    "critical_gaps": [
+      "Open questions on deletion behavior and subtask handling MUST be resolved — these directly impact DB schema",
+      "No edge cases documented — at minimum: timezone handling, holiday behavior, and project archiving must be addressed",
+      "Duplicate detection heuristic for success metric #2 must be defined"
+    ],
+    "suggested_improvements": [
+      "Add a user story for the admin/team lead use case",
+      "Request engineering to validate the 3-week estimate and confirm timezone handling approach",
+      "Define rollback criteria for the beta phase"
+    ],
+    "ready_for_engineering": false,
+    "reviewer_summary": "This spec has a strong foundation: clear problem, good metrics, and tight scope. However, two critical open questions (deletion behavior and subtask handling) must be resolved before engineering begins, as they directly affect database schema design. The edge case section is missing entirely. Recommend addressing critical gaps, then re-submitting for a quick second pass."
+  },
+  "meta": { "spec_title": "Recurring Tasks Feature Spec", "author": "Jane Smith", "version": "0.3", "generated_at": "2026-07-14T09:00:00.000Z" }
+}

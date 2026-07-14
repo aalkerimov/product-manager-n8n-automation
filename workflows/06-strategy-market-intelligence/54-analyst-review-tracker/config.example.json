@@ -1,0 +1,17 @@
+{
+  "_comment": "config.example.json for Analyst and Review Platform Tracker",
+  "workflow_id": "54-analyst-review-tracker",
+  "workflow_name": "Analyst and Review Platform Tracker",
+  "collection": "06-strategy-market-intelligence",
+  "status": "beta",
+  "configuration": {
+    "TRACKER_EMAIL_TO": { "default": "", "description": "Weekly report recipient", "required": "Required" },
+    "NOTIFICATION_EMAIL_FROM": { "default": "automation@acme-analytics.com", "description": "Sender address", "required": "Optional" },
+    "OUR_COMPANY_NAME": { "default": "Acme Analytics", "description": "Your company name as it appears in snapshot data. Must match exactly.", "required": "Optional" },
+    "TRACKER_SCHEDULE": { "default": "0 8 * * 1", "description": "Cron expression for weekly run (default: Monday 08:00)", "required": "Optional" }
+  },
+  "n8n_credentials_required": [
+    { "name": "YOUR_SMTP_CREDENTIAL", "type": "smtp", "required": true, "purpose": "Send weekly report email" }
+  ],
+  "notes": "No LLM credential required. G2 and Capterra do not have official APIs. Live data fetching requires custom HTTP Request nodes — see README section 12."
+}

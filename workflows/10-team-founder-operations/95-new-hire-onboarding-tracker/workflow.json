@@ -1,0 +1,177 @@
+{
+  "name": "New Hire Onboarding Tracker",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## New Hire Onboarding Tracker\n\n**Setup:**\n1. Create YOUR_SMTP_CREDENTIAL\n2. Set ONBOARDING_EMAIL_TO (manager + HR)\n3. Trigger when a new hire joins with their start date and onboarding checklist\n4. Code nodes track milestone completion vs. expected timeline, flag overdue items — no LLM\n5. Approval gate before status report is shared with HR",
+        "height": 240,
+        "width": 420,
+        "color": 4
+      },
+      "id": "sticky-setup",
+      "name": "Setup Instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, -260]
+    },
+    {
+      "parameters": { "rule": { "interval": [{ "field": "weeks", "triggerAtDay": [1], "triggerAtHour": 9 }] } },
+      "id": "cron-trigger",
+      "name": "Weekly Schedule (Monday 9am)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 200]
+    },
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 380]
+    },
+    {
+      "parameters": {
+        "jsCode": "const hires = [\n  {\n    name: 'Sofia Park',\n    role: 'Junior Frontend Engineer',\n    manager: 'Alex Chen',\n    start_date: '2026-06-30',\n    week_in_role: 2,\n    milestones: [\n      { name: 'Complete IT setup (laptop, accounts, tools)', due_day: 1, completed: true, completed_date: '2026-06-30' },\n      { name: 'Meet entire team (introductions done)', due_day: 3, completed: true, completed_date: '2026-07-02' },\n      { name: 'Read product onboarding docs and codebase intro', due_day: 5, completed: true, completed_date: '2026-07-04' },\n      { name: 'First PR submitted (however small)', due_day: 10, completed: true, completed_date: '2026-07-09' },\n      { name: 'Complete first independent task (PM-assigned)', due_day: 14, completed: false, completed_date: null },\n      { name: '30-day check-in with manager', due_day: 30, completed: false, completed_date: null },\n      { name: 'Ship first user-facing feature', due_day: 45, completed: false, completed_date: null }\n    ],\n    manager_notes: 'Sofia is integrating well. First PR merged independently. Gaining confidence quickly.',\n    buddy: 'James Kim'\n  }\n];\nconst today = '2026-07-14';\nreturn [{ json: { hires, today } }];"
+      },
+      "id": "load-hires",
+      "name": "Load New Hire Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 280]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { hires, today } = $input.first().json;\nconst todayMs = new Date(today).getTime();\nconst reports = hires.map(hire => {\n  const startMs = new Date(hire.start_date).getTime();\n  const days_in_role = Math.floor((todayMs - startMs) / (1000*60*60*24));\n  const milestones_with_status = hire.milestones.map(m => {\n    const due_date = new Date(startMs + m.due_day * 24*60*60*1000);\n    const overdue = !m.completed && todayMs > due_date.getTime();\n    const days_overdue = overdue ? Math.floor((todayMs - due_date.getTime())/(1000*60*60*24)) : 0;\n    return { ...m, due_date: due_date.toISOString().slice(0,10), overdue, days_overdue };\n  });\n  const completed = milestones_with_status.filter(m => m.completed).length;\n  const total = milestones_with_status.length;\n  const overdue_items = milestones_with_status.filter(m => m.overdue);\n  const next_due = milestones_with_status.filter(m => !m.completed && !m.overdue).sort((a,b)=>a.due_day-b.due_day)[0];\n  return { name: hire.name, role: hire.role, manager: hire.manager, start_date: hire.start_date, days_in_role, week_in_role: hire.week_in_role, milestones: milestones_with_status, completed, total, pct_complete: parseFloat(((completed/total)*100).toFixed(0)), overdue_items, next_due, manager_notes: hire.manager_notes, buddy: hire.buddy };\n});\nconst total_overdue = reports.reduce((s,r) => s + r.overdue_items.length, 0);\nreturn [{ json: { reports, today, meta: { hire_count: reports.length, total_overdue } } }];"
+      },
+      "id": "track-milestones",
+      "name": "Track Milestones",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [740, 280]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { reports, today, meta: m } = $input.first().json;\nconst hireLines = reports.map(r => {\n  const mLines = r.milestones.map(ms => `    [${ms.completed?'✓':'○'}${ms.overdue?' ⚠️ OVERDUE '+ms.days_overdue+'d':''}] Day ${ms.due_day}: ${ms.name}${ms.completed?' (done '+ms.completed_date+')':' (due '+ms.due_date+')'}`).join('\\n');\n  return [\n    `  ${r.name} — ${r.role} | Day ${r.days_in_role} | ${r.pct_complete}% complete`,\n    `  Manager: ${r.manager} | Buddy: ${r.buddy}`,\n    r.overdue_items.length > 0 ? `  ⚠️ ${r.overdue_items.length} OVERDUE milestone(s)` : '  ✅ On track',\n    r.next_due ? `  Next due: Day ${r.next_due.due_day} — ${r.next_due.name}` : '',\n    `  Manager notes: ${r.manager_notes}`,\n    `  MILESTONES:`,\n    mLines\n  ].filter(Boolean).join('\\n');\n}).join('\\n\\n');\nconst report = [\n  `NEW HIRE ONBOARDING TRACKER`,\n  `As of: ${today} | ${m.hire_count} active hire(s) | ${m.total_overdue} overdue milestone(s)`,\n  ``,\n  hireLines,\n].join('\\n');\nreturn [{ json: { ...($input.first().json), report_text: report } }];"
+      },
+      "id": "format-report",
+      "name": "Format Onboarding Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [960, 280]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "fo", "leftValue": "={{ $json.meta.total_overdue }}", "rightValue": 0, "operator": { "type": "number", "operation": "gt" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "any-overdue",
+      "name": "Any Overdue?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1180, 280]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.ONBOARDING_APPROVER_EMAIL || $env.ONBOARDING_EMAIL_TO }}",
+        "subject": "=APPROVAL REQUIRED: Onboarding Report — {{ $json.meta.total_overdue }} overdue milestone(s)",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $json.report_text }}</pre><p><a href=\"{{ $execution.resumeUrl }}?decision=approved\">Approve and share with HR</a> | <a href=\"{{ $execution.resumeUrl }}?decision=rejected\">Reject</a></p>",
+        "options": {}
+      },
+      "id": "send-approval-overdue",
+      "name": "Send for Approval (Overdue)",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1400, 180],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.ONBOARDING_EMAIL_TO || 'hr@acme-analytics.com' }}",
+        "subject": "=Onboarding Status: {{ $json.meta.hire_count }} hire(s) on track — {{ $json.today }}",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $json.report_text }}</pre>",
+        "options": {}
+      },
+      "id": "send-on-track",
+      "name": "Send On-Track Report",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1400, 380],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": { "resume": "webhook", "options": { "webhookSuffix": "/approval" } },
+      "id": "wait-approval",
+      "name": "Wait for Approval",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [1620, 180],
+      "webhookId": "onboarding-approval"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "cd", "leftValue": "={{ $json.query?.decision || $json.body?.decision }}", "rightValue": "approved", "operator": { "type": "string", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-decision",
+      "name": "Approved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1840, 180]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.ONBOARDING_EMAIL_TO || 'hr@acme-analytics.com' }}",
+        "subject": "=Onboarding Alert: {{ $('Format Onboarding Report').first().json.meta.total_overdue }} overdue milestone(s) — action required",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $('Format Onboarding Report').first().json.report_text }}</pre>",
+        "options": {}
+      },
+      "id": "send-alert",
+      "name": "Send Overdue Alert to HR",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [2060, 100],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": { "assignments": { "assignments": [{ "id": "r1", "name": "status", "value": "rejected", "type": "string" }] }, "options": {} },
+      "id": "log-rejection",
+      "name": "Log Rejection",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2060, 260]
+    }
+  ],
+  "connections": {
+    "Weekly Schedule (Monday 9am)": { "main": [[{ "node": "Load New Hire Data", "type": "main", "index": 0 }]] },
+    "Manual Trigger": { "main": [[{ "node": "Load New Hire Data", "type": "main", "index": 0 }]] },
+    "Load New Hire Data": { "main": [[{ "node": "Track Milestones", "type": "main", "index": 0 }]] },
+    "Track Milestones": { "main": [[{ "node": "Format Onboarding Report", "type": "main", "index": 0 }]] },
+    "Format Onboarding Report": { "main": [[{ "node": "Any Overdue?", "type": "main", "index": 0 }]] },
+    "Any Overdue?": { "main": [[{ "node": "Send for Approval (Overdue)", "type": "main", "index": 0 }], [{ "node": "Send On-Track Report", "type": "main", "index": 0 }]] },
+    "Send for Approval (Overdue)": { "main": [[{ "node": "Wait for Approval", "type": "main", "index": 0 }]] },
+    "Wait for Approval": { "main": [[{ "node": "Approved?", "type": "main", "index": 0 }]] },
+    "Approved?": { "main": [[{ "node": "Send Overdue Alert to HR", "type": "main", "index": 0 }], [{ "node": "Log Rejection", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1", "saveManualExecutions": true, "callerPolicy": "workflowsFromSameOwner", "errorWorkflow": "" },
+  "staticData": null,
+  "tags": ["team", "founder", "onboarding", "hr", "beta"],
+  "triggerCount": 0,
+  "updatedAt": "2026-07-14T00:00:00.000Z",
+  "versionId": "95-new-hire-onboarding-tracker-v0.1.0"
+}

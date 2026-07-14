@@ -1,0 +1,11 @@
+{
+  "responses": [
+    { "name": "Alex Chen", "role": "Senior FE", "mood_score": 2, "blockers": "Still not getting design specs before sprint. Had to stop mid-task twice to wait.", "wins": "Finished recurring tasks frontend, PR merged.", "load": "high", "needs_help": true },
+    { "name": "Maria Santos", "role": "Backend Engineer", "mood_score": 4, "blockers": null, "wins": "Shipped auth migration. Team loved the performance gain.", "load": "medium", "needs_help": false },
+    { "name": "James Kim", "role": "Product Designer", "mood_score": 3, "blockers": "Unclear brief on onboarding redesign — need PM input before I can move forward.", "wins": "Finished custom fields UI design.", "load": "medium", "needs_help": false },
+    { "name": "Sofia Park", "role": "Junior FE", "mood_score": 4, "blockers": null, "wins": "First PR merged independently!", "load": "medium", "needs_help": false },
+    { "name": "David Osei", "role": "Backend Engineer", "mood_score": 3, "blockers": "Waiting for API contract from PM for task dependency graph.", "wins": "Added new endpoint for dependency graph.", "load": "high", "needs_help": true }
+  ],
+  "week": "July 7–11, 2026",
+  "team_size": 5
+}

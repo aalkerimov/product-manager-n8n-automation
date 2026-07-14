@@ -1,0 +1,197 @@
+{
+  "name": "Roadmap Communication Planner",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Roadmap Communication Planner\n\n**Setup:**\n1. Create YOUR_OPENAI_CREDENTIAL and YOUR_SMTP_CREDENTIAL\n2. Feed roadmap items and stakeholder map\n3. LLM produces a tailored communication plan (who gets what, when, and in what format)\n4. Approval gate before sending to stakeholders\n5. Trigger at start of quarter or before major roadmap changes",
+        "height": 260,
+        "width": 420,
+        "color": 5
+      },
+      "id": "sticky-setup",
+      "name": "Setup Instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, -260]
+    },
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: {\n  quarter: 'Q3 2026',\n  roadmap_items: [\n    { id: 'RM001', title: 'RBAC (role-based access control)', category: 'enterprise-security', eta: '2026-08-15', audience_impact: 'enterprise', confidentiality: 'internal' },\n    { id: 'RM002', title: 'iOS app GA', category: 'mobile', eta: '2026-07-31', audience_impact: 'all', confidentiality: 'public' },\n    { id: 'RM003', title: 'Android v1 beta', category: 'mobile', eta: '2026-09-15', audience_impact: 'all', confidentiality: 'internal' },\n    { id: 'RM004', title: 'Microsoft Teams integration', category: 'integration', eta: '2026-08-30', audience_impact: 'enterprise', confidentiality: 'public' },\n    { id: 'RM005', title: 'Audit log', category: 'enterprise-security', eta: '2026-08-29', audience_impact: 'enterprise', confidentiality: 'internal' },\n    { id: 'RM006', title: 'Gantt chart view (deferred to Q4)', category: 'ui', eta: 'Q4 2026', audience_impact: 'all', confidentiality: 'internal' }\n  ],\n  stakeholders: [\n    { group: 'enterprise customers', channel: 'customer success manager → email', cadence: 'monthly', sensitivity: 'medium' },\n    { group: 'sales team', channel: 'Slack + weekly sync', cadence: 'weekly', sensitivity: 'high' },\n    { group: 'board', channel: 'quarterly board deck', cadence: 'quarterly', sensitivity: 'high' },\n    { group: 'all-hands', channel: 'company meeting', cadence: 'monthly', sensitivity: 'low' },\n    { group: 'public (website/changelog)', channel: 'changelog + email newsletter', cadence: 'on release', sensitivity: 'low' }\n  ],\n  context: 'We have deferred Gantt chart view to Q4 and need to manage that expectation. Enterprise customers care most about RBAC and audit log. Sales needs clear ETAs for deals.'\n} }];"
+      },
+      "id": "load-sample",
+      "name": "Load Sample Roadmap Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $input.first().json;\nconst itemsText = d.roadmap_items.map(r =>\n  `  [${r.id}] ${r.title} | Category: ${r.category} | ETA: ${r.eta} | Audience: ${r.audience_impact} | Confidentiality: ${r.confidentiality}`\n).join('\\n');\nconst stakeholderText = d.stakeholders.map(s =>\n  `  ${s.group} — Channel: ${s.channel} | Cadence: ${s.cadence} | Sensitivity: ${s.sensitivity}`\n).join('\\n');\nconst system = `You are a senior PM creating a stakeholder communication plan for a product roadmap. You match roadmap items to the right stakeholder groups with the right message, channel, and timing. You flag sensitive items. Return ONLY valid JSON.`;\nconst user = `Create a roadmap communication plan for ${d.quarter}.\n\nContext: ${d.context}\n\nRoadmap items:\n${itemsText}\n\nStakeholders:\n${stakeholderText}\n\nReturn JSON:\n{\n  \"communication_plan\": [\n    {\n      \"stakeholder_group\": \"string\",\n      \"channel\": \"string\",\n      \"messages\": [\n        {\n          \"roadmap_item_ids\": [\"string\"],\n          \"message_type\": \"announcement|update|expectation-setting|defer-notice\",\n          \"suggested_timing\": \"string\",\n          \"key_points\": [\"string\"],\n          \"tone\": \"string\",\n          \"do_not_share\": [\"string — items to exclude from this group\"]\n        }\n      ]\n    }\n  ],\n  \"sensitive_items\": [{ \"item_id\": \"string\", \"reason\": \"string\", \"recommended_handling\": \"string\" }],\n  \"deferral_notices\": [{ \"item\": \"string\", \"affected_groups\": [\"string\"], \"suggested_message\": \"string\" }],\n  \"communication_calendar\": [{ \"date_or_trigger\": \"string\", \"action\": \"string\", \"groups\": [\"string\"] }]\n}`;\nreturn [{ json: { data: d, system_prompt: system, user_prompt: user } }];"
+      },
+      "id": "prepare-prompt",
+      "name": "Prepare Communication Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [740, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.OPENAI_BASE_URL || 'https://api.openai.com' }}/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParameters": {
+          "parameters": [
+            { "name": "model", "value": "={{ $env.AI_MODEL || 'gpt-4o-mini' }}" },
+            { "name": "messages", "value": "=[{\"role\":\"system\",\"content\":\"{{ $json.system_prompt }}\"},{\"role\":\"user\",\"content\":\"{{ $json.user_prompt }}\"}]" },
+            { "name": "temperature", "value": "=0.3" },
+            { "name": "response_format", "value": "={\"type\":\"json_object\"}" }
+          ]
+        },
+        "options": { "timeout": 60000 }
+      },
+      "id": "llm-call",
+      "name": "LLM: Build Comm Plan",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [960, 200],
+      "credentials": { "httpHeaderAuth": { "name": "YOUR_OPENAI_CREDENTIAL" } }
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst upstream = $('Prepare Communication Prompt').first().json;\nlet parsed;\ntry {\n  const c = response.choices?.[0]?.message?.content;\n  if (!c) throw new Error('No content');\n  parsed = JSON.parse(c);\n} catch(e) { return [{ json: { _error: true, reason: e.message } }]; }\nif (!parsed.communication_plan || !Array.isArray(parsed.communication_plan)) return [{ json: { _error: true, reason: 'Missing communication_plan' } }];\nreturn [{ json: { _error: false, plan: parsed, meta: { quarter: upstream.data.quarter, generated_at: new Date().toISOString() } } }];"
+      },
+      "id": "validate-llm",
+      "name": "Validate LLM Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1180, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "ce", "leftValue": "={{ $json._error }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "error-check",
+      "name": "LLM Error?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1400, 200]
+    },
+    {
+      "parameters": { "assignments": { "assignments": [{ "id": "e1", "name": "status", "value": "error", "type": "string" }] }, "options": {} },
+      "id": "error-handler",
+      "name": "LLM Error Handler",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1600, 100]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { plan: p, meta: m } = $input.first().json;\nconst planLines = (p.communication_plan||[]).map(sp => [\n  `STAKEHOLDER GROUP: ${sp.stakeholder_group} (${sp.channel})`,\n  ...(sp.messages||[]).map(msg =>\n    `  Type: ${msg.message_type} | Timing: ${msg.suggested_timing}\\n  Items: ${(msg.roadmap_item_ids||[]).join(', ')}\\n  Key points:\\n${(msg.key_points||[]).map(kp=>'    - '+kp).join('\\n')}\\n  Tone: ${msg.tone}${msg.do_not_share?.length ? '\\n  DO NOT SHARE with this group: '+msg.do_not_share.join(', ') : ''}`\n  ),\n  ''\n].join('\\n')).join('\\n');\nconst sensitiveLines = (p.sensitive_items||[]).map(s => `  [${s.item_id}] ${s.reason} → ${s.recommended_handling}`).join('\\n');\nconst deferralLines = (p.deferral_notices||[]).map(d => `  ${d.item}: ${d.suggested_message} (Affected: ${d.affected_groups.join(', ')})`).join('\\n');\nconst calendarLines = (p.communication_calendar||[]).map(c => `  ${c.date_or_trigger}: ${c.action} → ${c.groups.join(', ')}`).join('\\n');\nconst report = [\n  `ROADMAP COMMUNICATION PLAN — ${m.quarter}`,\n  `Generated: ${m.generated_at}`,\n  ``,\n  planLines,\n  `SENSITIVE ITEMS:`,\n  sensitiveLines || '  (none)',\n  ``,\n  `DEFERRAL NOTICES:`,\n  deferralLines || '  (none)',\n  ``,\n  `COMMUNICATION CALENDAR:`,\n  calendarLines,\n].join('\\n');\nreturn [{ json: { ...($input.first().json), report_text: report } }];"
+      },
+      "id": "format-plan",
+      "name": "Format Communication Plan",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1600, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.COMMPLAN_APPROVER_EMAIL || 'cpo@acme-analytics.com' }}",
+        "subject": "=APPROVAL REQUIRED: Roadmap Comm Plan — {{ $json.meta.quarter }}",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $json.report_text }}</pre><p><a href=\"{{ $execution.resumeUrl }}?decision=approved\">Approve and share</a> | <a href=\"{{ $execution.resumeUrl }}?decision=rejected\">Reject</a></p>",
+        "options": {}
+      },
+      "id": "send-approval",
+      "name": "Send for Approval",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1820, 300],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": { "resume": "webhook", "options": { "webhookSuffix": "/approval" } },
+      "id": "wait-approval",
+      "name": "Wait for Approval",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [2040, 300],
+      "webhookId": "comm-plan-approval"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "cd", "leftValue": "={{ $json.query?.decision || $json.body?.decision }}", "rightValue": "approved", "operator": { "type": "string", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-decision",
+      "name": "Approved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2260, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.COMMPLAN_EMAIL_TO || 'product@acme-analytics.com' }}",
+        "subject": "={{ 'Roadmap Communication Plan — ' + $('Format Communication Plan').first().json.meta.quarter }}",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $('Format Communication Plan').first().json.report_text }}</pre>",
+        "options": {}
+      },
+      "id": "send-plan",
+      "name": "Send Communication Plan",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [2480, 200],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": { "assignments": { "assignments": [{ "id": "r1", "name": "status", "value": "rejected", "type": "string" }] }, "options": {} },
+      "id": "log-rejection",
+      "name": "Log Rejection",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2480, 400]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": { "main": [[{ "node": "Load Sample Roadmap Context", "type": "main", "index": 0 }]] },
+    "Load Sample Roadmap Context": { "main": [[{ "node": "Prepare Communication Prompt", "type": "main", "index": 0 }]] },
+    "Prepare Communication Prompt": { "main": [[{ "node": "LLM: Build Comm Plan", "type": "main", "index": 0 }]] },
+    "LLM: Build Comm Plan": { "main": [[{ "node": "Validate LLM Output", "type": "main", "index": 0 }]] },
+    "Validate LLM Output": { "main": [[{ "node": "LLM Error?", "type": "main", "index": 0 }]] },
+    "LLM Error?": { "main": [[{ "node": "LLM Error Handler", "type": "main", "index": 0 }], [{ "node": "Format Communication Plan", "type": "main", "index": 0 }]] },
+    "Format Communication Plan": { "main": [[{ "node": "Send for Approval", "type": "main", "index": 0 }]] },
+    "Send for Approval": { "main": [[{ "node": "Wait for Approval", "type": "main", "index": 0 }]] },
+    "Wait for Approval": { "main": [[{ "node": "Approved?", "type": "main", "index": 0 }]] },
+    "Approved?": { "main": [[{ "node": "Send Communication Plan", "type": "main", "index": 0 }], [{ "node": "Log Rejection", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1", "saveManualExecutions": true, "callerPolicy": "workflowsFromSameOwner", "errorWorkflow": "" },
+  "staticData": null,
+  "tags": ["roadmap", "planning", "communication", "beta"],
+  "triggerCount": 0,
+  "updatedAt": "2026-07-14T00:00:00.000Z",
+  "versionId": "70-roadmap-communication-planner-v0.1.0"
+}

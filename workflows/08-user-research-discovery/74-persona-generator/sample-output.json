@@ -1,0 +1,48 @@
+{
+  "_comment": "Illustrative LLM output. Actual persona content will vary.",
+  "result": {
+    "personas": [
+      {
+        "name": "The Activation-Risk Casual",
+        "archetype": "At-risk churn",
+        "segment": "Segment A (1-5 users, 8 tasks/week)",
+        "primary_goal": "Track my team's tasks without spending time on setup or maintenance",
+        "secondary_goals": ["Get a quick status overview without opening the app", "Share progress with a founder or client without manual work"],
+        "key_frustrations": ["Onboarding takes too long — unclear where to start", "Too many features I never use, making the UI feel cluttered", "Mobile app doesn't let me do the basics on the go"],
+        "behavioural_patterns": ["Creates tasks but rarely uses due dates or assignees", "Checks status once per week, not daily", "Has not discovered recurring tasks or dependencies"],
+        "success_metric": "Team is aligned on what's happening this week without a meeting",
+        "retention_signal": "Whether they discover and use recurring tasks within the first 30 days — accounts that do have 3x retention",
+        "product_implications": ["Onboarding must surface recurring tasks early for this persona", "Mobile UX must support the basic task+status flow without friction", "Empty states and tooltips matter — this persona does not read docs"],
+        "research_evidence": ["NPS survey: casual users only create tasks and update status, high churn", "Segment analysis: 1-5 user accounts, 4-month LTV", "Feature analytics: recurring tasks not used — but usage predicts retention"]
+      },
+      {
+        "name": "The Collaborative Team Lead",
+        "archetype": "Growth persona",
+        "segment": "Segment B (6-20 users, 45 tasks/week)",
+        "primary_goal": "Keep the team aligned across multiple concurrent workstreams without spending all day in meetings",
+        "secondary_goals": ["Get non-technical stakeholders to update their own tasks", "Reduce notification noise without losing visibility"],
+        "key_frustrations": ["Non-PM team members resist adopting the tool", "Notification overload for large projects", "No easy way to share a project view with someone who doesn't need to edit"],
+        "behavioural_patterns": ["Daily active user across web and mobile", "Uses task dependencies and recurring tasks", "Manages 3-5 active projects simultaneously"],
+        "success_metric": "Everyone on the team updates their own tasks, and I can get a status overview in under 2 minutes",
+        "retention_signal": "Whether more than 60% of invited team members actively contribute tasks — accounts where only the PM uses it churn in 12 months",
+        "product_implications": ["Notification controls per project are critical for this persona", "Read-only sharing links would remove a key adoption blocker", "Team onboarding (not just individual) needs its own flow"],
+        "research_evidence": ["Customer interviews: mid-market PMs care about team adoption and collaboration", "NPS survey: team of 10+ people, too many notifications", "Segment analysis: 6-20 user accounts, 14-month LTV"]
+      },
+      {
+        "name": "The Enterprise Power User",
+        "archetype": "High-LTV anchor",
+        "segment": "Segment C (21-100 users, 200+ tasks/week)",
+        "primary_goal": "Manage 5+ concurrent enterprise projects with full visibility into dependencies, capacity, and blockers",
+        "secondary_goals": ["Produce status reports for executives without manual effort", "Integrate project data into the tools the rest of the company already uses"],
+        "key_frustrations": ["No RBAC — can't control what different roles can see or edit", "CSV export is incomplete — still requires manual report assembly", "No Microsoft Teams integration — forces tool-switching"],
+        "behavioural_patterns": ["Uses task dependencies for every project", "Exports data weekly for external reporting", "Manages user permissions manually — workaround for missing RBAC"],
+        "success_metric": "Zero project surprise escalations — everything tracked, assigned, and visible before it becomes a problem",
+        "retention_signal": "Whether enterprise security features (RBAC, audit log) are in place — this persona churns at contract renewal without them",
+        "product_implications": ["RBAC is a blocker — this persona cannot fully commit without it", "Microsoft Teams integration is a deal requirement, not a nice-to-have", "Reporting and export quality directly affects renewal conversations"],
+        "research_evidence": ["Customer interviews: enterprise PMs care about integrations and reporting", "Feature analytics: dependencies used by 12% of accounts, all in Segment C", "Segment analysis: 21-100 user accounts, 24-month LTV"]
+      }
+    ],
+    "persona_matrix": "The three personas represent a natural customer progression: Casual Activators churn early if not converted to power behaviour; Collaborative Team Leads are the growth engine and represent the largest revenue opportunity; Enterprise Power Users are the highest-LTV segment but require enterprise features (RBAC, integrations) to stay. Retention strategy should focus on activating Casuals into Team Leads, and converting Team Leads into Power Users."
+  },
+  "meta": { "product": "ProjectFlow — project management SaaS", "generated_at": "2026-07-14T09:00:00.000Z" }
+}

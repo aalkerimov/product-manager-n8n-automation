@@ -1,0 +1,229 @@
+{
+  "name": "Battlecard Generator",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Battlecard Generator\n\n**Setup:**\n1. Create `YOUR_OPENAI_CREDENTIAL` (HTTP Header Auth, Authorization: Bearer <key>)\n2. Create `YOUR_SMTP_CREDENTIAL`\n3. Create `YOUR_GOOGLE_SHEETS_CREDENTIAL` — point to competitor monitoring sheet\n4. Set BATTLECARD_EMAIL_TO, COMPETITOR_SHEET_ID env vars\n5. Test with Manual Trigger (embedded sample competitor data)\n\n**What it does:** Reads competitor monitoring output (or manual input), generates sales-ready battlecards with differentiation, objection handling, and landmines. All output requires approval before sharing with sales.",
+        "height": 320,
+        "width": 460,
+        "color": 6
+      },
+      "id": "sticky-setup",
+      "name": "Setup Instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, -280]
+    },
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 100]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "battlecard-generate",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook: Trigger Battlecard",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "battlecard-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: {\n  competitor_name: 'CompetitorX',\n  competitor_category: 'B2B project management',\n  our_product_name: 'Acme Analytics Platform',\n  our_strengths: ['Superior API and integrations', 'Best-in-class reporting', 'Faster onboarding (avg 3 days vs 14 days)', 'Transparent pricing — no seat upsells'],\n  our_weaknesses: ['No mobile app (roadmap Q3)', 'Missing SSO for free tier', 'Smaller ecosystem of native integrations'],\n  competitor_claims: ['\"Cheapest enterprise PM tool on the market\"', '\"AI-powered project predictions\"', '\"Enterprise-grade security by default\"'],\n  known_objections: ['Their price is lower', 'They have AI features we do not', 'They are better known in our industry'],\n  recent_changes: ['Raised Series C ($80M) — likely increasing sales motion', 'Released new AI assistant feature (beta)', 'Cut pricing by 20% for annual plans'],\n  target_segment: 'Mid-market and enterprise (200-2000 employees)',\n  run_id: 'manual_test_001'\n} }];"
+      },
+      "id": "load-sample-data",
+      "name": "Load Sample Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 100]
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json;\nconst body = raw.body || raw;\nif (!body.competitor_name || !body.our_product_name) {\n  throw new Error('competitor_name and our_product_name are required');\n}\nreturn [{ json: {\n  competitor_name: String(body.competitor_name).trim(),\n  competitor_category: String(body.competitor_category || 'unknown').trim(),\n  our_product_name: String(body.our_product_name).trim(),\n  our_strengths: Array.isArray(body.our_strengths) ? body.our_strengths : [],\n  our_weaknesses: Array.isArray(body.our_weaknesses) ? body.our_weaknesses : [],\n  competitor_claims: Array.isArray(body.competitor_claims) ? body.competitor_claims : [],\n  known_objections: Array.isArray(body.known_objections) ? body.known_objections : [],\n  recent_changes: Array.isArray(body.recent_changes) ? body.recent_changes : [],\n  target_segment: String(body.target_segment || 'all segments').trim(),\n  run_id: body.run_id || `bc_${Date.now()}`\n} }];"
+      },
+      "id": "validate-input",
+      "name": "Validate Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [740, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $input.first().json;\nconst system = `You are a sales enablement expert. You write clear, honest battlecards that help sales reps win deals — not marketing fluff. Use only facts provided. Identify where our product genuinely wins and where it does not. Return ONLY valid JSON.`;\nconst user = `Create a sales battlecard for ${d.our_product_name} competing against ${d.competitor_name} in the ${d.competitor_category} market.\n\nTarget segment: ${d.target_segment}\n\nOur strengths: ${d.our_strengths.join('; ')}\nOur weaknesses: ${d.our_weaknesses.join('; ')}\nCompetitor claims: ${d.competitor_claims.join('; ')}\nKnown objections from prospects: ${d.known_objections.join('; ')}\nCompetitor recent changes: ${d.recent_changes.join('; ')}\n\nReturn JSON:\n{\n  \"headline\": \"string — one sentence win thesis\",\n  \"when_we_win\": [{ \"situation\": \"string\", \"reason\": \"string\" }],\n  \"when_we_lose\": [{ \"situation\": \"string\", \"reason\": \"string\" }],\n  \"objection_handling\": [{ \"objection\": \"string\", \"response\": \"string\", \"avoid_saying\": \"string\" }],\n  \"discovery_questions\": [\"string — question to ask prospect to surface our advantage\"],\n  \"landmines\": [\"string — question to plant that exposes competitor weakness\"],\n  \"claims_rebuttal\": [{ \"their_claim\": \"string\", \"our_response\": \"string\", \"evidence\": \"string\" }],\n  \"recent_changes_impact\": \"string — what their recent moves mean for deals\",\n  \"confidence\": \"low|medium|high\",\n  \"confidence_rationale\": \"string\"\n}`;\nreturn [{ json: { ...d, system_prompt: system, user_prompt: user } }];"
+      },
+      "id": "prepare-prompt",
+      "name": "Prepare Battlecard Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [960, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.OPENAI_BASE_URL || 'https://api.openai.com' }}/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParameters": {
+          "parameters": [
+            { "name": "model", "value": "={{ $env.AI_MODEL || 'gpt-4o-mini' }}" },
+            { "name": "messages", "value": "=[{\"role\":\"system\",\"content\":\"{{ $json.system_prompt }}\"},{\"role\":\"user\",\"content\":\"{{ $json.user_prompt }}\"}]" },
+            { "name": "temperature", "value": "=0.3" },
+            { "name": "response_format", "value": "={\"type\":\"json_object\"}" }
+          ]
+        },
+        "options": { "timeout": 60000 }
+      },
+      "id": "llm-call",
+      "name": "LLM: Generate Battlecard",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1180, 200],
+      "credentials": { "httpHeaderAuth": { "name": "YOUR_OPENAI_CREDENTIAL" } }
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst upstream = $('Prepare Battlecard Prompt').first().json;\nlet parsed;\ntry {\n  const content = response.choices?.[0]?.message?.content;\n  if (!content) throw new Error('No LLM content');\n  parsed = JSON.parse(content);\n} catch(e) { return [{ json: { _error: true, reason: e.message } }]; }\nconst req = ['headline','when_we_win','when_we_lose','objection_handling','discovery_questions'];\nconst missing = req.filter(k => !parsed[k]);\nif (missing.length) return [{ json: { _error: true, reason: `Missing: ${missing.join(',')}` } }];\nreturn [{ json: { _error: false, battlecard: parsed, meta: { competitor: upstream.competitor_name, product: upstream.our_product_name, run_id: upstream.run_id, generated_at: new Date().toISOString() } } }];"
+      },
+      "id": "validate-llm",
+      "name": "Validate LLM Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1400, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "ce", "leftValue": "={{ $json._error }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "error-check",
+      "name": "LLM Error?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1620, 200]
+    },
+    {
+      "parameters": {
+        "assignments": { "assignments": [{ "id": "e1", "name": "status", "value": "error", "type": "string" }, { "id": "e2", "name": "message", "value": "={{ $json.reason }}", "type": "string" }] },
+        "options": {}
+      },
+      "id": "error-handler",
+      "name": "LLM Error Handler",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1840, 100]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { battlecard: b, meta: m } = $input.first().json;\nconst list = (arr, fn) => (arr||[]).map(fn).join('\\n');\nconst report = [\n  `BATTLECARD: ${m.product} vs ${m.competitor}`,\n  `Generated: ${m.generated_at} | Confidence: ${b.confidence}`,\n  ``,\n  `HEADLINE: ${b.headline}`,\n  ``,\n  `WHEN WE WIN:`,\n  list(b.when_we_win, w => `  - ${w.situation}: ${w.reason}`),\n  ``,\n  `WHEN WE LOSE:`,\n  list(b.when_we_lose, w => `  - ${w.situation}: ${w.reason}`),\n  ``,\n  `OBJECTION HANDLING:`,\n  list(b.objection_handling, o => `  Q: \"${o.objection}\"\\n  A: ${o.response}\\n  Avoid: ${o.avoid_saying}`),\n  ``,\n  `DISCOVERY QUESTIONS:`,\n  list(b.discovery_questions, q => `  - ${q}`),\n  ``,\n  `LANDMINES:`,\n  list(b.landmines, l => `  - ${l}`),\n  ``,\n  `THEIR CLAIMS REBUTTAL:`,\n  list(b.claims_rebuttal, c => `  \"${c.their_claim}\" → ${c.our_response} (Evidence: ${c.evidence})`),\n  ``,\n  `RECENT CHANGES IMPACT: ${b.recent_changes_impact}`,\n  ``,\n  `Confidence rationale: ${b.confidence_rationale}`,\n].join('\\n');\nreturn [{ json: { ...($input.first().json), report_text: report } }];"
+      },
+      "id": "format-battlecard",
+      "name": "Format Battlecard",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1840, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.BATTLECARD_EMAIL_TO || 'sales@acme-analytics.com' }}",
+        "subject": "=APPROVAL REQUIRED: Battlecard — {{ $json.meta.product }} vs {{ $json.meta.competitor }}",
+        "emailType": "html",
+        "message": "=<p>New battlecard ready for review. Approve before sharing with sales.</p><pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $json.report_text }}</pre><p><a href=\"{{ $execution.resumeUrl }}?decision=approved\">Approve and send to sales</a> | <a href=\"{{ $execution.resumeUrl }}?decision=rejected\">Reject</a></p>",
+        "options": {}
+      },
+      "id": "send-approval",
+      "name": "Send Approval Request",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [2060, 300],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": { "resume": "webhook", "options": { "webhookSuffix": "/approval" } },
+      "id": "wait-approval",
+      "name": "Wait for Approval",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [2280, 300],
+      "webhookId": "battlecard-approval"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "cd", "leftValue": "={{ $json.query?.decision || $json.body?.decision }}", "rightValue": "approved", "operator": { "type": "string", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-decision",
+      "name": "Approved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2500, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.BATTLECARD_EMAIL_TO || 'sales@acme-analytics.com' }}",
+        "subject": "=Battlecard: {{ $('Format Battlecard').first().json.meta.product }} vs {{ $('Format Battlecard').first().json.meta.competitor }}",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $('Format Battlecard').first().json.report_text }}</pre>",
+        "options": {}
+      },
+      "id": "send-battlecard",
+      "name": "Send Battlecard to Sales",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [2720, 200],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": {
+        "assignments": { "assignments": [{ "id": "r1", "name": "status", "value": "rejected", "type": "string" }, { "id": "r2", "name": "rejected_at", "value": "={{ $now.toISO() }}", "type": "string" }] },
+        "options": {}
+      },
+      "id": "log-rejection",
+      "name": "Log Rejection",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2720, 400]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": { "main": [[{ "node": "Load Sample Data", "type": "main", "index": 0 }]] },
+    "Webhook: Trigger Battlecard": { "main": [[{ "node": "Validate Input", "type": "main", "index": 0 }]] },
+    "Load Sample Data": { "main": [[{ "node": "Validate Input", "type": "main", "index": 0 }]] },
+    "Validate Input": { "main": [[{ "node": "Prepare Battlecard Prompt", "type": "main", "index": 0 }]] },
+    "Prepare Battlecard Prompt": { "main": [[{ "node": "LLM: Generate Battlecard", "type": "main", "index": 0 }]] },
+    "LLM: Generate Battlecard": { "main": [[{ "node": "Validate LLM Output", "type": "main", "index": 0 }]] },
+    "Validate LLM Output": { "main": [[{ "node": "LLM Error?", "type": "main", "index": 0 }]] },
+    "LLM Error?": { "main": [[{ "node": "LLM Error Handler", "type": "main", "index": 0 }], [{ "node": "Format Battlecard", "type": "main", "index": 0 }]] },
+    "Format Battlecard": { "main": [[{ "node": "Send Approval Request", "type": "main", "index": 0 }]] },
+    "Send Approval Request": { "main": [[{ "node": "Wait for Approval", "type": "main", "index": 0 }]] },
+    "Wait for Approval": { "main": [[{ "node": "Approved?", "type": "main", "index": 0 }]] },
+    "Approved?": { "main": [[{ "node": "Send Battlecard to Sales", "type": "main", "index": 0 }], [{ "node": "Log Rejection", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1", "saveManualExecutions": true, "callerPolicy": "workflowsFromSameOwner", "errorWorkflow": "" },
+  "staticData": null,
+  "tags": ["strategy", "sales", "battlecard", "beta"],
+  "triggerCount": 0,
+  "updatedAt": "2026-07-14T00:00:00.000Z",
+  "versionId": "53-battlecard-generator-v0.1.0"
+}

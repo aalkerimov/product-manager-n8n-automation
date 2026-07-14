@@ -1,0 +1,212 @@
+{
+  "name": "Interview Question Generator",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Interview Question Generator\n\n**Setup:**\n1. Create YOUR_OPENAI_CREDENTIAL and YOUR_SMTP_CREDENTIAL\n2. Set INTERVIEW_EMAIL_TO\n3. Provide research goal, participant profile, and topic areas\n4. LLM generates structured interview guide\n5. Approval gate before guide is shared with research team",
+        "height": 260,
+        "width": 420,
+        "color": 5
+      },
+      "id": "sticky-setup",
+      "name": "Setup Instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, -260]
+    },
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 200]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "generate-interview-guide",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook: Research Request",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 380],
+      "webhookId": "interview-guide-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: {\n  research_goal: 'Understand why mid-market project managers switch from incumbent tools to ours, and what barriers prevent full adoption after signing',\n  interview_type: 'discovery',\n  participant_profile: 'Mid-market (50-500 employees) project manager, using our product for 3-6 months, came from Asana or Monday.com',\n  topic_areas: ['switching motivation', 'onboarding experience', 'daily workflow fit', 'collaboration with non-PM stakeholders', 'blockers to full team adoption', 'unmet needs'],\n  duration_minutes: 45,\n  format: 'semi-structured',\n  researcher_note: 'We want to understand adoption gaps. Avoid leading questions about features.'\n} }];"
+      },
+      "id": "load-sample",
+      "name": "Load Sample Research Brief",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $input.first().json;\nconst topicText = d.topic_areas.map((t, i) => `  ${i+1}. ${t}`).join('\\n');\nconst system = `You are an expert UX researcher and interviewer. You write clear, unbiased, open-ended interview guides. You avoid leading questions. You include probes for each major question. Return ONLY valid JSON.`;\nconst user = `Create a ${d.duration_minutes}-minute ${d.format} ${d.interview_type} interview guide.\n\nResearch goal: ${d.research_goal}\nParticipant profile: ${d.participant_profile}\nResearcher note: ${d.researcher_note || 'none'}\n\nTopic areas to cover:\n${topicText}\n\nReturn JSON:\n{\n  \"interview_title\": \"string\",\n  \"estimated_duration_minutes\": ${d.duration_minutes},\n  \"research_goal\": \"string\",\n  \"screener_questions\": [\"string — 2-3 screener questions to validate participant fits profile\"],\n  \"warm_up_questions\": [\"string — 2 easy opening questions\"],\n  \"sections\": [\n    {\n      \"section_title\": \"string\",\n      \"section_goal\": \"string\",\n      \"estimated_time_minutes\": 8,\n      \"questions\": [\n        { \"question\": \"string\", \"type\": \"open|probe|hypothetical\", \"probes\": [\"string — follow-up probe questions\"] }\n      ]\n    }\n  ],\n  \"closing_questions\": [\"string — 2-3 wrap-up questions\"],\n  \"do_not_ask\": [\"string — topics or question patterns to avoid based on researcher note\"],\n  \"analysis_framework\": \"string — how to organize and analyze the interview data\"\n}`;\nreturn [{ json: { data: d, system_prompt: system, user_prompt: user } }];"
+      },
+      "id": "prepare-prompt",
+      "name": "Prepare Interview Guide Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [740, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.OPENAI_BASE_URL || 'https://api.openai.com' }}/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParameters": {
+          "parameters": [
+            { "name": "model", "value": "={{ $env.AI_MODEL || 'gpt-4o-mini' }}" },
+            { "name": "messages", "value": "=[{\"role\":\"system\",\"content\":\"{{ $json.system_prompt }}\"},{\"role\":\"user\",\"content\":\"{{ $json.user_prompt }}\"}]" },
+            { "name": "temperature", "value": "=0.4" },
+            { "name": "response_format", "value": "={\"type\":\"json_object\"}" }
+          ]
+        },
+        "options": { "timeout": 60000 }
+      },
+      "id": "llm-call",
+      "name": "LLM: Generate Interview Guide",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [960, 200],
+      "credentials": { "httpHeaderAuth": { "name": "YOUR_OPENAI_CREDENTIAL" } }
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst upstream = $('Prepare Interview Guide Prompt').first().json;\nlet parsed;\ntry {\n  const c = response.choices?.[0]?.message?.content;\n  if (!c) throw new Error('No content');\n  parsed = JSON.parse(c);\n} catch(e) { return [{ json: { _error: true, reason: e.message } }]; }\nif (!parsed.sections || !Array.isArray(parsed.sections)) return [{ json: { _error: true, reason: 'Missing sections' } }];\nreturn [{ json: { _error: false, guide: parsed, meta: { research_goal: upstream.data.research_goal, participant_profile: upstream.data.participant_profile, generated_at: new Date().toISOString() } } }];"
+      },
+      "id": "validate-llm",
+      "name": "Validate LLM Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1180, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "ce", "leftValue": "={{ $json._error }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "error-check",
+      "name": "LLM Error?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1400, 200]
+    },
+    {
+      "parameters": { "assignments": { "assignments": [{ "id": "e1", "name": "status", "value": "error", "type": "string" }] }, "options": {} },
+      "id": "error-handler",
+      "name": "LLM Error Handler",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1600, 100]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { guide: g, meta: m } = $input.first().json;\nconst sectionLines = (g.sections||[]).map(s => [\n  `SECTION: ${s.section_title} (~${s.estimated_time_minutes} min) — ${s.section_goal}`,\n  ...(s.questions||[]).map(q =>\n    `  Q [${q.type}]: ${q.question}${(q.probes||[]).length ? '\\n  Probes:\\n'+q.probes.map(p=>'    - '+p).join('\\n') : ''}`\n  ),\n  ''\n].join('\\n')).join('\\n');\nconst report = [\n  `INTERVIEW GUIDE: ${g.interview_title}`,\n  `Estimated duration: ${g.estimated_duration_minutes} min`,\n  `Research goal: ${m.research_goal}`,\n  `Generated: ${m.generated_at}`,\n  ``,\n  `SCREENER QUESTIONS:`,\n  (g.screener_questions||[]).map((q,i)=>`  ${i+1}. ${q}`).join('\\n'),\n  ``,\n  `WARM-UP:`,\n  (g.warm_up_questions||[]).map((q,i)=>`  ${i+1}. ${q}`).join('\\n'),\n  ``,\n  sectionLines,\n  `CLOSING QUESTIONS:`,\n  (g.closing_questions||[]).map((q,i)=>`  ${i+1}. ${q}`).join('\\n'),\n  ``,\n  `DO NOT ASK:`,\n  (g.do_not_ask||[]).map(d=>`  - ${d}`).join('\\n'),\n  ``,\n  `ANALYSIS FRAMEWORK: ${g.analysis_framework}`,\n].join('\\n');\nreturn [{ json: { ...($input.first().json), report_text: report } }];"
+      },
+      "id": "format-guide",
+      "name": "Format Interview Guide",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1600, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.INTERVIEW_APPROVER_EMAIL || $env.INTERVIEW_EMAIL_TO }}",
+        "subject": "=APPROVAL REQUIRED: Interview Guide — {{ $json.guide.interview_title }}",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $json.report_text }}</pre><p><a href=\"{{ $execution.resumeUrl }}?decision=approved\">Approve and share with research team</a> | <a href=\"{{ $execution.resumeUrl }}?decision=rejected\">Reject</a></p>",
+        "options": {}
+      },
+      "id": "send-approval",
+      "name": "Send for Approval",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1820, 300],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": { "resume": "webhook", "options": { "webhookSuffix": "/approval" } },
+      "id": "wait-approval",
+      "name": "Wait for Approval",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [2040, 300],
+      "webhookId": "interview-guide-approval"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "cd", "leftValue": "={{ $json.query?.decision || $json.body?.decision }}", "rightValue": "approved", "operator": { "type": "string", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-decision",
+      "name": "Approved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2260, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.INTERVIEW_EMAIL_TO || 'research@acme-analytics.com' }}",
+        "subject": "=Interview Guide: {{ $('Format Interview Guide').first().json.guide.interview_title }}",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $('Format Interview Guide').first().json.report_text }}</pre>",
+        "options": {}
+      },
+      "id": "send-guide",
+      "name": "Share with Research Team",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [2480, 200],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": { "assignments": { "assignments": [{ "id": "r1", "name": "status", "value": "rejected", "type": "string" }] }, "options": {} },
+      "id": "log-rejection",
+      "name": "Log Rejection",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2480, 400]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": { "main": [[{ "node": "Load Sample Research Brief", "type": "main", "index": 0 }]] },
+    "Webhook: Research Request": { "main": [[{ "node": "Prepare Interview Guide Prompt", "type": "main", "index": 0 }]] },
+    "Load Sample Research Brief": { "main": [[{ "node": "Prepare Interview Guide Prompt", "type": "main", "index": 0 }]] },
+    "Prepare Interview Guide Prompt": { "main": [[{ "node": "LLM: Generate Interview Guide", "type": "main", "index": 0 }]] },
+    "LLM: Generate Interview Guide": { "main": [[{ "node": "Validate LLM Output", "type": "main", "index": 0 }]] },
+    "Validate LLM Output": { "main": [[{ "node": "LLM Error?", "type": "main", "index": 0 }]] },
+    "LLM Error?": { "main": [[{ "node": "LLM Error Handler", "type": "main", "index": 0 }], [{ "node": "Format Interview Guide", "type": "main", "index": 0 }]] },
+    "Format Interview Guide": { "main": [[{ "node": "Send for Approval", "type": "main", "index": 0 }]] },
+    "Send for Approval": { "main": [[{ "node": "Wait for Approval", "type": "main", "index": 0 }]] },
+    "Wait for Approval": { "main": [[{ "node": "Approved?", "type": "main", "index": 0 }]] },
+    "Approved?": { "main": [[{ "node": "Share with Research Team", "type": "main", "index": 0 }], [{ "node": "Log Rejection", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1", "saveManualExecutions": true, "callerPolicy": "workflowsFromSameOwner", "errorWorkflow": "" },
+  "staticData": null,
+  "tags": ["research", "discovery", "interviews", "beta"],
+  "triggerCount": 0,
+  "updatedAt": "2026-07-14T00:00:00.000Z",
+  "versionId": "71-interview-question-generator-v0.1.0"
+}

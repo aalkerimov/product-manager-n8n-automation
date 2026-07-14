@@ -1,0 +1,19 @@
+{
+  "quarter": "Q3 2026",
+  "roadmap_items": [
+    { "id": "RM001", "title": "RBAC (role-based access control)", "category": "enterprise-security", "eta": "2026-08-15", "audience_impact": "enterprise", "confidentiality": "internal" },
+    { "id": "RM002", "title": "iOS app GA", "category": "mobile", "eta": "2026-07-31", "audience_impact": "all", "confidentiality": "public" },
+    { "id": "RM003", "title": "Android v1 beta", "category": "mobile", "eta": "2026-09-15", "audience_impact": "all", "confidentiality": "internal" },
+    { "id": "RM004", "title": "Microsoft Teams integration", "category": "integration", "eta": "2026-08-30", "audience_impact": "enterprise", "confidentiality": "public" },
+    { "id": "RM005", "title": "Audit log", "category": "enterprise-security", "eta": "2026-08-29", "audience_impact": "enterprise", "confidentiality": "internal" },
+    { "id": "RM006", "title": "Gantt chart view (deferred to Q4)", "category": "ui", "eta": "Q4 2026", "audience_impact": "all", "confidentiality": "internal" }
+  ],
+  "stakeholders": [
+    { "group": "enterprise customers", "channel": "customer success manager → email", "cadence": "monthly", "sensitivity": "medium" },
+    { "group": "sales team", "channel": "Slack + weekly sync", "cadence": "weekly", "sensitivity": "high" },
+    { "group": "board", "channel": "quarterly board deck", "cadence": "quarterly", "sensitivity": "high" },
+    { "group": "all-hands", "channel": "company meeting", "cadence": "monthly", "sensitivity": "low" },
+    { "group": "public (website/changelog)", "channel": "changelog + email newsletter", "cadence": "on release", "sensitivity": "low" }
+  ],
+  "context": "We have deferred Gantt chart view to Q4 and need to manage that expectation. Enterprise customers care most about RBAC and audit log. Sales needs clear ETAs for deals."
+}

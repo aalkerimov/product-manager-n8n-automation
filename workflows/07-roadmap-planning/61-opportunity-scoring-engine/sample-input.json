@@ -1,0 +1,12 @@
+[
+  { "id": "OPP-001", "title": "Native mobile app (iOS + Android)", "reach": 8, "impact": 7, "confidence": 6, "effort": 9, "strategic_fit": 8, "category": "new-capability", "tags": ["mobile", "retention"] },
+  { "id": "OPP-002", "title": "Bulk CSV import for onboarding", "reach": 6, "impact": 8, "confidence": 9, "effort": 3, "strategic_fit": 7, "category": "friction-removal", "tags": ["onboarding", "activation"] },
+  { "id": "OPP-003", "title": "AI-powered project risk detection", "reach": 5, "impact": 9, "confidence": 5, "effort": 8, "strategic_fit": 9, "category": "ai-feature", "tags": ["ai", "enterprise"] },
+  { "id": "OPP-004", "title": "SSO (SAML 2.0) for enterprise", "reach": 4, "impact": 10, "confidence": 9, "effort": 5, "strategic_fit": 10, "category": "enterprise-requirement", "tags": ["enterprise", "security"] },
+  { "id": "OPP-005", "title": "Slack integration (two-way sync)", "reach": 7, "impact": 6, "confidence": 8, "effort": 4, "strategic_fit": 6, "category": "integration", "tags": ["integrations", "collaboration"] },
+  { "id": "OPP-006", "title": "Custom fields on projects and tasks", "reach": 9, "impact": 7, "confidence": 8, "effort": 5, "strategic_fit": 7, "category": "customisation", "tags": ["flexibility", "enterprise"] },
+  { "id": "OPP-007", "title": "Advanced permissions (role-based access)", "reach": 5, "impact": 8, "confidence": 7, "effort": 6, "strategic_fit": 8, "category": "enterprise-requirement", "tags": ["enterprise", "security"] },
+  { "id": "OPP-008", "title": "Executive dashboard view", "reach": 4, "impact": 7, "confidence": 7, "effort": 4, "strategic_fit": 7, "category": "reporting", "tags": ["reporting", "enterprise"] },
+  { "id": "OPP-009", "title": "Time tracking built-in", "reach": 5, "impact": 5, "confidence": 6, "effort": 6, "strategic_fit": 4, "category": "new-capability", "tags": ["time-tracking"] },
+  { "id": "OPP-010", "title": "Dark mode UI", "reach": 7, "impact": 3, "confidence": 9, "effort": 2, "strategic_fit": 3, "category": "ui-polish", "tags": ["ui", "delight"] }
+]

@@ -1,0 +1,214 @@
+{
+  "name": "Technology Trend Radar",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Technology Trend Radar\n\n**Setup:**\n1. Create YOUR_OPENAI_CREDENTIAL and YOUR_SMTP_CREDENTIAL\n2. Set TREND_EMAIL_TO, TREND_DOMAINS env vars\n3. Configure RSS sources in the 'Configure Sources' Code node\n4. Test with Manual Trigger (embedded sample signal data)\n\n**Flow:** Reads launches/papers/discussion from configured feeds → LLM produces 'so what for us' digest → approval gate → weekly report sent",
+        "height": 280,
+        "width": 440,
+        "color": 6
+      },
+      "id": "sticky-setup",
+      "name": "Setup Instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, -260]
+    },
+    {
+      "parameters": {
+        "rule": { "interval": [{ "field": "cronExpression", "expression": "={{ $env.TREND_SCHEDULE || '0 8 * * 5' }}" }] }
+      },
+      "id": "schedule-trigger",
+      "name": "Weekly Friday Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 100]
+    },
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 280]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Sample technology signals from the past week.\n// In production: replace with HTTP Request → RSS/HN/ArXiv feeds.\nconst signals = [\n  { id: 's001', title: 'OpenAI releases o3-mini: reasoning model optimized for coding tasks', source: 'TechCrunch', category: 'ai-models', url: 'https://example.com/o3-mini', published_at: '2026-07-11', excerpt: 'New model shows 60% improvement on HumanEval benchmarks at 40% lower cost than o1.' },\n  { id: 's002', title: 'Anthropic paper: Constitutional AI v2 — self-correction without human labels', source: 'arXiv', category: 'ai-research', url: 'https://example.com/cai-v2', published_at: '2026-07-10', excerpt: 'New training approach reduces RLHF dependence. Potential to lower fine-tuning costs.' },\n  { id: 's003', title: 'Vercel ships AI SDK 4.0 with streaming structured outputs', source: 'Vercel Blog', category: 'developer-tools', url: 'https://example.com/vercel-ai-sdk-4', published_at: '2026-07-09', excerpt: 'Simplifies building LLM features in Next.js. Type-safe streaming responses.' },\n  { id: 's004', title: 'HN: \"We replaced our entire analytics stack with DuckDB + Parquet\"', source: 'Hacker News', category: 'data-engineering', url: 'https://example.com/hn-duckdb', published_at: '2026-07-08', excerpt: '347 upvotes. Teams reporting 10x cost reduction vs Snowflake for workloads under 100GB.' },\n  { id: 's005', title: 'Google launches Gemini 2.5 Pro with 2M token context window', source: 'Google Blog', category: 'ai-models', url: 'https://example.com/gemini-2-5', published_at: '2026-07-07', excerpt: 'Context window now covers full codebases. Multimodal. Priced at $3.50/1M input tokens.' },\n  { id: 's006', title: 'GitHub Copilot adds multi-file editing and PR review in VS Code', source: 'GitHub Blog', category: 'developer-tools', url: 'https://example.com/copilot-multifile', published_at: '2026-07-06', excerpt: 'Copilot can now propose changes across multiple files in a single session. GA for all paid plans.' },\n  { id: 's007', title: 'Ray 3.0 released: unified compute for ML training and serving', source: 'Anyscale Blog', category: 'ml-infrastructure', url: 'https://example.com/ray-3', published_at: '2026-07-05', excerpt: 'Significant API simplification. New autoscaling for inference workloads.' }\n];\nreturn [{ json: { signals, total: signals.length, period: 'week of 2026-07-07 to 2026-07-14' } }];"
+      },
+      "id": "load-sample",
+      "name": "Load Sample Signals",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 280]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { signals, total, period } = $input.first().json;\nif (!signals || signals.length === 0) {\n  throw new Error('No signals to process');\n}\nconst domains = $env.TREND_DOMAINS || 'AI, developer tools, data infrastructure';\nconst signalText = signals.map((s, i) =>\n  `[${i+1}] ${s.title}\\nSource: ${s.source} | Category: ${s.category} | Date: ${s.published_at}\\nExcerpt: ${s.excerpt}`\n).join('\\n\\n');\nconst system = `You are a technology strategist writing a weekly trend radar for a product team. You are honest about uncertainty. You focus on practical implications, not hype. Return ONLY valid JSON.`;\nconst user = `Analyse these ${signals.length} technology signals from ${period} and produce a weekly 'so what for us' digest.\n\nOur domain: ${domains}\n\nSignals:\n${signalText}\n\nReturn JSON:\n{\n  \"headline_insight\": \"string — one sentence, the single most important thing this week\",\n  \"signals_analysed\": [\n    {\n      \"id\": \"string\",\n      \"title\": \"string\",\n      \"category\": \"string\",\n      \"relevance_to_us\": \"high|medium|low\",\n      \"so_what\": \"string — specific implication for our product or team\",\n      \"recommended_response\": \"investigate|monitor|ignore|act\",\n      \"confidence\": \"low|medium|high\"\n    }\n  ],\n  \"watch_list\": [\"string — things to keep tracking\"],\n  \"actions_to_consider\": [{ \"action\": \"string\", \"urgency\": \"now|soon|later\" }],\n  \"confidence_overall\": \"low|medium|high\",\n  \"what_we_dont_know\": [\"string\"]\n}`;\nreturn [{ json: { signals, total, period, system_prompt: system, user_prompt: user } }];"
+      },
+      "id": "prepare-prompt",
+      "name": "Prepare Digest Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [740, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.OPENAI_BASE_URL || 'https://api.openai.com' }}/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParameters": {
+          "parameters": [
+            { "name": "model", "value": "={{ $env.AI_MODEL || 'gpt-4o-mini' }}" },
+            { "name": "messages", "value": "=[{\"role\":\"system\",\"content\":\"{{ $json.system_prompt }}\"},{\"role\":\"user\",\"content\":\"{{ $json.user_prompt }}\"}]" },
+            { "name": "temperature", "value": "=0.3" },
+            { "name": "response_format", "value": "={\"type\":\"json_object\"}" }
+          ]
+        },
+        "options": { "timeout": 60000 }
+      },
+      "id": "llm-call",
+      "name": "LLM: Generate Digest",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [960, 200],
+      "credentials": { "httpHeaderAuth": { "name": "YOUR_OPENAI_CREDENTIAL" } }
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst upstream = $('Prepare Digest Prompt').first().json;\nlet parsed;\ntry {\n  const content = response.choices?.[0]?.message?.content;\n  if (!content) throw new Error('No LLM content');\n  parsed = JSON.parse(content);\n} catch(e) { return [{ json: { _error: true, reason: e.message } }]; }\nconst req = ['headline_insight', 'signals_analysed', 'watch_list', 'actions_to_consider'];\nconst missing = req.filter(k => !parsed[k]);\nif (missing.length) return [{ json: { _error: true, reason: `Missing: ${missing.join(',')}` } }];\nreturn [{ json: { _error: false, digest: parsed, meta: { period: upstream.period, signal_count: upstream.total, generated_at: new Date().toISOString() } } }];"
+      },
+      "id": "validate-llm",
+      "name": "Validate LLM Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1180, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "ce", "leftValue": "={{ $json._error }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "error-check",
+      "name": "LLM Error?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1400, 200]
+    },
+    {
+      "parameters": {
+        "assignments": { "assignments": [{ "id": "e1", "name": "status", "value": "error", "type": "string" }, { "id": "e2", "name": "message", "value": "={{ $json.reason }}", "type": "string" }] },
+        "options": {}
+      },
+      "id": "error-handler",
+      "name": "LLM Error Handler",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1620, 100]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { digest: d, meta: m } = $input.first().json;\nconst signalLines = (d.signals_analysed || []).map(s =>\n  `  [${s.relevance_to_us.toUpperCase()}] ${s.title}\\n  So what: ${s.so_what}\\n  Response: ${s.recommended_response} (confidence: ${s.confidence})`\n).join('\\n\\n');\nconst actionLines = (d.actions_to_consider || []).map(a => `  [${a.urgency.toUpperCase()}] ${a.action}`).join('\\n');\nconst watchLines = (d.watch_list || []).map(w => `  - ${w}`).join('\\n');\nconst unknownLines = (d.what_we_dont_know || []).map(u => `  - ${u}`).join('\\n');\nconst report = [\n  `TECHNOLOGY TREND RADAR — ${m.period}`,\n  `Signals reviewed: ${m.signal_count} | Generated: ${m.generated_at}`,\n  `Overall confidence: ${d.confidence_overall}`,\n  ``,\n  `HEADLINE: ${d.headline_insight}`,\n  ``,\n  `SIGNALS:`,\n  signalLines || '  (none)',\n  ``,\n  `ACTIONS TO CONSIDER:`,\n  actionLines || '  (none)',\n  ``,\n  `WATCH LIST:`,\n  watchLines || '  (none)',\n  ``,\n  `WHAT WE DO NOT KNOW:`,\n  unknownLines || '  (none)',\n].join('\\n');\nreturn [{ json: { ...($input.first().json), report_text: report } }];"
+      },
+      "id": "format-digest",
+      "name": "Format Digest",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1620, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.TREND_EMAIL_TO || 'product@acme-analytics.com' }}",
+        "subject": "=APPROVAL REQUIRED: Weekly Tech Trend Radar — {{ $json.meta.period }}",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $json.report_text }}</pre><p><a href=\"{{ $execution.resumeUrl }}?decision=approved\">Approve and send to team</a> | <a href=\"{{ $execution.resumeUrl }}?decision=rejected\">Reject</a></p>",
+        "options": {}
+      },
+      "id": "send-approval",
+      "name": "Send for Approval",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1840, 300],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": { "resume": "webhook", "options": { "webhookSuffix": "/approval" } },
+      "id": "wait-approval",
+      "name": "Wait for Approval",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [2060, 300],
+      "webhookId": "trend-radar-approval"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "cd", "leftValue": "={{ $json.query?.decision || $json.body?.decision }}", "rightValue": "approved", "operator": { "type": "string", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-decision",
+      "name": "Approved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2280, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.TREND_EMAIL_TO || 'product@acme-analytics.com' }}",
+        "subject": "=Weekly Tech Trend Radar — {{ $('Format Digest').first().json.meta.period }}",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $('Format Digest').first().json.report_text }}</pre>",
+        "options": {}
+      },
+      "id": "send-digest",
+      "name": "Send Approved Digest",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [2500, 200],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": {
+        "assignments": { "assignments": [{ "id": "r1", "name": "status", "value": "rejected", "type": "string" }] },
+        "options": {}
+      },
+      "id": "log-rejection",
+      "name": "Log Rejection",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2500, 400]
+    }
+  ],
+  "connections": {
+    "Weekly Friday Schedule": { "main": [[{ "node": "Prepare Digest Prompt", "type": "main", "index": 0 }]] },
+    "Manual Trigger": { "main": [[{ "node": "Load Sample Signals", "type": "main", "index": 0 }]] },
+    "Load Sample Signals": { "main": [[{ "node": "Prepare Digest Prompt", "type": "main", "index": 0 }]] },
+    "Prepare Digest Prompt": { "main": [[{ "node": "LLM: Generate Digest", "type": "main", "index": 0 }]] },
+    "LLM: Generate Digest": { "main": [[{ "node": "Validate LLM Output", "type": "main", "index": 0 }]] },
+    "Validate LLM Output": { "main": [[{ "node": "LLM Error?", "type": "main", "index": 0 }]] },
+    "LLM Error?": { "main": [[{ "node": "LLM Error Handler", "type": "main", "index": 0 }], [{ "node": "Format Digest", "type": "main", "index": 0 }]] },
+    "Format Digest": { "main": [[{ "node": "Send for Approval", "type": "main", "index": 0 }]] },
+    "Send for Approval": { "main": [[{ "node": "Wait for Approval", "type": "main", "index": 0 }]] },
+    "Wait for Approval": { "main": [[{ "node": "Approved?", "type": "main", "index": 0 }]] },
+    "Approved?": { "main": [[{ "node": "Send Approved Digest", "type": "main", "index": 0 }], [{ "node": "Log Rejection", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1", "saveManualExecutions": true, "callerPolicy": "workflowsFromSameOwner", "errorWorkflow": "" },
+  "staticData": null,
+  "tags": ["strategy", "technology", "trends", "beta"],
+  "triggerCount": 0,
+  "updatedAt": "2026-07-14T00:00:00.000Z",
+  "versionId": "56-technology-trend-radar-v0.1.0"
+}

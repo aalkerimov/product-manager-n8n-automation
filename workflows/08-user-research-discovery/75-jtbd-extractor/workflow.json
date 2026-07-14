@@ -1,0 +1,197 @@
+{
+  "name": "Jobs-to-be-Done Extractor",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Jobs-to-be-Done Extractor\n\n**Setup:**\n1. Create YOUR_OPENAI_CREDENTIAL and YOUR_SMTP_CREDENTIAL\n2. Set JTBD_EMAIL_TO\n3. Feed interview transcript excerpts or research notes\n4. LLM extracts functional, emotional, and social jobs from the raw text\n5. Approval gate before JTBD map is shared",
+        "height": 240,
+        "width": 400,
+        "color": 5
+      },
+      "id": "sticky-setup",
+      "name": "Setup Instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, -240]
+    },
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const excerpts = [\n  'When I get to work on Monday I just need to know what my team is working on without having to send messages asking people.',\n  'I use the tool at the end of the week to prove to my boss that the team is actually delivering something.',\n  'My biggest fear is that I miss a dependency and something breaks at the last minute without warning.',\n  'I want to feel like I am in control of the project even when I am not at my desk.',\n  'My colleagues judge me by whether projects land on time, so I need to always have an answer when they ask.',\n  'I like the tool because it makes me look organised in front of the team even when things are chaotic.',\n  'I need to be able to hand the project to someone else mid-sprint without losing context.',\n  'I hate writing status updates — if I could skip that entirely I would.',\n  'I want to move fast but I also need an audit trail in case something goes wrong.',\n];\nreturn [{ json: { excerpts, source: 'Customer interviews — switching and onboarding study, July 2026', persona: 'Mid-market team lead (Segment B)' } }];"
+      },
+      "id": "load-sample",
+      "name": "Load Sample Excerpts",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $input.first().json;\nconst excerptText = d.excerpts.map((e, i) => `  [${i+1}] \"${e}\"`).join('\\n');\nconst system = `You are a JTBD (Jobs-to-be-Done) analyst. You extract the functional, emotional, and social jobs users are trying to get done from raw interview quotes and research notes. You follow the JTBD framework: jobs are stable, goals-oriented, and context-independent. Return ONLY valid JSON.`;\nconst user = `Extract Jobs-to-be-Done from these research excerpts.\nSource: ${d.source}\nPersona context: ${d.persona}\n\nExcerpts:\n${excerptText}\n\nReturn JSON:\n{\n  \"functional_jobs\": [\n    { \"job\": \"string — When [situation], I want to [motivation], so I can [outcome]\", \"frequency\": \"daily|weekly|occasional\", \"evidence_indexes\": [1, 3], \"current_solution\": \"string\", \"underserved\": true }\n  ],\n  \"emotional_jobs\": [\n    { \"job\": \"string — Feel [emotion] when/after [trigger]\", \"valence\": \"positive|negative\", \"evidence_indexes\": [2], \"product_implication\": \"string\" }\n  ],\n  \"social_jobs\": [\n    { \"job\": \"string — Be perceived as [attribute] by [audience]\", \"evidence_indexes\": [4], \"product_implication\": \"string\" }\n  ],\n  \"pain_points\": [{ \"pain\": \"string\", \"severity\": \"critical|major|minor\", \"evidence_indexes\": [1] }],\n  \"jtbd_summary\": \"string — 2-3 sentence synthesis of the core job this user is trying to do\"\n}`;\nreturn [{ json: { data: d, system_prompt: system, user_prompt: user } }];"
+      },
+      "id": "prepare-prompt",
+      "name": "Prepare JTBD Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [740, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.OPENAI_BASE_URL || 'https://api.openai.com' }}/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParameters": {
+          "parameters": [
+            { "name": "model", "value": "={{ $env.AI_MODEL || 'gpt-4o-mini' }}" },
+            { "name": "messages", "value": "=[{\"role\":\"system\",\"content\":\"{{ $json.system_prompt }}\"},{\"role\":\"user\",\"content\":\"{{ $json.user_prompt }}\"}]" },
+            { "name": "temperature", "value": "=0.3" },
+            { "name": "response_format", "value": "={\"type\":\"json_object\"}" }
+          ]
+        },
+        "options": { "timeout": 60000 }
+      },
+      "id": "llm-call",
+      "name": "LLM: Extract JTBD",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [960, 200],
+      "credentials": { "httpHeaderAuth": { "name": "YOUR_OPENAI_CREDENTIAL" } }
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst upstream = $('Prepare JTBD Prompt').first().json;\nlet parsed;\ntry {\n  const c = response.choices?.[0]?.message?.content;\n  if (!c) throw new Error('No content');\n  parsed = JSON.parse(c);\n} catch(e) { return [{ json: { _error: true, reason: e.message } }]; }\nif (!parsed.functional_jobs || !Array.isArray(parsed.functional_jobs)) return [{ json: { _error: true, reason: 'Missing functional_jobs' } }];\nreturn [{ json: { _error: false, jtbd: parsed, meta: { source: upstream.data.source, persona: upstream.data.persona, generated_at: new Date().toISOString() } } }];"
+      },
+      "id": "validate-llm",
+      "name": "Validate LLM Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1180, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "ce", "leftValue": "={{ $json._error }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "error-check",
+      "name": "LLM Error?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1400, 200]
+    },
+    {
+      "parameters": { "assignments": { "assignments": [{ "id": "e1", "name": "status", "value": "error", "type": "string" }] }, "options": {} },
+      "id": "error-handler",
+      "name": "LLM Error Handler",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1600, 100]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { jtbd: j, meta: m } = $input.first().json;\nconst report = [\n  `JOBS-TO-BE-DONE MAP`,\n  `Source: ${m.source}`,\n  `Persona: ${m.persona}`,\n  `Generated: ${m.generated_at}`,\n  ``,\n  `CORE JOB SUMMARY: ${j.jtbd_summary}`,\n  ``,\n  `FUNCTIONAL JOBS:`,\n  (j.functional_jobs||[]).map(f=>`  [${f.frequency}] ${f.job}${f.underserved?' [UNDERSERVED]':''}\\n  Current solution: ${f.current_solution} | Evidence: [${f.evidence_indexes.join(',')}]`).join('\\n'),\n  ``,\n  `EMOTIONAL JOBS:`,\n  (j.emotional_jobs||[]).map(e=>`  [${e.valence}] ${e.job}\\n  → ${e.product_implication} | Evidence: [${e.evidence_indexes.join(',')}]`).join('\\n'),\n  ``,\n  `SOCIAL JOBS:`,\n  (j.social_jobs||[]).map(s=>`  ${s.job}\\n  → ${s.product_implication} | Evidence: [${s.evidence_indexes.join(',')}]`).join('\\n'),\n  ``,\n  `PAIN POINTS:`,\n  (j.pain_points||[]).map(p=>`  [${p.severity.toUpperCase()}] ${p.pain} | Evidence: [${p.evidence_indexes.join(',')}]`).join('\\n'),\n].join('\\n');\nreturn [{ json: { ...($input.first().json), report_text: report } }];"
+      },
+      "id": "format-jtbd",
+      "name": "Format JTBD Map",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1600, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.JTBD_APPROVER_EMAIL || $env.JTBD_EMAIL_TO }}",
+        "subject": "=APPROVAL REQUIRED: JTBD Map — {{ $json.meta.persona }}",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $json.report_text }}</pre><p><a href=\"{{ $execution.resumeUrl }}?decision=approved\">Approve and share</a> | <a href=\"{{ $execution.resumeUrl }}?decision=rejected\">Reject</a></p>",
+        "options": {}
+      },
+      "id": "send-approval",
+      "name": "Send for Approval",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1820, 300],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": { "resume": "webhook", "options": { "webhookSuffix": "/approval" } },
+      "id": "wait-approval",
+      "name": "Wait for Approval",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [2040, 300],
+      "webhookId": "jtbd-approval"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "cd", "leftValue": "={{ $json.query?.decision || $json.body?.decision }}", "rightValue": "approved", "operator": { "type": "string", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-decision",
+      "name": "Approved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2260, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.JTBD_EMAIL_TO || 'product@acme-analytics.com' }}",
+        "subject": "=JTBD Map: {{ $('Format JTBD Map').first().json.meta.persona }}",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $('Format JTBD Map').first().json.report_text }}</pre>",
+        "options": {}
+      },
+      "id": "send-jtbd",
+      "name": "Share JTBD Map",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [2480, 200],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": { "assignments": { "assignments": [{ "id": "r1", "name": "status", "value": "rejected", "type": "string" }] }, "options": {} },
+      "id": "log-rejection",
+      "name": "Log Rejection",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2480, 400]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": { "main": [[{ "node": "Load Sample Excerpts", "type": "main", "index": 0 }]] },
+    "Load Sample Excerpts": { "main": [[{ "node": "Prepare JTBD Prompt", "type": "main", "index": 0 }]] },
+    "Prepare JTBD Prompt": { "main": [[{ "node": "LLM: Extract JTBD", "type": "main", "index": 0 }]] },
+    "LLM: Extract JTBD": { "main": [[{ "node": "Validate LLM Output", "type": "main", "index": 0 }]] },
+    "Validate LLM Output": { "main": [[{ "node": "LLM Error?", "type": "main", "index": 0 }]] },
+    "LLM Error?": { "main": [[{ "node": "LLM Error Handler", "type": "main", "index": 0 }], [{ "node": "Format JTBD Map", "type": "main", "index": 0 }]] },
+    "Format JTBD Map": { "main": [[{ "node": "Send for Approval", "type": "main", "index": 0 }]] },
+    "Send for Approval": { "main": [[{ "node": "Wait for Approval", "type": "main", "index": 0 }]] },
+    "Wait for Approval": { "main": [[{ "node": "Approved?", "type": "main", "index": 0 }]] },
+    "Approved?": { "main": [[{ "node": "Share JTBD Map", "type": "main", "index": 0 }], [{ "node": "Log Rejection", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1", "saveManualExecutions": true, "callerPolicy": "workflowsFromSameOwner", "errorWorkflow": "" },
+  "staticData": null,
+  "tags": ["research", "discovery", "jtbd", "beta"],
+  "triggerCount": 0,
+  "updatedAt": "2026-07-14T00:00:00.000Z",
+  "versionId": "75-jtbd-extractor-v0.1.0"
+}

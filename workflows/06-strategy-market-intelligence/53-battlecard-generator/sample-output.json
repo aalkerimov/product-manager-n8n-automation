@@ -1,0 +1,65 @@
+{
+  "_comment": "Illustrative output. Actual LLM output will vary.",
+  "meta": { "competitor": "CompetitorX", "product": "Acme Analytics Platform", "run_id": "manual_test_001", "generated_at": "2026-07-14T09:00:00.000Z" },
+  "battlecard": {
+    "headline": "We win when buyers need reliable integrations and transparent pricing; CompetitorX wins on price optics and AI hype — both are defeatable with the right discovery.",
+    "when_we_win": [
+      { "situation": "Prospect has a complex tech stack with 10+ tools", "reason": "Our 200+ native connectors and API quality eliminate the integration risk CompetitorX creates with their smaller marketplace" },
+      { "situation": "Security and compliance are in the buying criteria", "reason": "We are SOC 2 Type II certified; CompetitorX is not, which fails most enterprise security reviews" },
+      { "situation": "Buyer has been burned by slow vendor support", "reason": "Our 3-day onboarding and SLA-backed support are proven differentiators against CompetitorX's 14-day average" }
+    ],
+    "when_we_lose": [
+      { "situation": "Prospect needs a mobile-first experience", "reason": "We have no native mobile app until Q3 2026; CompetitorX has full iOS/Android" },
+      { "situation": "Budget is fixed and below our entry price", "reason": "CompetitorX's 20% annual discount makes them cheaper in year 1 for deals under $500/mo" },
+      { "situation": "Prospect is deeply embedded in CompetitorX's ecosystem", "reason": "Switching cost argument is real if they use CompetitorX's marketplace integrations we do not have" }
+    ],
+    "objection_handling": [
+      {
+        "objection": "Their price is lower than yours",
+        "response": "CompetitorX's list price is lower, but their true cost includes per-seat add-ons for reporting, SSO, and API access that push enterprise TCO 30-40% higher than their headline price. Let me show you a side-by-side of what you would actually pay for equivalent capabilities.",
+        "avoid_saying": "Our pricing reflects our value — that is not an argument, it is a deflection."
+      },
+      {
+        "objection": "They have AI features we do not see in your product",
+        "response": "Their AI assistant is currently in beta and limited to Enterprise plan users. We would want to understand what specific AI outcome you are trying to achieve — our roadmap includes [X] which addresses the same problem. Can you walk me through the workflow you are hoping AI will improve?",
+        "avoid_saying": "AI is overrated — that dismisses their legitimate interest."
+      },
+      {
+        "objection": "We have been using them for two years — switching cost is high",
+        "response": "That is a fair concern. Our migration team has moved 40+ teams from CompetitorX in the last 12 months. We do it in 3 days on average. Can we schedule a technical call to scope the actual migration complexity for your setup?",
+        "avoid_saying": "Migration is easy — it minimises a real concern."
+      }
+    ],
+    "discovery_questions": [
+      "How many tools does your team currently connect to your project management system?",
+      "Have you gone through a security or compliance review for software in the last year — and what did it require?",
+      "What does it cost your team when a project runs late because of a missing integration or a broken sync?",
+      "Who on your team reviews the vendor's security certifications before procurement approval?"
+    ],
+    "landmines": [
+      "Have you seen CompetitorX's SOC 2 Type II certification documentation? (They do not have one — this surfaces the gap without you saying it)",
+      "How does your team handle integrations that CompetitorX's marketplace does not cover natively?",
+      "What has been your experience with their support response time on production issues?"
+    ],
+    "claims_rebuttal": [
+      {
+        "their_claim": "\"Cheapest enterprise PM tool on the market\"",
+        "our_response": "This claim is based on base seat price. CompetitorX charges separately for advanced reporting, API access, and SSO — features included in our Business plan. Enterprise TCO is typically comparable.",
+        "evidence": "Request their full price list including add-ons and compare against our Business plan pricing sheet"
+      },
+      {
+        "their_claim": "\"AI-powered project predictions reduce delays by 40%\"",
+        "our_response": "This figure appears in their marketing but no methodology or case study is published. The AI feature is currently in beta on Enterprise plan only.",
+        "evidence": "Their feature page — beta label is visible; no published case study as of July 2026"
+      },
+      {
+        "their_claim": "\"Enterprise-grade security by default on all plans\"",
+        "our_response": "Enterprise-grade is undefined in their documentation. They do not hold SOC 2 Type II certification. We do, with a full audit report available under NDA.",
+        "evidence": "Our SOC 2 Type II report available from sales team; CompetitorX's trust page shows no equivalent certification"
+      }
+    ],
+    "recent_changes_impact": "The Series C and 20% price cut signal CompetitorX is in growth mode and willing to buy market share. Expect more aggressive discounting in competitive deals. Their AI acquisition adds roadmap risk — they may close some of our current differentiation gaps within 12-18 months. In deals closing in the next 6 months, our SOC 2 and integration depth remain durable advantages.",
+    "confidence": "medium",
+    "confidence_rationale": "Objection handling and win/loss scenarios are based on structured input, not primary win/loss interview data. Claims rebuttal evidence should be verified before use with prospects."
+  }
+}

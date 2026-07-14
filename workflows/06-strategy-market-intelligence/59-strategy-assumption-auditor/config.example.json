@@ -1,0 +1,18 @@
+{
+  "_comment": "config.example.json for Strategy Assumption Auditor",
+  "workflow_id": "59-strategy-assumption-auditor",
+  "workflow_name": "Strategy Assumption Auditor",
+  "collection": "06-strategy-market-intelligence",
+  "status": "beta",
+  "configuration": {
+    "ASSUMPTION_EMAIL_TO": { "default": "", "description": "Leadership recipient for the approved audit report", "required": "Required" },
+    "ASSUMPTION_SCHEDULE": { "default": "0 9 1 1,4,7,10 *", "description": "Quarterly cron (1st of Jan, Apr, Jul, Oct at 09:00)", "required": "Optional" },
+    "AI_MODEL": { "default": "gpt-4o-mini", "description": "LLM model for assumption re-assessment", "required": "Required" },
+    "OPENAI_BASE_URL": { "default": "https://api.openai.com", "description": "LLM base URL", "required": "Optional" },
+    "NOTIFICATION_EMAIL_FROM": { "default": "automation@acme-analytics.com", "description": "Sender address", "required": "Optional" }
+  },
+  "n8n_credentials_required": [
+    { "name": "YOUR_OPENAI_CREDENTIAL", "type": "httpHeaderAuth", "required": true, "purpose": "LLM assumption re-assessment" },
+    { "name": "YOUR_SMTP_CREDENTIAL", "type": "smtp", "required": true, "purpose": "Approval and report delivery" }
+  ]
+}

@@ -1,0 +1,146 @@
+{
+  "name": "1:1 Prep Assistant",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 1:1 Prep Assistant\n\n**Setup:**\n1. Create YOUR_OPENAI_CREDENTIAL and YOUR_SMTP_CREDENTIAL\n2. Trigger before each 1:1 with context about the team member\n3. LLM generates: agenda items, coaching questions, recognition moments, blockers to address\n4. Sent to you (the manager) only — no approval gate needed",
+        "height": 220,
+        "width": 400,
+        "color": 4
+      },
+      "id": "sticky-setup",
+      "name": "Setup Instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, -240]
+    },
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 280]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: {\n  team_member: 'Alex Chen',\n  role: 'Senior Frontend Engineer',\n  manager_role: 'Head of Product',\n  last_meeting_date: '2026-07-07',\n  last_meeting_summary: 'Alex mentioned feeling stretched across too many projects. We agreed to reduce to 2 active work streams. Raised a concern about lack of design specs before sprint planning.',\n  recent_work: [\n    { item: 'Led recurring tasks frontend — completed and in QA', type: 'delivery' },\n    { item: 'Refactored TaskList component (PR-1851) — performance improvement', type: 'quality' },\n    { item: 'Raised PR review process concerns in team channel', type: 'process' }\n  ],\n  context: {\n    current_sprint_status: 'On track for recurring tasks QA sign-off',\n    career_goal: 'Move to Staff Engineer within 18 months',\n    known_challenges: 'Overloaded; needs clearer priorities from PM side before sprint',\n    team_dynamics: 'Mentoring junior FE; doing well but taking extra time'\n  },\n  topics_to_discuss: [\n    'Recurring tasks QA — any blockers before sign-off?',\n    'Design spec process improvement — concrete steps',\n    'Mentorship load — is it sustainable?'\n  ]\n} }];"
+      },
+      "id": "load-context",
+      "name": "Load 1:1 Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 280]
+    },
+    {
+      "parameters": {
+        "jsCode": "const ctx = $input.first().json;\nconst recentWork = ctx.recent_work.map(w => `  [${w.type.toUpperCase()}] ${w.item}`).join('\\n');\nconst topics = ctx.topics_to_discuss.map(t => `  • ${t}`).join('\\n');\nconst system = `You are an executive coach and people manager advisor. You help managers prepare for high-quality 1:1 conversations. You generate: a concise agenda, coaching questions that surface what matters to the individual, recognition moments to acknowledge, and blockers for the manager to address. Be specific, not generic. Return ONLY valid JSON.`;\nconst user = `Prepare a 1:1 meeting agenda for my meeting with ${ctx.team_member} (${ctx.role}).\\n\\nLast meeting (${ctx.last_meeting_date}): ${ctx.last_meeting_summary}\\n\\nRecent work:\\n${recentWork}\\n\\nContext:\\n  Career goal: ${ctx.context.career_goal}\\n  Known challenges: ${ctx.context.known_challenges}\\n  Team dynamics: ${ctx.context.team_dynamics}\\n  Sprint status: ${ctx.context.current_sprint_status}\\n\\nTopics I want to cover:\\n${topics}\\n\\nReturn JSON:\\n{\\n  \"opening_check_in\": \"string — a warm, specific opening question (not 'how are you')\",\\n  \"agenda_items\": [\\n    {\\n      \"topic\": \"string\",\\n      \"type\": \"delivery|coaching|career|process|recognition\",\\n      \"suggested_questions\": [\"string\"],\\n      \"manager_action_before\": \"string|null\"\\n    }\\n  ],\\n  \"recognition_moment\": \"string — specific acknowledgement of recent work\",\\n  \"manager_commitments_to_follow_up\": [\"string\"],\\n  \"coaching_theme\": \"string — the overarching coaching opportunity this 1:1\"\\n}`;\nreturn [{ json: { ctx, system_prompt: system, user_prompt: user } }];"
+      },
+      "id": "prepare-prompt",
+      "name": "Prepare 1:1 Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [740, 280]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.OPENAI_BASE_URL || 'https://api.openai.com' }}/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParameters": {
+          "parameters": [
+            { "name": "model", "value": "={{ $env.AI_MODEL || 'gpt-4o-mini' }}" },
+            { "name": "messages", "value": "=[{\"role\":\"system\",\"content\":\"{{ $json.system_prompt }}\"},{\"role\":\"user\",\"content\":\"{{ $json.user_prompt }}\"}]" },
+            { "name": "temperature", "value": "=0.5" },
+            { "name": "response_format", "value": "={\"type\":\"json_object\"}" }
+          ]
+        },
+        "options": { "timeout": 60000 }
+      },
+      "id": "llm-call",
+      "name": "LLM: Generate 1:1 Prep",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [960, 280],
+      "credentials": { "httpHeaderAuth": { "name": "YOUR_OPENAI_CREDENTIAL" } }
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst upstream = $('Prepare 1:1 Prompt').first().json;\nlet parsed;\ntry {\n  const c = response.choices?.[0]?.message?.content;\n  if (!c) throw new Error('No content');\n  parsed = JSON.parse(c);\n} catch(e) { return [{ json: { _error: true, reason: e.message } }]; }\nif (!parsed.agenda_items || !Array.isArray(parsed.agenda_items)) return [{ json: { _error: true, reason: 'Missing agenda_items' } }];\nreturn [{ json: { _error: false, prep: parsed, ctx: upstream.ctx, meta: { team_member: upstream.ctx.team_member, generated_at: new Date().toISOString() } } }];"
+      },
+      "id": "validate-llm",
+      "name": "Validate LLM Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1180, 280]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "ce", "leftValue": "={{ $json._error }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "error-check",
+      "name": "LLM Error?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1400, 280]
+    },
+    {
+      "parameters": { "assignments": { "assignments": [{ "id": "e1", "name": "status", "value": "error", "type": "string" }] }, "options": {} },
+      "id": "error-handler",
+      "name": "LLM Error Handler",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1600, 180]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { prep: p, ctx, meta: m } = $input.first().json;\nconst agendaLines = p.agenda_items.map((item,i) => [\n  `  [${i+1}] ${item.topic} (${item.type})`,\n  ...item.suggested_questions.map(q => `    Q: ${q}`),\n  item.manager_action_before ? `    ⚡ Before meeting: ${item.manager_action_before}` : ''\n].filter(Boolean).join('\\n')).join('\\n\\n');\nconst commitLines = (p.manager_commitments_to_follow_up||[]).map(c => `  • ${c}`).join('\\n');\nconst report = [\n  `1:1 PREP: ${ctx.team_member} (${ctx.role})`,\n  `Generated: ${m.generated_at}`,\n  ``,\n  `COACHING THEME: ${p.coaching_theme}`,\n  ``,\n  `OPENING: ${p.opening_check_in}`,\n  ``,\n  `AGENDA (${p.agenda_items.length} items):`,\n  agendaLines,\n  ``,\n  `RECOGNITION: ${p.recognition_moment}`,\n  ``,\n  `MANAGER FOLLOW-UPS:`,\n  commitLines || '  (none)',\n].join('\\n');\nreturn [{ json: { ...($input.first().json), report_text: report } }];"
+      },
+      "id": "format-prep",
+      "name": "Format 1:1 Prep",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1600, 380]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.ONE_ON_ONE_EMAIL_TO || 'pm@acme-analytics.com' }}",
+        "subject": "=1:1 Prep: {{ $json.meta.team_member }} — {{ $json.meta.generated_at | slice(0,10) }}",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $json.report_text }}</pre>",
+        "options": {}
+      },
+      "id": "send-prep",
+      "name": "Send 1:1 Prep to Manager",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1820, 380],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    }
+  ],
+  "connections": {
+    "Manual Trigger": { "main": [[{ "node": "Load 1:1 Context", "type": "main", "index": 0 }]] },
+    "Load 1:1 Context": { "main": [[{ "node": "Prepare 1:1 Prompt", "type": "main", "index": 0 }]] },
+    "Prepare 1:1 Prompt": { "main": [[{ "node": "LLM: Generate 1:1 Prep", "type": "main", "index": 0 }]] },
+    "LLM: Generate 1:1 Prep": { "main": [[{ "node": "Validate LLM Output", "type": "main", "index": 0 }]] },
+    "Validate LLM Output": { "main": [[{ "node": "LLM Error?", "type": "main", "index": 0 }]] },
+    "LLM Error?": { "main": [[{ "node": "LLM Error Handler", "type": "main", "index": 0 }], [{ "node": "Format 1:1 Prep", "type": "main", "index": 0 }]] },
+    "Format 1:1 Prep": { "main": [[{ "node": "Send 1:1 Prep to Manager", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1", "saveManualExecutions": true, "callerPolicy": "workflowsFromSameOwner", "errorWorkflow": "" },
+  "staticData": null,
+  "tags": ["team", "founder", "1on1", "coaching", "beta"],
+  "triggerCount": 0,
+  "updatedAt": "2026-07-14T00:00:00.000Z",
+  "versionId": "93-1on1-prep-assistant-v0.1.0"
+}

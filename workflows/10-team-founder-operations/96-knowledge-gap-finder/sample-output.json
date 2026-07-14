@@ -1,0 +1,19 @@
+{
+  "_comment": "Illustrative LLM output for Knowledge Gap Finder.",
+  "analysis": {
+    "gaps": [
+      { "skill": "React Native", "missing_from": ["Alex Chen", "Sofia Park", "Maria Santos", "James Kim", "David Osei"], "required_for": ["Mobile app (React Native) — Q3 launch"], "priority": "critical", "impact_if_unaddressed": "Mobile launch blocked entirely — no team member has shipped a React Native app. Q3 milestone at risk.", "learning_path": { "recommended_resource": "React Native docs + Expo crash course (egghead.io) + ship a prototype app to TestFlight", "estimated_days": 10, "who_should_lead": "Alex Chen — strongest React fundamentals, fastest path to React Native proficiency" } },
+      { "skill": "LLM API integration & prompt engineering", "missing_from": ["Alex Chen", "Maria Santos", "David Osei"], "required_for": ["AI-powered task suggestions (OpenAI integration)"], "priority": "high", "impact_if_unaddressed": "AI feature delayed or implemented without cost control — risk of budget overrun.", "learning_path": { "recommended_resource": "OpenAI cookbook + n8n LLM nodes + internal session reviewing #87 AI Cost Monitor workflow", "estimated_days": 3, "who_should_lead": "Maria Santos — backend, already works with APIs; integrate cost monitoring from day one" } },
+      { "skill": "SAML/OIDC", "missing_from": ["Alex Chen", "James Kim", "Sofia Park", "David Osei"], "required_for": ["Enterprise SSO (SAML/OIDC)"], "priority": "high", "impact_if_unaddressed": "Enterprise SSO project requires external contractor or 2-week ramp-up delay.", "learning_path": { "recommended_resource": "Auth0 SSO documentation + SAML2 integration guide + Passport.js SAML module", "estimated_days": 5, "who_should_lead": "Maria Santos — auth domain expert from existing Auth work" } }
+    ],
+    "strengths_to_leverage": [
+      "Maria Santos: Auth expertise — own the SSO spike and lead backend for AI integration",
+      "Alex Chen: React depth — fastest path to React Native; lead mobile frontend",
+      "James Kim: Design systems — owns mobile UX patterns and handoff; already has Figma mobile components",
+      "David Osei: GraphQL API design — lead real-time collaboration API contract design"
+    ],
+    "hiring_recommendation": "Consider a React Native contractor for 6 weeks to accelerate the Q3 mobile launch while Alex ramps on the platform. Internal learning alone may not close the gap in time for a July 31 target.",
+    "quarter_readiness_assessment": "The team is strong on backend, design, and web frontend — but has a critical gap in mobile (React Native) and meaningful gaps in LLM integration and enterprise auth. These gaps map directly to the three highest-priority Q3 projects. Address React Native first; it has no internal coverage. LLM and SAML can be closed with 3–5 days of focused learning each."
+  },
+  "meta": { "quarter": "Q3 2026", "gap_count": 3, "critical_count": 1, "generated_at": "2026-07-14T09:00:00.000Z" }
+}

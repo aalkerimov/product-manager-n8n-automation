@@ -1,0 +1,14 @@
+{
+  "_comment": "Deterministic output — scores are exact given the input.",
+  "qualified": [
+    { "id": "A001", "name": "Applicant A", "company_size": 45, "role": "Project Manager", "months_using_our_product": 4, "weekly_tasks": 38, "timezone": "UTC+2", "email": "a@example.com", "screening": { "qualifies": true, "score_pct": 100, "passed_count": 5, "total": 5, "checks": { "company_size": true, "role": true, "months_using": true, "weekly_tasks": true, "willing": true } } },
+    { "id": "A003", "name": "Applicant C", "company_size": 250, "role": "Head of PMO", "months_using_our_product": 7, "weekly_tasks": 190, "timezone": "UTC+0", "email": "c@example.com", "screening": { "qualifies": true, "score_pct": 100, "passed_count": 5, "total": 5, "checks": { "company_size": true, "role": true, "months_using": true, "weekly_tasks": true, "willing": true } } },
+    { "id": "A005", "name": "Applicant E", "company_size": 80, "role": "Product Manager", "months_using_our_product": 5, "weekly_tasks": 55, "timezone": "UTC-8", "email": "e@example.com", "screening": { "qualifies": true, "score_pct": 100, "passed_count": 5, "total": 5, "checks": { "company_size": true, "role": true, "months_using": true, "weekly_tasks": true, "willing": true } } }
+  ],
+  "rejected": [
+    { "id": "A002", "name": "Applicant B", "role": "Founder", "screening": { "qualifies": false, "score_pct": 20, "passed_count": 1, "total": 5, "checks": { "company_size": false, "role": false, "months_using": false, "weekly_tasks": false, "willing": true } } },
+    { "id": "A004", "name": "Applicant D", "role": "Designer", "screening": { "qualifies": false, "score_pct": 0, "passed_count": 0, "total": 5, "checks": { "company_size": false, "role": false, "months_using": false, "weekly_tasks": false, "willing": false } } }
+  ],
+  "meta": { "total": 5, "qualified_count": 3, "rejected_count": 2, "checked_at": "2026-07-14T09:00:00.000Z" },
+  "study_name": "Mid-Market PM Adoption Study — Q3 2026"
+}

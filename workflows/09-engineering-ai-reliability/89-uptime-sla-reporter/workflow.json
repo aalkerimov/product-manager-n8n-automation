@@ -1,0 +1,145 @@
+{
+  "name": "Uptime & SLA Reporter",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Uptime & SLA Reporter\n\n**Setup:**\n1. Create YOUR_SMTP_CREDENTIAL\n2. Set UPTIME_EMAIL_TO and SLA targets\n3. Feed uptime measurement data from your monitoring system\n4. Code nodes compute SLA compliance, downtime duration, breach status — no LLM\n5. Approval gate before SLA report is distributed",
+        "height": 240,
+        "width": 400,
+        "color": 7
+      },
+      "id": "sticky-setup",
+      "name": "Setup Instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, -240]
+    },
+    {
+      "parameters": { "rule": { "interval": [{ "field": "weeks", "triggerAtDay": [1], "triggerAtHour": 9 }] } },
+      "id": "cron-trigger",
+      "name": "Weekly Schedule (Monday 9am)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 200]
+    },
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 380]
+    },
+    {
+      "parameters": {
+        "jsCode": "// In production: pull from Datadog/PagerDuty/StatusPage API\nconst services = [\n  { name: 'ProjectFlow Web App', sla_target_pct: 99.9, uptime_minutes: 10069, total_minutes: 10080, incidents: [{ id: 'INC-089', start: '2026-07-12T08:43:00Z', end: '2026-07-12T09:30:00Z', duration_minutes: 47, severity: 'P0', description: 'Dashboard timeout — enterprise accounts' }] },\n  { name: 'ProjectFlow API', sla_target_pct: 99.95, uptime_minutes: 10069, total_minutes: 10080, incidents: [{ id: 'INC-089', start: '2026-07-12T08:43:00Z', end: '2026-07-12T09:30:00Z', duration_minutes: 47, severity: 'P0', description: 'Same root cause as Web App' }] },\n  { name: 'Webhook Delivery', sla_target_pct: 99.5, uptime_minutes: 10080, total_minutes: 10080, incidents: [] },\n  { name: 'Data Export Service', sla_target_pct: 99.0, uptime_minutes: 10050, total_minutes: 10080, incidents: [{ id: 'INC-090', start: '2026-07-09T14:00:00Z', end: '2026-07-09T14:30:00Z', duration_minutes: 30, severity: 'P2', description: 'CSV export errors after v2.4.0' }] }\n];\nconst period = { start: '2026-07-07', end: '2026-07-13', period_type: 'week' };\nreturn [{ json: { services, period, product: 'ProjectFlow' } }];"
+      },
+      "id": "load-uptime",
+      "name": "Load Uptime Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 280]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { services, period, product } = $input.first().json;\nconst results = services.map(s => {\n  const uptime_pct = parseFloat(((s.uptime_minutes / s.total_minutes) * 100).toFixed(4));\n  const downtime_minutes = s.total_minutes - s.uptime_minutes;\n  const sla_met = uptime_pct >= s.sla_target_pct;\n  const sla_gap = parseFloat((uptime_pct - s.sla_target_pct).toFixed(4));\n  return { name: s.name, uptime_pct, sla_target_pct: s.sla_target_pct, sla_met, sla_gap, downtime_minutes, incident_count: s.incidents.length, incidents: s.incidents };\n});\nconst breached = results.filter(r => !r.sla_met);\nconst total_incidents = results.reduce((s,r) => s + r.incident_count, 0);\nreturn [{ json: { results, period, product, meta: { service_count: services.length, sla_breaches: breached.length, total_incidents, generated_at: new Date().toISOString() }, breached } }];"
+      },
+      "id": "compute-sla",
+      "name": "Compute SLA Compliance",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [740, 280]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { results, period, product, meta: m, breached } = $input.first().json;\nconst svcLines = results.map(r => [\n  `  [${r.sla_met?'✅ MET':'❌ BREACH'}] ${r.name}: ${r.uptime_pct}% (target ${r.sla_target_pct}%)${!r.sla_met ? ' | gap: '+r.sla_gap+'%' : ''}`,\n  `  Downtime: ${r.downtime_minutes}min | Incidents: ${r.incident_count}`,\n  ...r.incidents.map(i => `    [${i.severity}] ${i.id}: ${i.description} (${i.duration_minutes}min)`),\n  ''\n].join('\\n')).join('\\n');\nconst report = [\n  `UPTIME & SLA REPORT: ${product}`,\n  `Period: ${period.start} → ${period.end} | Generated: ${m.generated_at}`,\n  `Services: ${m.service_count} | SLA breaches: ${m.sla_breaches} | Incidents: ${m.total_incidents}`,\n  ``,\n  `SERVICE DETAIL:`,\n  svcLines,\n  m.sla_breaches > 0 ? `⚠️ SLA BREACH SUMMARY: ${breached.map(b=>b.name).join(', ')} did not meet their uptime targets this period.` : '✅ All services met SLA targets.',\n].join('\\n');\nreturn [{ json: { ...($input.first().json), report_text: report } }];"
+      },
+      "id": "format-report",
+      "name": "Format SLA Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [960, 280]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.UPTIME_APPROVER_EMAIL || $env.UPTIME_EMAIL_TO }}",
+        "subject": "=APPROVAL REQUIRED: SLA Report — {{ $json.meta.sla_breaches }} breach{{ $json.meta.sla_breaches !== 1 ? 'es' : '' }} | {{ $json.meta.total_incidents }} incident{{ $json.meta.total_incidents !== 1 ? 's' : '' }}",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $json.report_text }}</pre><p><a href=\"{{ $execution.resumeUrl }}?decision=approved\">Approve and distribute</a> | <a href=\"{{ $execution.resumeUrl }}?decision=rejected\">Reject</a></p>",
+        "options": {}
+      },
+      "id": "send-approval",
+      "name": "Send for Approval",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1180, 280],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": { "resume": "webhook", "options": { "webhookSuffix": "/approval" } },
+      "id": "wait-approval",
+      "name": "Wait for Approval",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [1400, 280],
+      "webhookId": "uptime-sla-approval"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "cd", "leftValue": "={{ $json.query?.decision || $json.body?.decision }}", "rightValue": "approved", "operator": { "type": "string", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-decision",
+      "name": "Approved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1620, 280]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.UPTIME_EMAIL_TO || 'engineering@acme-analytics.com' }}",
+        "subject": "=Uptime & SLA Report: {{ $('Format SLA Report').first().json.period.start }} — {{ $('Format SLA Report').first().json.meta.sla_breaches }} breach(es)",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $('Format SLA Report').first().json.report_text }}</pre>",
+        "options": {}
+      },
+      "id": "send-report",
+      "name": "Distribute SLA Report",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1840, 180],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": { "assignments": { "assignments": [{ "id": "r1", "name": "status", "value": "rejected", "type": "string" }] }, "options": {} },
+      "id": "log-rejection",
+      "name": "Log Rejection",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1840, 380]
+    }
+  ],
+  "connections": {
+    "Weekly Schedule (Monday 9am)": { "main": [[{ "node": "Load Uptime Data", "type": "main", "index": 0 }]] },
+    "Manual Trigger": { "main": [[{ "node": "Load Uptime Data", "type": "main", "index": 0 }]] },
+    "Load Uptime Data": { "main": [[{ "node": "Compute SLA Compliance", "type": "main", "index": 0 }]] },
+    "Compute SLA Compliance": { "main": [[{ "node": "Format SLA Report", "type": "main", "index": 0 }]] },
+    "Format SLA Report": { "main": [[{ "node": "Send for Approval", "type": "main", "index": 0 }]] },
+    "Send for Approval": { "main": [[{ "node": "Wait for Approval", "type": "main", "index": 0 }]] },
+    "Wait for Approval": { "main": [[{ "node": "Approved?", "type": "main", "index": 0 }]] },
+    "Approved?": { "main": [[{ "node": "Distribute SLA Report", "type": "main", "index": 0 }], [{ "node": "Log Rejection", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1", "saveManualExecutions": true, "callerPolicy": "workflowsFromSameOwner", "errorWorkflow": "" },
+  "staticData": null,
+  "tags": ["engineering", "reliability", "uptime", "sla", "beta"],
+  "triggerCount": 0,
+  "updatedAt": "2026-07-14T00:00:00.000Z",
+  "versionId": "89-uptime-sla-reporter-v0.1.0"
+}

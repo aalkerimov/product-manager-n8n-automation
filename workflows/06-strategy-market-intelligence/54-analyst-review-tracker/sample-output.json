@@ -1,0 +1,6 @@
+{
+  "_comment": "Output is a formatted plain-text report delivered by email. This is what the report_text field contains.",
+  "report_text": "REVIEW PLATFORM TRACKER — Mon Jul 14 2026\n\nOUR POSITION: Acme Analytics\n  G2: 4.6/5 (312 reviews) — Rank #3\n  Capterra: 4.5/5 (187 reviews) — Rank #4\n  Top G2 tags: easy to use, great support, good reporting\n  Recent G2 reviews:\n    [5★] Onboarding was fast and the support team responded in hours. (2026-07-10)\n    [2★] Wish there was a mobile app. Everything else is great. (2026-07-08)\n\nCOMPETITORS:\n  CompetitorX:\n    G2: 4.3/5 (890 reviews) — Rank #1\n    Capterra: 4.2/5 (645 reviews) — Rank #2\n    Recent G2 reviews:\n      [3★] Good tool but onboarding took us 3 weeks and pricing jumped at renewal. (2026-07-11)\n  CompetitorY:\n    G2: 4.5/5 (430 reviews) — Rank #2\n    Capterra: 4.4/5 (290 reviews) — Rank #3\n    Recent G2 reviews:\n      [5★] Perfect for small teams. Simple and affordable. (2026-07-12)\n\nNOTE: Delta tracking requires historical snapshot storage (see README for setup).",
+  "captured_at": "2026-07-14T08:00:00.000Z",
+  "company_count": 3
+}

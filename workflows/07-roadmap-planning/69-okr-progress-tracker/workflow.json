@@ -1,0 +1,96 @@
+{
+  "name": "OKR Progress Tracker",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## OKR Progress Tracker\n\n**Setup:**\n1. Create YOUR_SMTP_CREDENTIAL\n2. Set OKR_EMAIL_TO\n3. OKRs and current progress live in Google Sheets or the embedded sample\n4. No LLM — deterministic confidence scoring from numeric key results\n5. Runs bi-weekly on Monday",
+        "height": 240,
+        "width": 400,
+        "color": 5
+      },
+      "id": "sticky-setup",
+      "name": "Setup Instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, -240]
+    },
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 200]
+    },
+    {
+      "parameters": {
+        "rule": { "interval": [{ "field": "cronExpression", "expression": "={{ $env.OKR_SCHEDULE || '0 9 * * 1' }}" }] }
+      },
+      "id": "schedule-trigger",
+      "name": "Weekly Monday Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 380]
+    },
+    {
+      "parameters": {
+        "jsCode": "// OKRs with current progress as percentages (0–100)\n// Each KR has: target, current, and unit\nconst okrs = [\n  {\n    id: 'O1',\n    objective: 'Unblock enterprise sales with a complete security foundation',\n    quarter: 'Q3 2026',\n    key_results: [\n      { id: 'O1-KR1', title: 'RBAC shipped by August 15', type: 'binary', target: 1, current: 0, unit: 'shipped' },\n      { id: 'O1-KR2', title: 'Audit log shipped by August 29', type: 'binary', target: 1, current: 0, unit: 'shipped' },\n      { id: 'O1-KR3', title: 'P0 security incidents in Q3', type: 'binary_inverse', target: 0, current: 0, unit: 'incidents' },\n      { id: 'O1-KR4', title: 'New enterprise logos citing security features', type: 'numeric', target: 3, current: 1, unit: 'logos' }\n    ]\n  },\n  {\n    id: 'O2',\n    objective: 'Establish mobile as a core product surface',\n    quarter: 'Q3 2026',\n    key_results: [\n      { id: 'O2-KR1', title: 'iOS app reaches GA by July 31', type: 'binary', target: 1, current: 0, unit: 'shipped' },\n      { id: 'O2-KR2', title: 'Android v1 shipped to 10 beta customers by September 15', type: 'binary', target: 1, current: 0, unit: 'shipped' },\n      { id: 'O2-KR3', title: 'Mobile daily active rate ≥ 40%', type: 'numeric', target: 40, current: 43, unit: 'pct' }\n    ]\n  },\n  {\n    id: 'O3',\n    objective: 'Grow net new ARR by $220k in Q3',\n    quarter: 'Q3 2026',\n    key_results: [\n      { id: 'O3-KR1', title: 'Net new ARR ($k)', type: 'numeric', target: 220, current: 64, unit: 'k USD' },\n      { id: 'O3-KR2', title: 'Churn maintained at ≤ 2.1%', type: 'numeric_inverse', target: 2.1, current: 1.9, unit: 'pct' },\n      { id: 'O3-KR3', title: 'NPS ≥ 44', type: 'numeric', target: 44, current: 43, unit: 'points' }\n    ]\n  }\n];\nreturn [{ json: { okrs, quarter: 'Q3 2026', week: 'week 2 of 13', as_of: new Date().toISOString().split('T')[0] } }];"
+      },
+      "id": "load-sample",
+      "name": "Load Sample OKRs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { okrs, quarter, week, as_of } = $input.first().json;\n// Compute progress per KR and per Objective\nconst scored = okrs.map(o => {\n  const krs = o.key_results.map(kr => {\n    let progress = 0;\n    if (kr.type === 'binary') progress = kr.current >= kr.target ? 100 : 0;\n    else if (kr.type === 'binary_inverse') progress = kr.current <= kr.target ? 100 : 0;\n    else if (kr.type === 'numeric') progress = kr.target > 0 ? Math.min(100, Math.round((kr.current / kr.target) * 100)) : 100;\n    else if (kr.type === 'numeric_inverse') progress = kr.target > 0 ? Math.min(100, Math.round(((2 * kr.target - kr.current) / kr.target) * 100)) : 100;\n    const status = progress >= 70 ? 'on-track' : progress >= 40 ? 'at-risk' : 'off-track';\n    return { ...kr, progress_pct: progress, status };\n  });\n  const obj_progress = Math.round(krs.reduce((sum, kr) => sum + kr.progress_pct, 0) / krs.length);\n  const obj_status = obj_progress >= 70 ? 'on-track' : obj_progress >= 40 ? 'at-risk' : 'off-track';\n  return { ...o, key_results: krs, objective_progress_pct: obj_progress, objective_status: obj_status };\n});\nconst overall_pct = Math.round(scored.reduce((sum, o) => sum + o.objective_progress_pct, 0) / scored.length);\nreturn [{ json: { scored, overall_pct, quarter, week, as_of } }];"
+      },
+      "id": "score-okrs",
+      "name": "Score OKRs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [740, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { scored, overall_pct, quarter, week, as_of } = $input.first().json;\nconst emoji = (s) => s === 'on-track' ? '✅' : s === 'at-risk' ? '⚠️' : '❌';\nconst lines = [\n  `OKR PROGRESS TRACKER — ${quarter} | ${week} | As of ${as_of}`,\n  `Overall portfolio: ${overall_pct}%`,\n  ``\n];\nfor (const o of scored) {\n  lines.push(`${emoji(o.objective_status)} ${o.objective} — ${o.objective_progress_pct}% [${o.objective_status}]`);\n  for (const kr of o.key_results) {\n    lines.push(`    ${emoji(kr.status)} ${kr.title}: ${kr.current} / ${kr.target} ${kr.unit} (${kr.progress_pct}%) [${kr.status}]`);\n  }\n  lines.push('');\n}\nconst atRisk = scored.flatMap(o => o.key_results.filter(kr => kr.status !== 'on-track').map(kr => ({ objective: o.objective, kr_title: kr.title, progress_pct: kr.progress_pct, status: kr.status })));\nif (atRisk.length > 0) {\n  lines.push('AT-RISK / OFF-TRACK KEY RESULTS:');\n  for (const a of atRisk) lines.push(`  ${emoji(a.status)} [${a.status.toUpperCase()}] ${a.kr_title} (${a.progress_pct}%) under \"${a.objective}\"`);\n}\nreturn [{ json: { scored, overall_pct, quarter, week, as_of, report_text: lines.join('\\n') } }];"
+      },
+      "id": "format-report",
+      "name": "Format OKR Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [960, 200]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.OKR_EMAIL_TO || 'leadership@acme-analytics.com' }}",
+        "subject": "=OKR Pulse: {{ $json.quarter }} | {{ $json.week }} — Overall {{ $json.overall_pct }}%",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $json.report_text }}</pre>",
+        "options": {}
+      },
+      "id": "send-report",
+      "name": "Send OKR Pulse",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1180, 200],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    }
+  ],
+  "connections": {
+    "Manual Trigger": { "main": [[{ "node": "Load Sample OKRs", "type": "main", "index": 0 }]] },
+    "Weekly Monday Schedule": { "main": [[{ "node": "Load Sample OKRs", "type": "main", "index": 0 }]] },
+    "Load Sample OKRs": { "main": [[{ "node": "Score OKRs", "type": "main", "index": 0 }]] },
+    "Score OKRs": { "main": [[{ "node": "Format OKR Report", "type": "main", "index": 0 }]] },
+    "Format OKR Report": { "main": [[{ "node": "Send OKR Pulse", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1", "saveManualExecutions": true, "callerPolicy": "workflowsFromSameOwner", "errorWorkflow": "" },
+  "staticData": null,
+  "tags": ["roadmap", "planning", "okr", "beta"],
+  "triggerCount": 0,
+  "updatedAt": "2026-07-14T00:00:00.000Z",
+  "versionId": "69-okr-progress-tracker-v0.1.0"
+}

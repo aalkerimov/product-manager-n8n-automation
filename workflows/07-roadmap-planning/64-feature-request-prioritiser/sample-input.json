@@ -1,0 +1,22 @@
+[
+  { "id": "FR001", "title": "Bulk export to CSV", "segment": "enterprise", "votes": 142, "source": "intercom", "created_at": "2026-06-01" },
+  { "id": "FR002", "title": "Native Salesforce integration", "segment": "enterprise", "votes": 98, "source": "intercom", "created_at": "2026-05-15" },
+  { "id": "FR003", "title": "Dark mode", "segment": "smb", "votes": 321, "source": "productboard", "created_at": "2026-04-10" },
+  { "id": "FR004", "title": "Automated status updates via Slack", "segment": "mid-market", "votes": 67, "source": "zendesk", "created_at": "2026-06-20" },
+  { "id": "FR005", "title": "Custom workflow templates", "segment": "mid-market", "votes": 89, "source": "productboard", "created_at": "2026-05-30" },
+  { "id": "FR006", "title": "Role-based access control", "segment": "enterprise", "votes": 210, "source": "sales", "created_at": "2026-06-15" },
+  { "id": "FR007", "title": "SSO (SAML / Google Workspace)", "segment": "enterprise", "votes": 178, "source": "sales", "created_at": "2026-05-01" },
+  { "id": "FR008", "title": "Calendar view for tasks", "segment": "smb", "votes": 255, "source": "productboard", "created_at": "2026-04-20" },
+  { "id": "FR009", "title": "Offline mode on mobile", "segment": "smb", "votes": 112, "source": "app-store-review", "created_at": "2026-06-05" },
+  { "id": "FR010", "title": "Budget tracking integration", "segment": "enterprise", "votes": 45, "source": "intercom", "created_at": "2026-06-18" },
+  { "id": "FR011", "title": "Time tracking built-in", "segment": "smb", "votes": 198, "source": "productboard", "created_at": "2026-05-20" },
+  { "id": "FR012", "title": "Recurring task support", "segment": "smb", "votes": 287, "source": "productboard", "created_at": "2026-04-01" },
+  { "id": "FR013", "title": "Microsoft Teams integration", "segment": "enterprise", "votes": 134, "source": "sales", "created_at": "2026-06-10" },
+  { "id": "FR014", "title": "Guest / client access (limited permissions)", "segment": "mid-market", "votes": 76, "source": "intercom", "created_at": "2026-05-25" },
+  { "id": "FR015", "title": "Email digest of overdue items", "segment": "smb", "votes": 93, "source": "zendesk", "created_at": "2026-06-08" },
+  { "id": "FR016", "title": "API webhooks for external automation", "segment": "enterprise", "votes": 56, "source": "developer-forum", "created_at": "2026-05-12" },
+  { "id": "FR017", "title": "Kanban board view", "segment": "smb", "votes": 344, "source": "productboard", "created_at": "2026-03-15" },
+  { "id": "FR018", "title": "Gantt chart view", "segment": "mid-market", "votes": 167, "source": "productboard", "created_at": "2026-04-28" },
+  { "id": "FR019", "title": "AI task description generator", "segment": "smb", "votes": 44, "source": "productboard", "created_at": "2026-06-22" },
+  { "id": "FR020", "title": "Data retention and audit log for compliance", "segment": "enterprise", "votes": 88, "source": "legal-team", "created_at": "2026-06-01" }
+]

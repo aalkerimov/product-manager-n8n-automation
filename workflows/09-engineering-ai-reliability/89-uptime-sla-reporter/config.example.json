@@ -1,0 +1,18 @@
+{
+  "_comment": "config.example.json for Uptime & SLA Reporter",
+  "workflow_id": "89-uptime-sla-reporter",
+  "workflow_name": "Uptime & SLA Reporter",
+  "collection": "09-engineering-ai-reliability",
+  "status": "beta",
+  "configuration": {
+    "UPTIME_EMAIL_TO": { "default": "", "description": "Engineering and PM recipients", "required": "Required" },
+    "UPTIME_APPROVER_EMAIL": { "default": "", "description": "PM approver. Defaults to UPTIME_EMAIL_TO.", "required": "Optional" },
+    "NOTIFICATION_EMAIL_FROM": { "default": "automation@acme-analytics.com", "description": "Sender address", "required": "Optional" }
+  },
+  "n8n_credentials_required": [
+    { "name": "YOUR_SMTP_CREDENTIAL", "type": "smtp", "required": true, "purpose": "Approval and SLA report distribution" }
+  ],
+  "ai_required": false,
+  "schedule": "Every Monday at 09:00",
+  "sla_examples": { "three_nines": 99.9, "four_nines": 99.99, "five_nines": 99.999 }
+}

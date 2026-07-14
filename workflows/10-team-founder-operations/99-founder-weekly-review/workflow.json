@@ -1,0 +1,155 @@
+{
+  "name": "Founder Weekly Review",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Founder Weekly Review\n\n**Setup:**\n1. Create YOUR_OPENAI_CREDENTIAL and YOUR_SMTP_CREDENTIAL\n2. Set WEEKLY_REVIEW_EMAIL_TO\n3. Fill in this week's wins, struggles, decisions, and metrics\n4. LLM produces reflection, pattern analysis, and focus recommendations for next week\n5. Sent to yourself — no approval gate needed",
+        "height": 220,
+        "width": 400,
+        "color": 4
+      },
+      "id": "sticky-setup",
+      "name": "Setup Instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, -240]
+    },
+    {
+      "parameters": { "rule": { "interval": [{ "field": "weeks", "triggerAtDay": [5], "triggerAtHour": 17 }] } },
+      "id": "cron-trigger",
+      "name": "Weekly Schedule (Friday 5pm)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 200]
+    },
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 380]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: {\n  week: 'July 7–11, 2026',\n  wins: [\n    'Recurring tasks frontend completed and in QA — on track for July 31 GA',\n    'Customer discovery call: confirmed NPS hypothesis — onboarding drop-off at step 3',\n    'Board deck draft done 2 days early'\n  ],\n  struggles: [\n    'Two team members blocked by missing PM deliverables (design spec, API contract) — I should have unblocked these Tuesday, not Friday',\n    'Spent 3h on email/Slack that could have been batched into 1h',\n    'Did not write spec for bulk actions — carries over for the 2nd consecutive week'\n  ],\n  big_decisions: [\n    { decision: 'Decided not to pursue enterprise tier pricing update this quarter — too many moving parts', confidence: 'medium', reversible: true },\n    { decision: 'Hired James Kim as design lead — will start Aug 1', confidence: 'high', reversible: false }\n  ],\n  key_metrics_vs_last_week: [\n    { metric: 'MRR', current: 38400, previous: 37200, unit: 'USD' },\n    { metric: 'Signups', current: 142, previous: 129, unit: 'accounts' },\n    { metric: 'NPS', current: 41, previous: 38, unit: 'score' },\n    { metric: 'Support tickets', current: 23, previous: 31, unit: 'tickets' }\n  ],\n  energy_level: 'medium',\n  focus_rating: 3,\n  what_i_would_do_differently: 'Unblock team members daily — not at end-of-week standup'\n} }];"
+      },
+      "id": "load-review",
+      "name": "Load Weekly Review Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 280]
+    },
+    {
+      "parameters": {
+        "jsCode": "const ctx = $input.first().json;\nconst winsText = ctx.wins.map(w => `  ✓ ${w}`).join('\\n');\nconst strugglesText = ctx.struggles.map(s => `  ✗ ${s}`).join('\\n');\nconst decisionsText = ctx.big_decisions.map(d => `  [${d.confidence.toUpperCase()} confidence | ${d.reversible?'reversible':'irreversible'}] ${d.decision}`).join('\\n');\nconst metricsText = ctx.key_metrics_vs_last_week.map(m => { const chg = m.current - m.previous; const pct = parseFloat(((chg/m.previous)*100).toFixed(1)); return `  ${m.metric}: ${m.current}${m.unit} (${chg>=0?'+':''}${chg} / ${pct>=0?'+':''}${pct}%)`; }).join('\\n');\nconst system = `You are an executive coach and founder advisor. You help founders extract insight from their week — not just reflect, but spot patterns, identify leverage points, and set sharper intentions. You are direct and honest, not flattering. Return ONLY valid JSON.`;\nconst user = `Weekly review for the week of ${ctx.week}:\\n\\nWins:\\n${winsText}\\n\\nStruggles:\\n${strugglesText}\\n\\nBig decisions:\\n${decisionsText}\\n\\nMetrics vs last week:\\n${metricsText}\\n\\nEnergy level: ${ctx.energy_level} | Focus rating: ${ctx.focus_rating}/5\\nWhat I'd do differently: ${ctx.what_i_would_do_differently}\\n\\nReturn JSON:\\n{\\n  \"week_headline\": \"string — 8-12 word summary of the week\",\\n  \"key_pattern\": \"string — the most important behavioural or operational pattern you observed\",\\n  \"leverage_point\": \"string — the one thing to change next week that will have the highest impact\",\\n  \"metric_commentary\": \"string — brief insight on the most important metric movement\",\\n  \"decision_quality_note\": \"string — feedback on the quality of decisions made this week\",\\n  \"energy_note\": \"string — honest assessment of energy and what it signals\",\\n  \"next_week_intention\": \"string — a single clear intention for next week (not a todo list)\",\\n  \"question_to_sit_with\": \"string — a coaching question to reflect on over the weekend\"\\n}`;\nreturn [{ json: { ctx, system_prompt: system, user_prompt: user } }];"
+      },
+      "id": "prepare-prompt",
+      "name": "Prepare Reflection Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [740, 280]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.OPENAI_BASE_URL || 'https://api.openai.com' }}/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParameters": {
+          "parameters": [
+            { "name": "model", "value": "={{ $env.AI_MODEL || 'gpt-4o-mini' }}" },
+            { "name": "messages", "value": "=[{\"role\":\"system\",\"content\":\"{{ $json.system_prompt }}\"},{\"role\":\"user\",\"content\":\"{{ $json.user_prompt }}\"}]" },
+            { "name": "temperature", "value": "=0.5" },
+            { "name": "response_format", "value": "={\"type\":\"json_object\"}" }
+          ]
+        },
+        "options": { "timeout": 60000 }
+      },
+      "id": "llm-call",
+      "name": "LLM: Generate Reflection",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [960, 280],
+      "credentials": { "httpHeaderAuth": { "name": "YOUR_OPENAI_CREDENTIAL" } }
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst upstream = $('Prepare Reflection Prompt').first().json;\nlet parsed;\ntry {\n  const c = response.choices?.[0]?.message?.content;\n  if (!c) throw new Error('No content');\n  parsed = JSON.parse(c);\n} catch(e) { return [{ json: { _error: true, reason: e.message } }]; }\nif (!parsed.week_headline) return [{ json: { _error: true, reason: 'Missing week_headline' } }];\nreturn [{ json: { _error: false, reflection: parsed, ctx: upstream.ctx, meta: { week: upstream.ctx.week, generated_at: new Date().toISOString() } } }];"
+      },
+      "id": "validate-llm",
+      "name": "Validate LLM Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1180, 280]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "ce", "leftValue": "={{ $json._error }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "error-check",
+      "name": "LLM Error?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1400, 280]
+    },
+    {
+      "parameters": { "assignments": { "assignments": [{ "id": "e1", "name": "status", "value": "error", "type": "string" }] }, "options": {} },
+      "id": "error-handler",
+      "name": "LLM Error Handler",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1600, 180]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { reflection: r, ctx, meta: m } = $input.first().json;\nconst metricsLines = ctx.key_metrics_vs_last_week.map(mt => { const chg = mt.current - mt.previous; const pct = parseFloat(((chg/mt.previous)*100).toFixed(1)); return `  ${mt.metric}: ${mt.current}${mt.unit} (${chg>=0?'+':''}${pct}%)`; }).join('\\n');\nconst report = [\n  `WEEKLY REVIEW: ${ctx.week}`,\n  `\"${r.week_headline}\"`,\n  `Generated: ${m.generated_at}`,\n  ``,\n  `METRICS:`,\n  metricsLines,\n  `Metric insight: ${r.metric_commentary}`,\n  ``,\n  `KEY PATTERN: ${r.key_pattern}`,\n  ``,\n  `LEVERAGE POINT FOR NEXT WEEK: ${r.leverage_point}`,\n  ``,\n  `DECISION QUALITY: ${r.decision_quality_note}`,\n  ``,\n  `ENERGY (${ctx.energy_level}): ${r.energy_note}`,\n  ``,\n  `NEXT WEEK INTENTION: ${r.next_week_intention}`,\n  ``,\n  `QUESTION TO SIT WITH: \"${r.question_to_sit_with}\"`,\n].join('\\n');\nreturn [{ json: { ...($input.first().json), report_text: report } }];"
+      },
+      "id": "format-review",
+      "name": "Format Weekly Review",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1600, 380]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.WEEKLY_REVIEW_EMAIL_TO || 'founder@acme-analytics.com' }}",
+        "subject": "=Weekly Review: {{ $json.reflection.week_headline }} — {{ $json.meta.week }}",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $json.report_text }}</pre>",
+        "options": {}
+      },
+      "id": "send-review",
+      "name": "Send Weekly Review",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1820, 380],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    }
+  ],
+  "connections": {
+    "Weekly Schedule (Friday 5pm)": { "main": [[{ "node": "Load Weekly Review Data", "type": "main", "index": 0 }]] },
+    "Manual Trigger": { "main": [[{ "node": "Load Weekly Review Data", "type": "main", "index": 0 }]] },
+    "Load Weekly Review Data": { "main": [[{ "node": "Prepare Reflection Prompt", "type": "main", "index": 0 }]] },
+    "Prepare Reflection Prompt": { "main": [[{ "node": "LLM: Generate Reflection", "type": "main", "index": 0 }]] },
+    "LLM: Generate Reflection": { "main": [[{ "node": "Validate LLM Output", "type": "main", "index": 0 }]] },
+    "Validate LLM Output": { "main": [[{ "node": "LLM Error?", "type": "main", "index": 0 }]] },
+    "LLM Error?": { "main": [[{ "node": "LLM Error Handler", "type": "main", "index": 0 }], [{ "node": "Format Weekly Review", "type": "main", "index": 0 }]] },
+    "Format Weekly Review": { "main": [[{ "node": "Send Weekly Review", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1", "saveManualExecutions": true, "callerPolicy": "workflowsFromSameOwner", "errorWorkflow": "" },
+  "staticData": null,
+  "tags": ["founder", "reflection", "weekly-review", "beta"],
+  "triggerCount": 0,
+  "updatedAt": "2026-07-14T00:00:00.000Z",
+  "versionId": "99-founder-weekly-review-v0.1.0"
+}

@@ -1,0 +1,214 @@
+{
+  "name": "Strategy Assumption Auditor",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Strategy Assumption Auditor\n\n**Setup:**\n1. Create YOUR_OPENAI_CREDENTIAL and YOUR_SMTP_CREDENTIAL\n2. Set ASSUMPTION_SHEET_ID (your assumption register Google Sheet)\n3. Set ASSUMPTION_EMAIL_TO\n4. Run quarterly (or trigger manually)\n5. Sample data built in for zero-account testing\n\n**Flow:** Reads assumption register → feeds new evidence → LLM re-checks each assumption → flags changed confidence → approval gate → report sent",
+        "height": 300,
+        "width": 460,
+        "color": 6
+      },
+      "id": "sticky-setup",
+      "name": "Setup Instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, -280]
+    },
+    {
+      "parameters": {
+        "rule": { "interval": [{ "field": "cronExpression", "expression": "={{ $env.ASSUMPTION_SCHEDULE || '0 9 1 1,4,7,10 *' }}" }] }
+      },
+      "id": "schedule-trigger",
+      "name": "Quarterly Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 100]
+    },
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 280]
+    },
+    {
+      "parameters": {
+        "jsCode": "const assumptions = [\n  { id: 'A001', assumption: 'Our primary buyers are engineering managers, not VPs', category: 'ICP', original_confidence: 'high', last_reviewed: '2025-10-01', evidence_at_creation: 'Based on 20 discovery calls in 2025 Q3 — 18/20 champions were engineering managers', new_evidence: 'Win/loss analysis (Q2 2026): 6 of last 10 enterprise wins had VP of Engineering as economic buyer, not manager' },\n  { id: 'A002', assumption: 'Customers will not pay more than $500/month in SMB segment', category: 'Pricing', original_confidence: 'medium', last_reviewed: '2025-10-01', evidence_at_creation: 'Survey of 30 SMB prospects in 2025 — median WTP was $300/month', new_evidence: '3 SMB customers on $600/mo plan (launched Q1 2026). No churn after 6 months. N=3 so limited confidence.' },\n  { id: 'A003', assumption: 'G2 reviews are the primary discovery channel for mid-market buyers', category: 'GTM', original_confidence: 'medium', last_reviewed: '2025-10-01', evidence_at_creation: 'Survey: 14/20 mid-market buyers said they checked G2 during evaluation', new_evidence: 'New survey (n=40, Q2 2026): G2 cited by 35%, peer referral cited by 42%. G2 still important but not primary.' },\n  { id: 'A004', assumption: 'Integration quality is a top-3 purchase criterion for all segments', category: 'Product', original_confidence: 'high', last_reviewed: '2025-10-01', evidence_at_creation: 'Feature ranking survey 2025 — integrations ranked #2 overall', new_evidence: 'Feature ranking repeated Q1 2026 — integrations still #2 overall but #4 for SMB segment specifically' },\n  { id: 'A005', assumption: 'The market will not see an AI-native entrant with traction before 2027', category: 'Competition', original_confidence: 'medium', last_reviewed: '2025-10-01', evidence_at_creation: 'No credible AI-native PM tool with >500 customers as of 2025', new_evidence: 'NewEntrant Co raised YC seed in July 2026. 200 waitlist signups. Too early to assess traction.' }\n];\nreturn [{ json: { assumptions, total: assumptions.length, review_date: new Date().toISOString() } }];"
+      },
+      "id": "load-sample",
+      "name": "Load Sample Assumptions",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 280]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { assumptions, total, review_date } = $input.first().json;\nif (!assumptions || assumptions.length === 0) throw new Error('No assumptions to review');\nconst asText = assumptions.map((a, i) =>\n  `[${i+1}] ID: ${a.id}\\nAssumption: ${a.assumption}\\nCategory: ${a.category}\\nOriginal confidence: ${a.original_confidence}\\nEvidence at creation: ${a.evidence_at_creation}\\nNew evidence since last review: ${a.new_evidence}`\n).join('\\n\\n');\nconst system = `You are a strategy consultant reviewing strategic assumptions. You assess whether new evidence confirms, weakens, or contradicts each assumption. You are honest about uncertainty. You flag any assumption that should change the strategy if it is wrong. Return ONLY valid JSON.`;\nconst user = `Re-assess these ${total} strategic assumptions against the new evidence provided.\n\nAssumptions:\n${asText}\n\nReturn JSON:\n{\n  \"assessments\": [\n    {\n      \"id\": \"string\",\n      \"assumption\": \"string\",\n      \"verdict\": \"confirmed|weakened|contradicted|insufficient-evidence\",\n      \"confidence_change\": \"increased|decreased|unchanged\",\n      \"new_confidence\": \"low|medium|high\",\n      \"reasoning\": \"string — specific reference to the evidence\",\n      \"strategic_risk_if_wrong\": \"high|medium|low\",\n      \"recommended_action\": \"string\"\n    }\n  ],\n  \"assumptions_needing_action\": number,\n  \"summary\": \"string — 2-3 sentences covering the most important finding\"\n}`;\nreturn [{ json: { assumptions, total, review_date, system_prompt: system, user_prompt: user } }];"
+      },
+      "id": "prepare-prompt",
+      "name": "Prepare Audit Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [740, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.OPENAI_BASE_URL || 'https://api.openai.com' }}/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParameters": {
+          "parameters": [
+            { "name": "model", "value": "={{ $env.AI_MODEL || 'gpt-4o-mini' }}" },
+            { "name": "messages", "value": "=[{\"role\":\"system\",\"content\":\"{{ $json.system_prompt }}\"},{\"role\":\"user\",\"content\":\"{{ $json.user_prompt }}\"}]" },
+            { "name": "temperature", "value": "=0.1" },
+            { "name": "response_format", "value": "={\"type\":\"json_object\"}" }
+          ]
+        },
+        "options": { "timeout": 60000 }
+      },
+      "id": "llm-call",
+      "name": "LLM: Audit Assumptions",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [960, 200],
+      "credentials": { "httpHeaderAuth": { "name": "YOUR_OPENAI_CREDENTIAL" } }
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst upstream = $('Prepare Audit Prompt').first().json;\nlet parsed;\ntry {\n  const content = response.choices?.[0]?.message?.content;\n  if (!content) throw new Error('No content');\n  parsed = JSON.parse(content);\n} catch(e) { return [{ json: { _error: true, reason: e.message } }]; }\nif (!parsed.assessments || !Array.isArray(parsed.assessments)) {\n  return [{ json: { _error: true, reason: 'Missing assessments array' } }];\n}\nreturn [{ json: { _error: false, audit: parsed, meta: { total: upstream.total, review_date: upstream.review_date } } }];"
+      },
+      "id": "validate-llm",
+      "name": "Validate LLM Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1180, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "ce", "leftValue": "={{ $json._error }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "error-check",
+      "name": "LLM Error?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1400, 200]
+    },
+    {
+      "parameters": {
+        "assignments": { "assignments": [{ "id": "e1", "name": "status", "value": "error", "type": "string" }, { "id": "e2", "name": "message", "value": "={{ $json.reason }}", "type": "string" }] },
+        "options": {}
+      },
+      "id": "error-handler",
+      "name": "LLM Error Handler",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1620, 100]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { audit: a, meta: m } = $input.first().json;\nconst verdictLines = (a.assessments || []).map(ass =>\n  `  [${ass.verdict.toUpperCase()}] ${ass.id}: ${ass.assumption}\\n  Confidence: ${ass.new_confidence} (${ass.confidence_change}) | Risk if wrong: ${ass.strategic_risk_if_wrong}\\n  Reasoning: ${ass.reasoning}\\n  Action: ${ass.recommended_action}`\n).join('\\n\\n');\nconst report = [\n  `STRATEGY ASSUMPTION AUDIT`,\n  `Review date: ${m.review_date} | Assumptions reviewed: ${m.total}`,\n  `Needing action: ${a.assumptions_needing_action}`,\n  ``,\n  `SUMMARY: ${a.summary}`,\n  ``,\n  `ASSESSMENTS:`,\n  verdictLines || '  (none)',\n].join('\\n');\nreturn [{ json: { ...($input.first().json), report_text: report } }];"
+      },
+      "id": "format-report",
+      "name": "Format Audit Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1620, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.ASSUMPTION_EMAIL_TO || 'strategy@acme-analytics.com' }}",
+        "subject": "APPROVAL REQUIRED: Quarterly Strategy Assumption Audit",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $json.report_text }}</pre><p><a href=\"{{ $execution.resumeUrl }}?decision=approved\">Approve and send to leadership</a> | <a href=\"{{ $execution.resumeUrl }}?decision=rejected\">Reject</a></p>",
+        "options": {}
+      },
+      "id": "send-approval",
+      "name": "Send for Approval",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1840, 300],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": { "resume": "webhook", "options": { "webhookSuffix": "/approval" } },
+      "id": "wait-approval",
+      "name": "Wait for Approval",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [2060, 300],
+      "webhookId": "assumption-audit-approval"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "cd", "leftValue": "={{ $json.query?.decision || $json.body?.decision }}", "rightValue": "approved", "operator": { "type": "string", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-decision",
+      "name": "Approved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2280, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.ASSUMPTION_EMAIL_TO || 'strategy@acme-analytics.com' }}",
+        "subject": "=Quarterly Strategy Assumption Audit — {{ $('Format Audit Report').first().json.meta.review_date.substring(0,10) }}",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $('Format Audit Report').first().json.report_text }}</pre>",
+        "options": {}
+      },
+      "id": "send-report",
+      "name": "Send Final Report",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [2500, 200],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": {
+        "assignments": { "assignments": [{ "id": "r1", "name": "status", "value": "rejected", "type": "string" }] },
+        "options": {}
+      },
+      "id": "log-rejection",
+      "name": "Log Rejection",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2500, 400]
+    }
+  ],
+  "connections": {
+    "Quarterly Schedule": { "main": [[{ "node": "Prepare Audit Prompt", "type": "main", "index": 0 }]] },
+    "Manual Trigger": { "main": [[{ "node": "Load Sample Assumptions", "type": "main", "index": 0 }]] },
+    "Load Sample Assumptions": { "main": [[{ "node": "Prepare Audit Prompt", "type": "main", "index": 0 }]] },
+    "Prepare Audit Prompt": { "main": [[{ "node": "LLM: Audit Assumptions", "type": "main", "index": 0 }]] },
+    "LLM: Audit Assumptions": { "main": [[{ "node": "Validate LLM Output", "type": "main", "index": 0 }]] },
+    "Validate LLM Output": { "main": [[{ "node": "LLM Error?", "type": "main", "index": 0 }]] },
+    "LLM Error?": { "main": [[{ "node": "LLM Error Handler", "type": "main", "index": 0 }], [{ "node": "Format Audit Report", "type": "main", "index": 0 }]] },
+    "Format Audit Report": { "main": [[{ "node": "Send for Approval", "type": "main", "index": 0 }]] },
+    "Send for Approval": { "main": [[{ "node": "Wait for Approval", "type": "main", "index": 0 }]] },
+    "Wait for Approval": { "main": [[{ "node": "Approved?", "type": "main", "index": 0 }]] },
+    "Approved?": { "main": [[{ "node": "Send Final Report", "type": "main", "index": 0 }], [{ "node": "Log Rejection", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1", "saveManualExecutions": true, "callerPolicy": "workflowsFromSameOwner", "errorWorkflow": "" },
+  "staticData": null,
+  "tags": ["strategy", "assumptions", "quarterly", "beta"],
+  "triggerCount": 0,
+  "updatedAt": "2026-07-14T00:00:00.000Z",
+  "versionId": "59-strategy-assumption-auditor-v0.1.0"
+}

@@ -1,0 +1,96 @@
+{
+  "name": "Analyst and Review Platform Tracker",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Analyst & Review Platform Tracker\n\n**Setup:**\n1. Set G2_COMPANY_SLUG, CAPTERRA_PROFILE_URL env vars for your company and competitors\n2. Create YOUR_SMTP_CREDENTIAL\n3. Set TRACKER_EMAIL_TO env var\n4. Schedule: weekly on Monday\n5. Manual Trigger uses embedded sample data (no external accounts needed for testing)\n\n**Note:** G2 and Capterra do not have official APIs. This workflow reads their public pages via HTTP Request. If they change their HTML structure, the parsing Code nodes will need updating.",
+        "height": 320,
+        "width": 480,
+        "color": 7
+      },
+      "id": "sticky-setup",
+      "name": "Setup Instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, -300]
+    },
+    {
+      "parameters": {
+        "rule": { "interval": [{ "field": "cronExpression", "expression": "={{ $env.TRACKER_SCHEDULE || '0 8 * * 1' }}" }] }
+      },
+      "id": "schedule-trigger",
+      "name": "Weekly Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 100]
+    },
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 280]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Sample review and ranking data — embedded for zero-account testing.\n// In production, replace with live HTTP fetches to G2/Capterra pages.\nconst snapshot = {\n  captured_at: new Date().toISOString(),\n  companies: [\n    {\n      name: 'Acme Analytics',\n      g2: { rating: 4.6, review_count: 312, category_rank: 3, top_tags: ['easy to use', 'great support', 'good reporting'], recent_reviews: [\n        { stars: 5, excerpt: 'Onboarding was fast and the support team responded in hours.', date: '2026-07-10' },\n        { stars: 2, excerpt: 'Wish there was a mobile app. Everything else is great.', date: '2026-07-08' }\n      ]},\n      capterra: { rating: 4.5, review_count: 187, category_rank: 4, recent_reviews: [\n        { stars: 5, excerpt: 'Best reporting I have seen in this category.', date: '2026-07-09' }\n      ]}\n    },\n    {\n      name: 'CompetitorX',\n      g2: { rating: 4.3, review_count: 890, category_rank: 1, top_tags: ['feature-rich', 'steep learning curve', 'expensive'], recent_reviews: [\n        { stars: 3, excerpt: 'Good tool but onboarding took us 3 weeks and pricing jumped at renewal.', date: '2026-07-11' }\n      ]},\n      capterra: { rating: 4.2, review_count: 645, category_rank: 2, recent_reviews: [\n        { stars: 2, excerpt: 'Hidden costs in enterprise tier. Watch your contract.', date: '2026-07-07' }\n      ]}\n    },\n    {\n      name: 'CompetitorY',\n      g2: { rating: 4.5, review_count: 430, category_rank: 2, top_tags: ['affordable', 'simple UI', 'limited integrations'], recent_reviews: [\n        { stars: 5, excerpt: 'Perfect for small teams. Simple and affordable.', date: '2026-07-12' }\n      ]},\n      capterra: { rating: 4.4, review_count: 290, category_rank: 3, recent_reviews: [\n        { stars: 4, excerpt: 'Would love more integrations but the core product is solid.', date: '2026-07-06' }\n      ]}\n    }\n  ]\n};\nreturn [{ json: snapshot }];"
+      },
+      "id": "load-sample-data",
+      "name": "Load Sample Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 280]
+    },
+    {
+      "parameters": {
+        "jsCode": "// In a live run (scheduled), fetch real pages here.\n// For now, pass through the data from whichever trigger ran.\n// Advanced: replace with HTTP Request nodes to G2/Capterra public URLs.\nconst data = $input.first().json;\nif (!data.companies || !Array.isArray(data.companies)) {\n  throw new Error('Expected companies array in snapshot data');\n}\nreturn [{ json: { ...data, company_count: data.companies.length } }];"
+      },
+      "id": "validate-data",
+      "name": "Validate Snapshot Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [740, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { companies, captured_at } = $input.first().json;\n\n// Compute deltas (in production, compare against previous snapshot stored in Sheets/DB)\n// For now, annotate and summarize\nconst our_company = companies.find(c => c.name === ($env.OUR_COMPANY_NAME || 'Acme Analytics'));\nconst competitors = companies.filter(c => c.name !== ($env.OUR_COMPANY_NAME || 'Acme Analytics'));\n\nconst lines = [\n  `REVIEW PLATFORM TRACKER — ${new Date(captured_at).toDateString()}`,\n  ``,\n  `OUR POSITION: ${our_company?.name || 'Not found'}`,\n  our_company ? [\n    `  G2: ${our_company.g2.rating}/5 (${our_company.g2.review_count} reviews) — Rank #${our_company.g2.category_rank}`,\n    `  Capterra: ${our_company.capterra.rating}/5 (${our_company.capterra.review_count} reviews) — Rank #${our_company.capterra.category_rank}`,\n    `  Top G2 tags: ${our_company.g2.top_tags.join(', ')}`,\n    `  Recent G2 reviews:`,\n    ...our_company.g2.recent_reviews.map(r => `    [${r.stars}★] ${r.excerpt} (${r.date})`)\n  ].join('\\n') : '  (no data)',\n  ``,\n  `COMPETITORS:`,\n  ...competitors.map(c => [\n    `  ${c.name}:`,\n    `    G2: ${c.g2.rating}/5 (${c.g2.review_count} reviews) — Rank #${c.g2.category_rank}`,\n    `    Capterra: ${c.capterra.rating}/5 (${c.capterra.review_count} reviews) — Rank #${c.capterra.category_rank}`,\n    `    Recent G2 reviews:`,\n    ...c.g2.recent_reviews.map(r => `      [${r.stars}★] ${r.excerpt} (${r.date})`)\n  ].join('\\n')),\n  ``,\n  `NOTE: Delta tracking requires historical snapshot storage (see README for setup).`\n].join('\\n');\n\nreturn [{ json: { report_text: lines, companies, captured_at } }];"
+      },
+      "id": "build-report",
+      "name": "Build Tracker Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [960, 200]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.TRACKER_EMAIL_TO || 'product@acme-analytics.com' }}",
+        "subject": "Weekly Review Platform Tracker",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $json.report_text }}</pre>",
+        "options": {}
+      },
+      "id": "send-report",
+      "name": "Send Weekly Report",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1180, 200],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    }
+  ],
+  "connections": {
+    "Weekly Schedule": { "main": [[{ "node": "Validate Snapshot Data", "type": "main", "index": 0 }]] },
+    "Manual Trigger": { "main": [[{ "node": "Load Sample Data", "type": "main", "index": 0 }]] },
+    "Load Sample Data": { "main": [[{ "node": "Validate Snapshot Data", "type": "main", "index": 0 }]] },
+    "Validate Snapshot Data": { "main": [[{ "node": "Build Tracker Report", "type": "main", "index": 0 }]] },
+    "Build Tracker Report": { "main": [[{ "node": "Send Weekly Report", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1", "saveManualExecutions": true, "callerPolicy": "workflowsFromSameOwner", "errorWorkflow": "" },
+  "staticData": null,
+  "tags": ["strategy", "market-intelligence", "reviews", "beta"],
+  "triggerCount": 0,
+  "updatedAt": "2026-07-14T00:00:00.000Z",
+  "versionId": "54-analyst-review-tracker-v0.1.0"
+}

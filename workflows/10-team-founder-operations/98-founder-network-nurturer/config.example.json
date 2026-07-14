@@ -1,0 +1,19 @@
+{
+  "_comment": "config.example.json for Founder Network Nurturer",
+  "workflow_id": "98-founder-network-nurturer",
+  "workflow_name": "Founder Network Nurturer",
+  "collection": "10-team-founder-operations",
+  "status": "beta",
+  "configuration": {
+    "NETWORK_EMAIL_TO": { "default": "", "description": "Your email (personal review)", "required": "Required" },
+    "AI_MODEL": { "default": "gpt-4o-mini", "description": "LLM model", "required": "Required" },
+    "OPENAI_BASE_URL": { "default": "https://api.openai.com", "description": "LLM base URL", "required": "Optional" },
+    "NOTIFICATION_EMAIL_FROM": { "default": "automation@acme-analytics.com", "description": "Sender address", "required": "Optional" }
+  },
+  "n8n_credentials_required": [
+    { "name": "YOUR_OPENAI_CREDENTIAL", "type": "httpHeaderAuth", "required": true, "purpose": "Personalised outreach drafts" },
+    { "name": "YOUR_SMTP_CREDENTIAL", "type": "smtp", "required": true, "purpose": "Draft delivery to founder" }
+  ],
+  "schedule": "Every Monday at 08:00",
+  "important_note": "This workflow NEVER sends outreach automatically. Drafts are delivered to the founder for manual review and personalised sending."
+}

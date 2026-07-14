@@ -1,0 +1,17 @@
+{
+  "_comment": "config.example.json for Automation Health Dashboard",
+  "workflow_id": "100-automation-health-dashboard",
+  "workflow_name": "Automation Health Dashboard",
+  "collection": "10-team-founder-operations",
+  "status": "beta",
+  "configuration": {
+    "AUTOMATION_HEALTH_EMAIL_TO": { "default": "", "description": "Your email (founder/ops lead)", "required": "Required" },
+    "NOTIFICATION_EMAIL_FROM": { "default": "automation@acme-analytics.com", "description": "Sender address", "required": "Optional" }
+  },
+  "n8n_credentials_required": [
+    { "name": "YOUR_SMTP_CREDENTIAL", "type": "smtp", "required": true, "purpose": "Health dashboard delivery" }
+  ],
+  "ai_required": false,
+  "schedule": "Every Monday at 06:00",
+  "production_note": "In production: replace Load Workflow Stats code node with HTTP Request to n8n API GET /executions to pull real execution data."
+}

@@ -1,0 +1,197 @@
+{
+  "name": "Feature Request Prioritiser",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Feature Request Prioritiser\n\n**Setup:**\n1. Create YOUR_OPENAI_CREDENTIAL and YOUR_SMTP_CREDENTIAL\n2. Workflow reads feature requests from embedded sample or via webhook\n3. Set FEATURE_EMAIL_TO\n4. LLM groups requests, assesses value, and produces ranked shortlist\n5. Approval gate before results are distributed",
+        "height": 260,
+        "width": 420,
+        "color": 5
+      },
+      "id": "sticky-setup",
+      "name": "Setup Instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, -260]
+    },
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// 20 sample feature requests spanning multiple segments and themes\nconst requests = [\n  { id: 'FR001', title: 'Bulk export to CSV', segment: 'enterprise', votes: 142, source: 'intercom', created_at: '2026-06-01' },\n  { id: 'FR002', title: 'Native Salesforce integration', segment: 'enterprise', votes: 98, source: 'intercom', created_at: '2026-05-15' },\n  { id: 'FR003', title: 'Dark mode', segment: 'smb', votes: 321, source: 'productboard', created_at: '2026-04-10' },\n  { id: 'FR004', title: 'Automated status updates via Slack', segment: 'mid-market', votes: 67, source: 'zendesk', created_at: '2026-06-20' },\n  { id: 'FR005', title: 'Custom workflow templates', segment: 'mid-market', votes: 89, source: 'productboard', created_at: '2026-05-30' },\n  { id: 'FR006', title: 'Role-based access control', segment: 'enterprise', votes: 210, source: 'sales', created_at: '2026-06-15' },\n  { id: 'FR007', title: 'SSO (SAML / Google Workspace)', segment: 'enterprise', votes: 178, source: 'sales', created_at: '2026-05-01' },\n  { id: 'FR008', title: 'Calendar view for tasks', segment: 'smb', votes: 255, source: 'productboard', created_at: '2026-04-20' },\n  { id: 'FR009', title: 'Offline mode on mobile', segment: 'smb', votes: 112, source: 'app-store-review', created_at: '2026-06-05' },\n  { id: 'FR010', title: 'Budget tracking integration', segment: 'enterprise', votes: 45, source: 'intercom', created_at: '2026-06-18' },\n  { id: 'FR011', title: 'Time tracking built-in', segment: 'smb', votes: 198, source: 'productboard', created_at: '2026-05-20' },\n  { id: 'FR012', title: 'Recurring task support', segment: 'smb', votes: 287, source: 'productboard', created_at: '2026-04-01' },\n  { id: 'FR013', title: 'Microsoft Teams integration', segment: 'enterprise', votes: 134, source: 'sales', created_at: '2026-06-10' },\n  { id: 'FR014', title: 'Guest / client access (limited permissions)', segment: 'mid-market', votes: 76, source: 'intercom', created_at: '2026-05-25' },\n  { id: 'FR015', title: 'Email digest of overdue items', segment: 'smb', votes: 93, source: 'zendesk', created_at: '2026-06-08' },\n  { id: 'FR016', title: 'API webhooks for external automation', segment: 'enterprise', votes: 56, source: 'developer-forum', created_at: '2026-05-12' },\n  { id: 'FR017', title: 'Kanban board view', segment: 'smb', votes: 344, source: 'productboard', created_at: '2026-03-15' },\n  { id: 'FR018', title: 'Gantt chart view', segment: 'mid-market', votes: 167, source: 'productboard', created_at: '2026-04-28' },\n  { id: 'FR019', title: 'AI task description generator', segment: 'smb', votes: 44, source: 'productboard', created_at: '2026-06-22' },\n  { id: 'FR020', title: 'Data retention and audit log for compliance', segment: 'enterprise', votes: 88, source: 'legal-team', created_at: '2026-06-01' }\n];\nreturn [{ json: { requests, total: requests.length } }];"
+      },
+      "id": "load-sample",
+      "name": "Load Sample Requests",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { requests, total } = $input.first().json;\n// Sort by votes descending for context\nconst sorted = [...requests].sort((a, b) => b.votes - a.votes);\nconst reqText = sorted.map(r =>\n  `  [${r.id}] \"${r.title}\" | Segment: ${r.segment} | Votes: ${r.votes} | Source: ${r.source}`\n).join('\\n');\nconst system = `You are a senior PM helping prioritise feature requests. You look beyond raw vote counts to understand strategic value, segment fit, and theme clustering. Return ONLY valid JSON.`;\nconst user = `Prioritise these ${total} feature requests. Our ICP is mid-market B2B SaaS companies. Enterprise requests are strategically important. SMB requests with high vote counts may indicate broad user need.\n\n${reqText}\n\nReturn JSON:\n{\n  \"clusters\": [\n    { \"cluster_name\": \"string\", \"request_ids\": [\"string\"], \"theme\": \"string\", \"total_votes\": 0, \"primary_segment\": \"string\" }\n  ],\n  \"top_10_ranked\": [\n    { \"rank\": 1, \"id\": \"string\", \"title\": \"string\", \"rationale\": \"string\", \"estimated_impact\": \"high|medium|low\", \"strategic_fit\": \"core|adjacent|opportunistic\" }\n  ],\n  \"quick_wins\": [\"string — ID: reason why quick win\"],\n  \"defer\": [\"string — ID: reason to defer\"],\n  \"confidence\": \"low|medium|high\"\n}`;\nreturn [{ json: { requests, total, system_prompt: system, user_prompt: user } }];"
+      },
+      "id": "prepare-prompt",
+      "name": "Prepare Prioritisation Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [740, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.OPENAI_BASE_URL || 'https://api.openai.com' }}/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParameters": {
+          "parameters": [
+            { "name": "model", "value": "={{ $env.AI_MODEL || 'gpt-4o-mini' }}" },
+            { "name": "messages", "value": "=[{\"role\":\"system\",\"content\":\"{{ $json.system_prompt }}\"},{\"role\":\"user\",\"content\":\"{{ $json.user_prompt }}\"}]" },
+            { "name": "temperature", "value": "=0.2" },
+            { "name": "response_format", "value": "={\"type\":\"json_object\"}" }
+          ]
+        },
+        "options": { "timeout": 60000 }
+      },
+      "id": "llm-call",
+      "name": "LLM: Prioritise Requests",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [960, 200],
+      "credentials": { "httpHeaderAuth": { "name": "YOUR_OPENAI_CREDENTIAL" } }
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst upstream = $('Prepare Prioritisation Prompt').first().json;\nlet parsed;\ntry {\n  const c = response.choices?.[0]?.message?.content;\n  if (!c) throw new Error('No content');\n  parsed = JSON.parse(c);\n} catch(e) { return [{ json: { _error: true, reason: e.message } }]; }\nif (!parsed.top_10_ranked || !Array.isArray(parsed.top_10_ranked)) return [{ json: { _error: true, reason: 'Missing top_10_ranked' } }];\nreturn [{ json: { _error: false, prioritisation: parsed, meta: { total: upstream.total, generated_at: new Date().toISOString() } } }];"
+      },
+      "id": "validate-llm",
+      "name": "Validate LLM Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1180, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "ce", "leftValue": "={{ $json._error }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "error-check",
+      "name": "LLM Error?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1400, 200]
+    },
+    {
+      "parameters": { "assignments": { "assignments": [{ "id": "e1", "name": "status", "value": "error", "type": "string" }] }, "options": {} },
+      "id": "error-handler",
+      "name": "LLM Error Handler",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1600, 100]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { prioritisation: p, meta: m } = $input.first().json;\nconst clusterLines = (p.clusters||[]).map(c => `  ${c.cluster_name} (${c.total_votes} votes, ${c.request_ids.length} requests): ${c.theme}`).join('\\n');\nconst top10Lines = (p.top_10_ranked||[]).map(r => `  #${r.rank} [${r.id}] ${r.title}\\n    Impact: ${r.estimated_impact} | Fit: ${r.strategic_fit}\\n    Rationale: ${r.rationale}`).join('\\n');\nconst report = [\n  `FEATURE REQUEST PRIORITISATION`,\n  `Generated: ${m.generated_at} | Requests analysed: ${m.total}`,\n  ``,\n  `THEME CLUSTERS:`,\n  clusterLines,\n  ``,\n  `TOP 10 PRIORITISED:`,\n  top10Lines,\n  ``,\n  `QUICK WINS:`,\n  (p.quick_wins||[]).map(q => `  → ${q}`).join('\\n'),\n  ``,\n  `DEFER:`,\n  (p.defer||[]).map(d => `  ✗ ${d}`).join('\\n'),\n].join('\\n');\nreturn [{ json: { ...($input.first().json), report_text: report } }];"
+      },
+      "id": "format-report",
+      "name": "Format Prioritisation Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1600, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.FEATURE_EMAIL_TO || 'product@acme-analytics.com' }}",
+        "subject": "APPROVAL REQUIRED: Feature Request Prioritisation Report",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $json.report_text }}</pre><p><a href=\"{{ $execution.resumeUrl }}?decision=approved\">Approve and distribute</a> | <a href=\"{{ $execution.resumeUrl }}?decision=rejected\">Reject</a></p>",
+        "options": {}
+      },
+      "id": "send-approval",
+      "name": "Send for Approval",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1820, 300],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": { "resume": "webhook", "options": { "webhookSuffix": "/approval" } },
+      "id": "wait-approval",
+      "name": "Wait for Approval",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [2040, 300],
+      "webhookId": "feature-prioritiser-approval"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "cd", "leftValue": "={{ $json.query?.decision || $json.body?.decision }}", "rightValue": "approved", "operator": { "type": "string", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-decision",
+      "name": "Approved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2260, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.FEATURE_EMAIL_TO || 'product@acme-analytics.com' }}",
+        "subject": "Feature Request Prioritisation — Top 10 Shortlist",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $('Format Prioritisation Report').first().json.report_text }}</pre>",
+        "options": {}
+      },
+      "id": "send-report",
+      "name": "Send Prioritised Report",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [2480, 200],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": { "assignments": { "assignments": [{ "id": "r1", "name": "status", "value": "rejected", "type": "string" }] }, "options": {} },
+      "id": "log-rejection",
+      "name": "Log Rejection",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2480, 400]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": { "main": [[{ "node": "Load Sample Requests", "type": "main", "index": 0 }]] },
+    "Load Sample Requests": { "main": [[{ "node": "Prepare Prioritisation Prompt", "type": "main", "index": 0 }]] },
+    "Prepare Prioritisation Prompt": { "main": [[{ "node": "LLM: Prioritise Requests", "type": "main", "index": 0 }]] },
+    "LLM: Prioritise Requests": { "main": [[{ "node": "Validate LLM Output", "type": "main", "index": 0 }]] },
+    "Validate LLM Output": { "main": [[{ "node": "LLM Error?", "type": "main", "index": 0 }]] },
+    "LLM Error?": { "main": [[{ "node": "LLM Error Handler", "type": "main", "index": 0 }], [{ "node": "Format Prioritisation Report", "type": "main", "index": 0 }]] },
+    "Format Prioritisation Report": { "main": [[{ "node": "Send for Approval", "type": "main", "index": 0 }]] },
+    "Send for Approval": { "main": [[{ "node": "Wait for Approval", "type": "main", "index": 0 }]] },
+    "Wait for Approval": { "main": [[{ "node": "Approved?", "type": "main", "index": 0 }]] },
+    "Approved?": { "main": [[{ "node": "Send Prioritised Report", "type": "main", "index": 0 }], [{ "node": "Log Rejection", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1", "saveManualExecutions": true, "callerPolicy": "workflowsFromSameOwner", "errorWorkflow": "" },
+  "staticData": null,
+  "tags": ["roadmap", "planning", "feature-requests", "beta"],
+  "triggerCount": 0,
+  "updatedAt": "2026-07-14T00:00:00.000Z",
+  "versionId": "64-feature-request-prioritiser-v0.1.0"
+}

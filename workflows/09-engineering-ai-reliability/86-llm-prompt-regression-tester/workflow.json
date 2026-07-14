@@ -1,0 +1,136 @@
+{
+  "name": "LLM Prompt Regression Tester",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## LLM Prompt Regression Tester\n\n**Setup:**\n1. Create YOUR_OPENAI_CREDENTIAL and YOUR_SMTP_CREDENTIAL\n2. Set REGRESSION_EMAIL_TO\n3. Define test cases (prompt + expected output criteria)\n4. Workflow runs each prompt against the LLM and checks outputs\n5. Approval gate before regression report is shared with engineering",
+        "height": 240,
+        "width": 400,
+        "color": 7
+      },
+      "id": "sticky-setup",
+      "name": "Setup Instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, -240]
+    },
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const test_suite = [\n  { id: 'T001', prompt_name: 'JTBD Extractor', system_prompt: 'You are a JTBD analyst. Extract the core job from this quote. Return JSON: {\"job\": \"string\"}', user_prompt: 'When I get to Monday morning, I just need to know what my team is working on without sending messages.', assertions: [{ field: 'job', contains: 'know', required: true }, { field: 'job', min_length: 30, required: true }] },\n  { id: 'T002', prompt_name: 'Bug Severity Classifier', system_prompt: 'Classify bug severity. P0=production down, P1=major broken, P2=minor. Return JSON: {\"severity\": \"P0|P1|P2\"}', user_prompt: 'Dashboard 504 timeout affecting 12 enterprise customers since v2.4.1 deployment.', assertions: [{ field: 'severity', equals: 'P0', required: true }] },\n  { id: 'T003', prompt_name: 'Sentiment Classifier', system_prompt: 'Classify NPS comment sentiment. Return JSON: {\"sentiment\": \"positive|negative|neutral\"}', user_prompt: 'This is the worst project management tool I have used. Everything breaks constantly.', assertions: [{ field: 'sentiment', equals: 'negative', required: true }] }\n];\nreturn [{ json: { test_suite, model: process.env.AI_MODEL || 'gpt-4o-mini', run_id: `run-${Date.now()}` } }];"
+      },
+      "id": "load-tests",
+      "name": "Load Test Suite",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Run each test case sequentially\nconst { test_suite, model, run_id } = $input.first().json;\n// For n8n sample mode: simulate LLM responses (replace with real HTTP Request loop in production)\nconst simulated_responses = {\n  T001: { job: 'When starting the week, I want to see what my team is working on without sending individual status request messages, so I can plan my time and maintain momentum without interrupting colleagues.' },\n  T002: { severity: 'P0' },\n  T003: { sentiment: 'negative' }\n};\nconst results = test_suite.map(tc => {\n  const response = simulated_responses[tc.id];\n  const assertion_results = tc.assertions.map(a => {\n    const value = response?.[a.field];\n    const checks = [];\n    if (a.equals !== undefined) checks.push({ check: `equals '${a.equals}'`, passed: value === a.equals });\n    if (a.contains !== undefined) checks.push({ check: `contains '${a.contains}'`, passed: typeof value === 'string' && value.includes(a.contains) });\n    if (a.min_length !== undefined) checks.push({ check: `min_length ${a.min_length}`, passed: typeof value === 'string' && value.length >= a.min_length });\n    const all_passed = checks.every(c => c.passed);\n    return { field: a.field, checks, passed: all_passed, required: a.required };\n  });\n  const passed = assertion_results.every(a => a.passed);\n  return { id: tc.id, prompt_name: tc.prompt_name, passed, response, assertion_results };\n});\nconst total = results.length;\nconst passed_count = results.filter(r => r.passed).length;\nconst failed_count = total - passed_count;\nreturn [{ json: { results, run_id, model, meta: { total, passed: passed_count, failed: failed_count, run_at: new Date().toISOString() } } }];"
+      },
+      "id": "run-tests",
+      "name": "Run Regression Tests",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [740, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { results, run_id, model, meta: m } = $input.first().json;\nconst lines = results.map(r => [\n  `  [${r.passed?'PASS':'FAIL'}] ${r.id}: ${r.prompt_name}`,\n  ...r.assertion_results.map(a => `    ${a.passed?'✓':'✗'} ${a.field}: ${a.checks.map(c=>c.check+' → '+(c.passed?'pass':'FAIL')).join(', ')}`),\n  ''\n].join('\\n')).join('\\n');\nconst report = [\n  `LLM PROMPT REGRESSION REPORT`,\n  `Run ID: ${run_id} | Model: ${model} | ${m.run_at}`,\n  `Results: ${m.passed}/${m.total} passed${m.failed > 0 ? ' | ⚠️ '+m.failed+' FAILED' : ' | ✅ All passed'}`,\n  ``,\n  lines,\n].join('\\n');\nreturn [{ json: { ...($input.first().json), report_text: report } }];"
+      },
+      "id": "format-report",
+      "name": "Format Regression Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [960, 200]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.REGRESSION_APPROVER_EMAIL || $env.REGRESSION_EMAIL_TO }}",
+        "subject": "=APPROVAL REQUIRED: LLM Regression — {{ $json.meta.passed }}/{{ $json.meta.total }} passed{{ $json.meta.failed > 0 ? ' ⚠️ '+$json.meta.failed+' FAILED' : '' }}",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $json.report_text }}</pre><p><a href=\"{{ $execution.resumeUrl }}?decision=approved\">Approve and share</a> | <a href=\"{{ $execution.resumeUrl }}?decision=rejected\">Reject</a></p>",
+        "options": {}
+      },
+      "id": "send-approval",
+      "name": "Send for Approval",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1180, 200],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": { "resume": "webhook", "options": { "webhookSuffix": "/approval" } },
+      "id": "wait-approval",
+      "name": "Wait for Approval",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [1400, 200],
+      "webhookId": "regression-approval"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "cd", "leftValue": "={{ $json.query?.decision || $json.body?.decision }}", "rightValue": "approved", "operator": { "type": "string", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-decision",
+      "name": "Approved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1620, 200]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.REGRESSION_EMAIL_TO || 'engineering@acme-analytics.com' }}",
+        "subject": "=LLM Regression Results: {{ $('Format Regression Report').first().json.meta.passed }}/{{ $('Format Regression Report').first().json.meta.total }} passed",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $('Format Regression Report').first().json.report_text }}</pre>",
+        "options": {}
+      },
+      "id": "send-report",
+      "name": "Send Report to Engineering",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1840, 100],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": { "assignments": { "assignments": [{ "id": "r1", "name": "status", "value": "rejected", "type": "string" }] }, "options": {} },
+      "id": "log-rejection",
+      "name": "Log Rejection",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1840, 300]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": { "main": [[{ "node": "Load Test Suite", "type": "main", "index": 0 }]] },
+    "Load Test Suite": { "main": [[{ "node": "Run Regression Tests", "type": "main", "index": 0 }]] },
+    "Run Regression Tests": { "main": [[{ "node": "Format Regression Report", "type": "main", "index": 0 }]] },
+    "Format Regression Report": { "main": [[{ "node": "Send for Approval", "type": "main", "index": 0 }]] },
+    "Send for Approval": { "main": [[{ "node": "Wait for Approval", "type": "main", "index": 0 }]] },
+    "Wait for Approval": { "main": [[{ "node": "Approved?", "type": "main", "index": 0 }]] },
+    "Approved?": { "main": [[{ "node": "Send Report to Engineering", "type": "main", "index": 0 }], [{ "node": "Log Rejection", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1", "saveManualExecutions": true, "callerPolicy": "workflowsFromSameOwner", "errorWorkflow": "" },
+  "staticData": null,
+  "tags": ["engineering", "reliability", "llm", "testing", "beta"],
+  "triggerCount": 0,
+  "updatedAt": "2026-07-14T00:00:00.000Z",
+  "versionId": "86-llm-prompt-regression-tester-v0.1.0"
+}

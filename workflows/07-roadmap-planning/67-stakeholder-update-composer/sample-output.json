@@ -1,0 +1,8 @@
+{
+  "_comment": "Illustrative LLM output. Actual phrasing will vary.",
+  "update": {
+    "subject": "Product Update: Week of July 7 — Strong WAU, SSO on track, one at-risk item",
+    "tl_dr": "WAU grew 8% to 4,820. CSV export shipped for enterprise. SSO on track for July 28. Recurring tasks at risk — decision needed by July 16 to avoid slip.",
+    "body_markdown": "## Product Update — week of July 7–14\n\n**TL;DR:** WAU +8% | SSO on track | Recurring tasks at risk | Decision needed on headcount\n\n---\n\n### ✅ Shipped this week\n\n- **Bulk CSV export** — Enterprise customers can now export any project view to CSV for external reporting (ENG-451)\n- **Search 5× faster** — P95 search latency down from 4s to 0.8s (ENG-471)\n- **Fixed: duplicate email notifications** — Resolved for all users (ENG-461)\n\n---\n\n### 🔄 In progress\n\n| Feature | ETA | Status |\n|---|---|---|\n| SSO (SAML 2.0) | July 28 | ✅ On track |\n| Recurring tasks | Aug 4 | ⚠️ At risk |\n\n**Recurring tasks at risk:** One open question (task deletion behavior) must be resolved by July 16 to stay on track. Decision scheduled for this Wednesday.\n\n---\n\n### 📅 Up next\n\n- Role-based access control (RBAC)\n- Microsoft Teams integration\n\n---\n\n### 📊 Metrics\n\n| Metric | This week | Change |\n|---|---|---|\n| WAU | 4,820 | +8% |\n| NPS | 42 | — |\n| Support tickets | 38 | -12% |\n\n---\n\n### 🚦 Risks\n\n- **Recurring tasks slip** — if deletion behavior decision does not happen by July 16, August 4 delivery is in jeopardy\n\n---\n\n### 🎯 Decision needed\n\n- **Q3 engineering headcount** — approval needed for 2 additional engineers by **July 21**\n"
+  }
+}

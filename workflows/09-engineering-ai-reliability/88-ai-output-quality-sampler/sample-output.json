@@ -1,0 +1,13 @@
+{
+  "_comment": "Illustrative LLM evaluation output.",
+  "result": {
+    "quality_summary": "All three sampled workflows are producing high-quality outputs. The Bug Triage and Survey Analyser outputs are accurate and actionable. The JTBD extractor output is partially good — it captures the functional and emotional jobs but the core job statement is slightly too terse to be directly usable in a JTBD story.",
+    "evaluations": [
+      { "sample_id": "S001", "workflow": "Bug Triage Assistant", "accuracy_score": 5, "usefulness_score": 5, "format_score": 5, "overall_score": 5.0, "issues": [], "highlights": ["P0 classification is correct and rationale is specific to business impact", "Engineering area (backend/api) is correctly identified from the description", "Owner suggestion is actionable without being prescriptive"] },
+      { "sample_id": "S002", "workflow": "Survey Response Analyser", "accuracy_score": 5, "usefulness_score": 5, "format_score": 5, "overall_score": 5.0, "issues": [], "highlights": ["NPS of 44 is mathematically correct (62%-18%=44)", "Primary theme correctly connects detractor feedback to a specific feature area", "Actionable insight is specific enough to act on without further clarification"] },
+      { "sample_id": "S003", "workflow": "JTBD Extractor", "accuracy_score": 4, "usefulness_score": 3, "format_score": 5, "overall_score": 4.0, "issues": ["Core job statement 'See blocked work immediately without reading messages' is too short (9 words) — a useful job statement needs the situation trigger, the motivation, and the outcome", "Missing the social job dimension (e.g., 'be seen as an organised, responsive manager')"], "highlights": ["Correct separation of functional vs emotional job", "Emotional job 'Feel in control without communication overhead' is excellent"] }
+    ],
+    "recommended_actions": ["Update the JTBD Extractor system prompt to require a minimum job statement length of 20+ words with explicit situation (When...) + goal (I want to...) + outcome (so that...) structure", "Add social_job as a required field in the JTBD output schema"]
+  },
+  "meta": { "sample_count": 3, "avg_overall_score": 4.67, "low_quality_count": 0, "generated_at": "2026-07-14T09:00:00.000Z" }
+}

@@ -1,0 +1,197 @@
+{
+  "name": "Stakeholder Update Composer",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Stakeholder Update Composer\n\n**Setup:**\n1. Create YOUR_OPENAI_CREDENTIAL and YOUR_SMTP_CREDENTIAL\n2. Set STAKEHOLDER_EMAIL_TO\n3. Feed roadmap status data via webhook or use sample\n4. LLM drafts the stakeholder update in the right tone\n5. Approval gate before sending",
+        "height": 240,
+        "width": 400,
+        "color": 5
+      },
+      "id": "sticky-setup",
+      "name": "Setup Instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, -240]
+    },
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 200]
+    },
+    {
+      "parameters": {
+        "rule": { "interval": [{ "field": "cronExpression", "expression": "={{ $env.STAKEHOLDER_SCHEDULE || '0 9 * * 5' }}" }] }
+      },
+      "id": "schedule-trigger",
+      "name": "Weekly Friday Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 380]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: {\n  period: 'week of 2026-07-07 to 2026-07-14',\n  audience: 'leadership',\n  shipped: [\n    { item: 'Bulk CSV export', ticket: 'ENG-451', impact: 'Enterprise customers can now export project data for external reporting' },\n    { item: 'Search speed improvement (5×)', ticket: 'ENG-471', impact: 'P95 search latency reduced from 4s to 0.8s' },\n    { item: 'Fix: duplicate email notifications', ticket: 'ENG-461', impact: 'Noise reduction — fixed for all users' }\n  ],\n  in_progress: [\n    { item: 'SSO (SAML 2.0)', eta: '2026-07-28', status: 'on-track', blocker: null },\n    { item: 'Recurring tasks', eta: '2026-08-04', status: 'at-risk', blocker: 'Open question on deletion behavior — scheduled for resolution 2026-07-16' }\n  ],\n  upcoming_next_sprint: ['Role-based access control (RBAC)', 'Microsoft Teams integration'],\n  metrics: {\n    wau: 4820,\n    wau_change_pct: 8,\n    nps: 42,\n    support_tickets: 38,\n    support_tickets_change_pct: -12\n  },\n  key_decisions_needed: ['Approve Q3 headcount request for 2 additional engineers (due 2026-07-21)'],\n  risks: ['Recurring tasks may slip if deletion behavior decision is delayed beyond 2026-07-16']\n} }];"
+      },
+      "id": "load-sample",
+      "name": "Load Sample Status Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $input.first().json;\nconst shippedText = d.shipped.map(s => `  - ${s.item}: ${s.impact}`).join('\\n');\nconst inProgressText = d.in_progress.map(p => `  - ${p.item} (ETA: ${p.eta}) — Status: ${p.status}${p.blocker ? ' | Blocker: '+p.blocker : ''}`).join('\\n');\nconst upcomingText = (d.upcoming_next_sprint||[]).map(u => `  - ${u}`).join('\\n');\nconst metricsText = `WAU: ${d.metrics.wau} (${d.metrics.wau_change_pct > 0 ? '+' : ''}${d.metrics.wau_change_pct}% WoW) | NPS: ${d.metrics.nps} | Support tickets: ${d.metrics.support_tickets} (${d.metrics.support_tickets_change_pct}% WoW)`;\nconst riskText = (d.risks||[]).map(r => `  - ${r}`).join('\\n');\nconst system = `You are a PM writing a concise, professional stakeholder update for ${d.audience}. The tone is direct and confident. Lead with outcomes. Flag risks clearly. Do not pad. Return ONLY valid JSON.`;\nconst user = `Write a weekly stakeholder update for ${d.period}.\n\nShipped this week:\n${shippedText}\n\nIn progress:\n${inProgressText}\n\nUp next:\n${upcomingText}\n\nKey metrics:\n${metricsText}\n\nDecisions needed:\n${(d.key_decisions_needed||[]).join(', ')}\n\nRisks:\n${riskText}\n\nReturn JSON:\n{ \"subject\": \"string\", \"body_markdown\": \"string — full update in GFM\", \"tl_dr\": \"string — 2-3 sentences max\" }`;\nreturn [{ json: { data: d, system_prompt: system, user_prompt: user } }];"
+      },
+      "id": "prepare-prompt",
+      "name": "Prepare Update Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [740, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.OPENAI_BASE_URL || 'https://api.openai.com' }}/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParameters": {
+          "parameters": [
+            { "name": "model", "value": "={{ $env.AI_MODEL || 'gpt-4o-mini' }}" },
+            { "name": "messages", "value": "=[{\"role\":\"system\",\"content\":\"{{ $json.system_prompt }}\"},{\"role\":\"user\",\"content\":\"{{ $json.user_prompt }}\"}]" },
+            { "name": "temperature", "value": "=0.4" },
+            { "name": "response_format", "value": "={\"type\":\"json_object\"}" }
+          ]
+        },
+        "options": { "timeout": 60000 }
+      },
+      "id": "llm-call",
+      "name": "LLM: Draft Update",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [960, 200],
+      "credentials": { "httpHeaderAuth": { "name": "YOUR_OPENAI_CREDENTIAL" } }
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nlet parsed;\ntry {\n  const c = response.choices?.[0]?.message?.content;\n  if (!c) throw new Error('No content');\n  parsed = JSON.parse(c);\n} catch(e) { return [{ json: { _error: true, reason: e.message } }]; }\nif (!parsed.body_markdown) return [{ json: { _error: true, reason: 'Missing body_markdown' } }];\nreturn [{ json: { _error: false, update: parsed } }];"
+      },
+      "id": "validate-llm",
+      "name": "Validate LLM Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1180, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "ce", "leftValue": "={{ $json._error }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "error-check",
+      "name": "LLM Error?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1400, 200]
+    },
+    {
+      "parameters": { "assignments": { "assignments": [{ "id": "e1", "name": "status", "value": "error", "type": "string" }] }, "options": {} },
+      "id": "error-handler",
+      "name": "LLM Error Handler",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1600, 100]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.STAKEHOLDER_APPROVER_EMAIL || $env.STAKEHOLDER_EMAIL_TO }}",
+        "subject": "=APPROVAL REQUIRED: Stakeholder Update Draft — {{ $json.update.subject }}",
+        "emailType": "html",
+        "message": "=<p><strong>TL;DR:</strong> {{ $json.update.tl_dr }}</p><hr/><pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $json.update.body_markdown }}</pre><p><a href=\"{{ $execution.resumeUrl }}?decision=approved\">Approve and send</a> | <a href=\"{{ $execution.resumeUrl }}?decision=rejected\">Reject</a></p>",
+        "options": {}
+      },
+      "id": "send-approval",
+      "name": "Send for Approval",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1600, 300],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": { "resume": "webhook", "options": { "webhookSuffix": "/approval" } },
+      "id": "wait-approval",
+      "name": "Wait for Approval",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [1820, 300],
+      "webhookId": "stakeholder-update-approval"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "cd", "leftValue": "={{ $json.query?.decision || $json.body?.decision }}", "rightValue": "approved", "operator": { "type": "string", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-decision",
+      "name": "Approved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2040, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.STAKEHOLDER_EMAIL_TO || 'leadership@acme-analytics.com' }}",
+        "subject": "={{ $('Validate LLM Output').first().json.update.subject }}",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $('Validate LLM Output').first().json.update.body_markdown }}</pre>",
+        "options": {}
+      },
+      "id": "send-update",
+      "name": "Send Stakeholder Update",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [2260, 200],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": { "assignments": { "assignments": [{ "id": "r1", "name": "status", "value": "rejected", "type": "string" }] }, "options": {} },
+      "id": "log-rejection",
+      "name": "Log Rejection",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2260, 400]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": { "main": [[{ "node": "Load Sample Status Data", "type": "main", "index": 0 }]] },
+    "Weekly Friday Schedule": { "main": [[{ "node": "Load Sample Status Data", "type": "main", "index": 0 }]] },
+    "Load Sample Status Data": { "main": [[{ "node": "Prepare Update Prompt", "type": "main", "index": 0 }]] },
+    "Prepare Update Prompt": { "main": [[{ "node": "LLM: Draft Update", "type": "main", "index": 0 }]] },
+    "LLM: Draft Update": { "main": [[{ "node": "Validate LLM Output", "type": "main", "index": 0 }]] },
+    "Validate LLM Output": { "main": [[{ "node": "LLM Error?", "type": "main", "index": 0 }]] },
+    "LLM Error?": { "main": [[{ "node": "LLM Error Handler", "type": "main", "index": 0 }], [{ "node": "Send for Approval", "type": "main", "index": 0 }]] },
+    "Send for Approval": { "main": [[{ "node": "Wait for Approval", "type": "main", "index": 0 }]] },
+    "Wait for Approval": { "main": [[{ "node": "Approved?", "type": "main", "index": 0 }]] },
+    "Approved?": { "main": [[{ "node": "Send Stakeholder Update", "type": "main", "index": 0 }], [{ "node": "Log Rejection", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1", "saveManualExecutions": true, "callerPolicy": "workflowsFromSameOwner", "errorWorkflow": "" },
+  "staticData": null,
+  "tags": ["roadmap", "planning", "stakeholder", "beta"],
+  "triggerCount": 0,
+  "updatedAt": "2026-07-14T00:00:00.000Z",
+  "versionId": "67-stakeholder-update-composer-v0.1.0"
+}

@@ -1,0 +1,197 @@
+{
+  "name": "Error Spike Translator",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Error Spike Translator\n\n**Setup:**\n1. Create YOUR_OPENAI_CREDENTIAL and YOUR_SMTP_CREDENTIAL\n2. Set ERROR_SPIKE_EMAIL_TO\n3. Feed error log data or alerting webhook payload\n4. LLM translates technical error spikes into plain-English impact statements for PMs\n5. Approval gate before PM and stakeholder notification",
+        "height": 240,
+        "width": 400,
+        "color": 7
+      },
+      "id": "sticky-setup",
+      "name": "Setup Instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, -240]
+    },
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: {\n  alert_source: 'Datadog',\n  alert_triggered_at: '2026-07-14T08:43:00Z',\n  service: 'ProjectFlow API',\n  spikes: [\n    { error_type: 'TimeoutError', error_message: 'pg.query: statement timeout after 30000ms', count_last_5min: 847, count_baseline: 12, endpoints: ['/api/v2/dashboard', '/api/v2/workspaces/:id/projects'], severity: 'critical' },\n    { error_type: 'TypeError', error_message: \"Cannot read properties of undefined (reading 'customFields')\", count_last_5min: 203, count_baseline: 0, endpoints: ['/api/v2/projects/:id/export/csv'], severity: 'high' },\n    { error_type: 'AuthError', error_message: 'JWT: token expired', count_last_5min: 34, count_baseline: 28, endpoints: ['/api/v2/auth/refresh'], severity: 'low' }\n  ],\n  deployment_context: 'v2.4.1 deployed 2026-07-12T14:00Z. No deployments since.'\n} }];"
+      },
+      "id": "load-sample",
+      "name": "Load Sample Error Spike",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $input.first().json;\nconst spikesText = d.spikes.map(s => `  [${s.severity.toUpperCase()}] ${s.error_type}: ${s.error_message}\\n  Count (5min): ${s.count_last_5min} vs baseline ${s.count_baseline} (${s.count_baseline === 0 ? 'NEW' : Math.round(s.count_last_5min/s.count_baseline)+'x'}x spike)\\n  Endpoints: ${s.endpoints.join(', ')}`).join('\\n\\n');\nconst system = `You are a staff engineer explaining production incidents to non-technical PMs and stakeholders. You translate error log data into plain English: what is broken, who is affected, what they cannot do, and what the business impact likely is. You are concise, specific, and factual. Return ONLY valid JSON.`;\nconst user = `Translate this error spike report for a PM/stakeholder audience.\\nService: ${d.service}\\nAlert triggered: ${d.alert_triggered_at}\\nDeployment context: ${d.deployment_context}\\n\\nError spikes:\\n${spikesText}\\n\\nReturn JSON:\\n{\\n  \"executive_summary\": \"string — 2-3 sentences in plain English: what is broken, how many users are affected, what they cannot do\",\\n  \"translated_errors\": [\\n    {\\n      \"technical_error\": \"string\",\\n      \"plain_english\": \"string — what this means for a user, not a developer\",\\n      \"user_impact\": \"string — what users cannot do because of this error\",\\n      \"affected_feature\": \"string\",\\n      \"severity\": \"critical|high|medium|low\",\\n      \"is_regression\": true\\n    }\\n  ],\\n  \"recommended_action\": \"string — what the PM should do or communicate right now\",\\n  \"estimated_user_impact_pct\": \"string — rough estimate of percentage of active users affected\"\\n}`;\nreturn [{ json: { data: d, system_prompt: system, user_prompt: user } }];"
+      },
+      "id": "prepare-prompt",
+      "name": "Prepare Translation Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [740, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.OPENAI_BASE_URL || 'https://api.openai.com' }}/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParameters": {
+          "parameters": [
+            { "name": "model", "value": "={{ $env.AI_MODEL || 'gpt-4o-mini' }}" },
+            { "name": "messages", "value": "=[{\"role\":\"system\",\"content\":\"{{ $json.system_prompt }}\"},{\"role\":\"user\",\"content\":\"{{ $json.user_prompt }}\"}]" },
+            { "name": "temperature", "value": "=0.2" },
+            { "name": "response_format", "value": "={\"type\":\"json_object\"}" }
+          ]
+        },
+        "options": { "timeout": 60000 }
+      },
+      "id": "llm-call",
+      "name": "LLM: Translate Errors",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [960, 200],
+      "credentials": { "httpHeaderAuth": { "name": "YOUR_OPENAI_CREDENTIAL" } }
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst upstream = $('Prepare Translation Prompt').first().json;\nlet parsed;\ntry {\n  const c = response.choices?.[0]?.message?.content;\n  if (!c) throw new Error('No content');\n  parsed = JSON.parse(c);\n} catch(e) { return [{ json: { _error: true, reason: e.message } }]; }\nif (!parsed.translated_errors || !Array.isArray(parsed.translated_errors)) return [{ json: { _error: true, reason: 'Missing translated_errors' } }];\nreturn [{ json: { _error: false, result: parsed, meta: { service: upstream.data.service, alert_at: upstream.data.alert_triggered_at, spike_count: upstream.data.spikes.length, generated_at: new Date().toISOString() } } }];"
+      },
+      "id": "validate-llm",
+      "name": "Validate LLM Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1180, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "ce", "leftValue": "={{ $json._error }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "error-check",
+      "name": "LLM Error?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1400, 200]
+    },
+    {
+      "parameters": { "assignments": { "assignments": [{ "id": "e1", "name": "status", "value": "error", "type": "string" }] }, "options": {} },
+      "id": "error-handler",
+      "name": "LLM Error Handler",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1600, 100]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { result: r, meta: m } = $input.first().json;\nconst lines = (r.translated_errors||[]).map(e => `  [${e.severity.toUpperCase()}${e.is_regression?' REGRESSION':''}] ${e.affected_feature}\\n  What users see: ${e.plain_english}\\n  What they cannot do: ${e.user_impact}`).join('\\n\\n');\nconst report = [\n  `ERROR SPIKE REPORT: ${m.service}`,\n  `Alert at: ${m.alert_at} | Generated: ${m.generated_at}`,\n  ``,\n  `SUMMARY: ${r.executive_summary}`,\n  ``,\n  `ESTIMATED USER IMPACT: ${r.estimated_user_impact_pct}`,\n  ``,\n  `WHAT IS BROKEN:`,\n  lines,\n  ``,\n  `RECOMMENDED ACTION: ${r.recommended_action}`,\n].join('\\n');\nreturn [{ json: { ...($input.first().json), report_text: report } }];"
+      },
+      "id": "format-report",
+      "name": "Format Incident Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1600, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.ERROR_SPIKE_APPROVER_EMAIL || $env.ERROR_SPIKE_EMAIL_TO }}",
+        "subject": "=APPROVAL REQUIRED: Error Spike — {{ $json.meta.service }} [{{ $json.meta.alert_at }}]",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $json.report_text }}</pre><p><a href=\"{{ $execution.resumeUrl }}?decision=approved\">Approve and notify stakeholders</a> | <a href=\"{{ $execution.resumeUrl }}?decision=rejected\">Reject</a></p>",
+        "options": {}
+      },
+      "id": "send-approval",
+      "name": "Send for Approval",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1820, 300],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": { "resume": "webhook", "options": { "webhookSuffix": "/approval" } },
+      "id": "wait-approval",
+      "name": "Wait for Approval",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [2040, 300],
+      "webhookId": "error-spike-approval"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "cd", "leftValue": "={{ $json.query?.decision || $json.body?.decision }}", "rightValue": "approved", "operator": { "type": "string", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-decision",
+      "name": "Approved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2260, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.ERROR_SPIKE_EMAIL_TO || 'product@acme-analytics.com' }}",
+        "subject": "=Production Incident: {{ $('Load Sample Error Spike').first().json.service }} — {{ $('Format Incident Report').first().json.meta.alert_at }}",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $('Format Incident Report').first().json.report_text }}</pre>",
+        "options": {}
+      },
+      "id": "send-notification",
+      "name": "Notify Stakeholders",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [2480, 200],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": { "assignments": { "assignments": [{ "id": "r1", "name": "status", "value": "rejected", "type": "string" }] }, "options": {} },
+      "id": "log-rejection",
+      "name": "Log Rejection",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2480, 400]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": { "main": [[{ "node": "Load Sample Error Spike", "type": "main", "index": 0 }]] },
+    "Load Sample Error Spike": { "main": [[{ "node": "Prepare Translation Prompt", "type": "main", "index": 0 }]] },
+    "Prepare Translation Prompt": { "main": [[{ "node": "LLM: Translate Errors", "type": "main", "index": 0 }]] },
+    "LLM: Translate Errors": { "main": [[{ "node": "Validate LLM Output", "type": "main", "index": 0 }]] },
+    "Validate LLM Output": { "main": [[{ "node": "LLM Error?", "type": "main", "index": 0 }]] },
+    "LLM Error?": { "main": [[{ "node": "LLM Error Handler", "type": "main", "index": 0 }], [{ "node": "Format Incident Report", "type": "main", "index": 0 }]] },
+    "Format Incident Report": { "main": [[{ "node": "Send for Approval", "type": "main", "index": 0 }]] },
+    "Send for Approval": { "main": [[{ "node": "Wait for Approval", "type": "main", "index": 0 }]] },
+    "Wait for Approval": { "main": [[{ "node": "Approved?", "type": "main", "index": 0 }]] },
+    "Approved?": { "main": [[{ "node": "Notify Stakeholders", "type": "main", "index": 0 }], [{ "node": "Log Rejection", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1", "saveManualExecutions": true, "callerPolicy": "workflowsFromSameOwner", "errorWorkflow": "" },
+  "staticData": null,
+  "tags": ["engineering", "reliability", "errors", "incidents", "beta"],
+  "triggerCount": 0,
+  "updatedAt": "2026-07-14T00:00:00.000Z",
+  "versionId": "82-error-spike-translator-v0.1.0"
+}

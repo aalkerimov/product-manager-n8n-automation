@@ -1,0 +1,13 @@
+{
+  "_comment": "Illustrative LLM output. Actual tags will vary.",
+  "result": {
+    "tagged_notes": [
+      { "id": "N001", "themes": ["discoverability", "onboarding"], "personas": ["casual-activator", "team-lead"], "sentiment": "negative", "evidence_type": "usability-test", "confidence": "high", "actionable": true, "insight_statement": "The Add Task button is not discoverable — users look in the sidebar before finding it via keyboard tooltip, suggesting the primary action needs more visual prominence.", "suggested_follow_up": "Does moving Add Task to a persistent empty-state CTA reduce time-on-task in the next round of usability testing?" },
+      { "id": "N002", "themes": ["search"], "personas": ["casual-activator", "team-lead"], "sentiment": "negative", "evidence_type": "survey", "confidence": "high", "actionable": true, "insight_statement": "Search fails for historical task recall — users cannot find tasks older than a few weeks without manual scrolling.", "suggested_follow_up": "What percentage of search queries are for tasks older than 90 days? Analytics review needed." },
+      { "id": "N003", "themes": ["recurring-tasks", "discoverability"], "personas": ["team-lead"], "sentiment": "mixed", "evidence_type": "interview", "confidence": "high", "actionable": true, "insight_statement": "Recurring tasks is a primary switching trigger — users explicitly sought this feature and switched from Asana because it was inaccessible there, implying ours must remain more accessible to maintain the advantage.", "suggested_follow_up": "Is recurring tasks discoverability actively better than Asana's? Run a comparative usability task." },
+      { "id": "N004", "themes": ["recurring-tasks"], "personas": ["team-lead"], "sentiment": "positive", "evidence_type": "survey", "confidence": "high", "actionable": false, "insight_statement": "Recurring tasks delivers quantified time savings (2 hours/week) and drives strong promoter sentiment — this is a core retention feature that should be protected and promoted.", "suggested_follow_up": null },
+      { "id": "N005", "themes": ["team-adoption", "onboarding"], "personas": ["team-lead"], "sentiment": "negative", "evidence_type": "interview", "confidence": "high", "actionable": true, "insight_statement": "Team adoption stalls when non-PM team members do not see value quickly enough during onboarding — the tool is adopted by the PM but not the team, creating a partial-adoption ceiling.", "suggested_follow_up": "How long does it take for non-PM team members to make their first update? Funnel analysis needed." }
+    ]
+  },
+  "meta": { "note_count": 5, "generated_at": "2026-07-14T09:00:00.000Z" }
+}

@@ -1,0 +1,13 @@
+{
+  "_comment": "Illustrative LLM output for Network Nurturer. Contacts Sarah Chen (95d/60d), Marcus Obi (55d/45d), James Walton (180d/90d) are overdue. Priya Nair (43d/90d) is not overdue.",
+  "outreach": {
+    "outreach_list": [
+      { "name": "Sarah Chen", "channel": "LinkedIn", "draft_message": "Sarah — congratulations on the Series B! That's a huge milestone for Fintech.io. I've been thinking of you since ProductCon — we're finally shipping recurring tasks next week, so the SMB pricing experiment you suggested is about to get a real test. Would love to grab 20 minutes to catch up and hear how the new chapter is going for you.", "ask_or_offer": "Sharing ProjectFlow Q3 progress (update for her); hoping for a casual catch-up that keeps the relationship warm for future advice", "why_now": "Series B is a perfect news peg — congrats message is natural, not transactional" },
+      { "name": "Marcus Obi", "channel": "Email", "draft_message": "Marcus — it's been a couple of months and I wanted to give you an update. We've hit our first 100 paying teams and are shipping recurring tasks next week — a feature that's been top of the enterprise wishlist. I'd love to reconnect and hear what you're seeing in the market. Are those enterprise buyer intros still on the table? Happy to jump on a 15-minute call whenever works for you.", "ask_or_offer": "Explicit ask: enterprise buyer introductions. Giving: company progress update for his portfolio tracking", "why_now": "Overdue by 10 days on 45-day cadence. Progress update gives natural reason to reach out." },
+      { "name": "James Walton", "channel": "LinkedIn", "draft_message": "Hey James — I noticed TaskFlow launched the Gantt view last week. Bold move — curious how users are responding. We're approaching our next big milestone and I've been thinking about our SaaStr conversation. You mentioned swapping NPS insights — still up for it? Would be useful to compare notes on the enterprise segment.", "ask_or_offer": "Mutual value exchange: NPS benchmark data swap — no power imbalance, genuinely useful for both", "why_now": "Gantt launch is a natural conversation opener; 180 days without contact is too long for a competitor relationship worth maintaining" }
+    ],
+    "skip_list": [{ "name": "Priya Nair", "reason": "Last contact was 43 days ago — not yet overdue on 90-day cadence. Skip this week." }],
+    "weekly_networking_goal": "Two warm reconnections (Sarah + Marcus) and one competitive intelligence exchange (James). Aim for one reply that leads to a call."
+  },
+  "meta": { "outreach_count": 3, "today": "2026-07-14", "generated_at": "2026-07-14T08:00:00.000Z" }
+}

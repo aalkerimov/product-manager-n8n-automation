@@ -1,0 +1,94 @@
+{
+  "name": "Calendar Audit & Focus Protector",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Calendar Audit & Focus Protector\n\n**Setup:**\n1. Create YOUR_SMTP_CREDENTIAL\n2. Set CALENDAR_AUDIT_EMAIL_TO\n3. Provide this week's calendar events (manually or via Google Calendar HTTP Request)\n4. Code nodes compute meeting load, categorise event types, identify focus blocks — no LLM\n5. Generates recommendations and alerts if focus time is below threshold",
+        "height": 260,
+        "width": 420,
+        "color": 4
+      },
+      "id": "sticky-setup",
+      "name": "Setup Instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, -260]
+    },
+    {
+      "parameters": { "rule": { "interval": [{ "field": "weeks", "triggerAtDay": [1], "triggerAtHour": 6 }] } },
+      "id": "cron-trigger",
+      "name": "Weekly Schedule (Monday 6am)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 200]
+    },
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 380]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Replace with Google Calendar API HTTP Request for production\nconst events = [\n  { title: 'Sprint Planning', day: 'Monday', start: '09:00', end: '11:00', category: 'engineering', attendees: 8, recurring: false },\n  { title: 'CEO 1:1', day: 'Monday', start: '14:00', end: '14:30', category: 'internal', attendees: 2, recurring: true },\n  { title: 'Customer Discovery Call', day: 'Tuesday', start: '10:00', end: '11:00', category: 'customer', attendees: 3, recurring: false },\n  { title: 'Design Review', day: 'Tuesday', start: '14:00', end: '15:00', category: 'internal', attendees: 4, recurring: true },\n  { title: 'All Hands', day: 'Wednesday', start: '12:00', end: '13:00', category: 'company', attendees: 45, recurring: true },\n  { title: 'PM Sync', day: 'Wednesday', start: '15:00', end: '16:00', category: 'internal', attendees: 3, recurring: true },\n  { title: 'Candidate Interview', day: 'Thursday', start: '10:00', end: '11:00', category: 'recruiting', attendees: 2, recurring: false },\n  { title: 'Stakeholder Update', day: 'Thursday', start: '14:00', end: '15:00', category: 'internal', attendees: 6, recurring: false },\n  { title: 'Team Retro', day: 'Friday', start: '10:00', end: '11:00', category: 'team', recurring: true, attendees: 8 }\n];\nconst config = { work_day_hours: 8, work_days: 5, focus_threshold_pct: 40, min_focus_block_hours: 2 };\nreturn [{ json: { events, config, week: 'July 14–18, 2026' } }];"
+      },
+      "id": "load-calendar",
+      "name": "Load Calendar Events",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 280]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { events, config, week } = $input.first().json;\nconst getDuration = (start, end) => { const [sh,sm] = start.split(':').map(Number); const [eh,em] = end.split(':').map(Number); return (eh*60+em-sh*60-sm)/60; };\nconst total_meeting_hours = events.reduce((s,e) => s + getDuration(e.start, e.end), 0);\nconst total_available = config.work_day_hours * config.work_days;\nconst focus_hours = total_available - total_meeting_hours;\nconst focus_pct = parseFloat(((focus_hours / total_available)*100).toFixed(1));\nconst below_threshold = focus_pct < config.focus_threshold_pct;\nconst by_category = {};\nevents.forEach(e => { by_category[e.category] = (by_category[e.category]||0) + getDuration(e.start,e.end); });\nconst recurring_hours = events.filter(e=>e.recurring).reduce((s,e) => s + getDuration(e.start,e.end), 0);\nconst one_off_hours = total_meeting_hours - recurring_hours;\nconst by_day = {};\nevents.forEach(e => { if(!by_day[e.day]) by_day[e.day]={hours:0,events:[]}; by_day[e.day].hours += getDuration(e.start,e.end); by_day[e.day].events.push(e.title); });\nconst heaviest_day = Object.entries(by_day).sort((a,b)=>b[1].hours-a[1].hours)[0];\nconst suggestions = [];\nif (below_threshold) suggestions.push(`Focus time is ${focus_pct}% (below ${config.focus_threshold_pct}% threshold) — consider declining or shortening ${Object.entries(by_category).sort((a,b)=>b[1]-a[1])[0][0]} meetings`);\nif (recurring_hours > total_meeting_hours * 0.7) suggestions.push(`${Math.round((recurring_hours/total_meeting_hours)*100)}% of meeting time is recurring — review each recurring meeting this week for necessity`);\nif (heaviest_day[1].hours > 5) suggestions.push(`${heaviest_day[0]} is the heaviest day (${heaviest_day[1].hours}h in meetings) — protect mornings for focus work on ${Object.keys(by_day).find(d=>!by_day[d] || by_day[d].hours < 2) || 'lighter days'}`);\nconst free_days = ['Monday','Tuesday','Wednesday','Thursday','Friday'].filter(d => !by_day[d] || by_day[d].hours < 2);\nif (free_days.length > 0) suggestions.push(`${free_days.join(' and ')} ${free_days.length>1?'are':'is'} light — schedule deep work blocks`);\nreturn [{ json: { events, config, week, metrics: { total_meeting_hours, total_available, focus_hours, focus_pct, below_threshold, recurring_hours, one_off_hours }, by_category, by_day, heaviest_day: heaviest_day[0], suggestions } }];"
+      },
+      "id": "analyse-calendar",
+      "name": "Analyse Calendar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [740, 280]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { metrics: m, by_category, by_day, heaviest_day, suggestions, week } = $input.first().json;\nconst catLines = Object.entries(by_category).sort((a,b)=>b[1]-a[1]).map(([k,v]) => `  ${k}: ${v}h`).join('\\n');\nconst dayLines = ['Monday','Tuesday','Wednesday','Thursday','Friday'].map(d => { const data = by_day[d]; return data ? `  ${d}: ${data.hours}h meetings — ${data.events.join(', ')}` : `  ${d}: no meetings`; }).join('\\n');\nconst report = [\n  `CALENDAR AUDIT: ${week}`,\n  `Meeting load: ${m.total_meeting_hours}h / ${m.total_available}h total | Focus: ${m.focus_hours}h (${m.focus_pct}%)${m.below_threshold ? ' ⚠️ BELOW THRESHOLD' : ' ✅'}`,\n  `Recurring: ${m.recurring_hours}h | One-off: ${m.one_off_hours}h`,\n  `Heaviest day: ${heaviest_day}`,\n  ``,\n  `BY DAY:`,\n  dayLines,\n  ``,\n  `BY CATEGORY:`,\n  catLines,\n  ``,\n  `RECOMMENDATIONS:`,\n  ...suggestions.map(s => `  • ${s}`),\n].join('\\n');\nreturn [{ json: { ...($input.first().json), report_text: report } }];"
+      },
+      "id": "format-audit",
+      "name": "Format Calendar Audit",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [960, 280]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.CALENDAR_AUDIT_EMAIL_TO || 'pm@acme-analytics.com' }}",
+        "subject": "=Calendar Audit: {{ $json.metrics.focus_pct }}% focus time{{ $json.metrics.below_threshold ? ' ⚠️ below threshold' : ' ✅' }} — {{ $json.week }}",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $json.report_text }}</pre>",
+        "options": {}
+      },
+      "id": "send-report",
+      "name": "Send Calendar Audit",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1180, 280],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    }
+  ],
+  "connections": {
+    "Weekly Schedule (Monday 6am)": { "main": [[{ "node": "Load Calendar Events", "type": "main", "index": 0 }]] },
+    "Manual Trigger": { "main": [[{ "node": "Load Calendar Events", "type": "main", "index": 0 }]] },
+    "Load Calendar Events": { "main": [[{ "node": "Analyse Calendar", "type": "main", "index": 0 }]] },
+    "Analyse Calendar": { "main": [[{ "node": "Format Calendar Audit", "type": "main", "index": 0 }]] },
+    "Format Calendar Audit": { "main": [[{ "node": "Send Calendar Audit", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1", "saveManualExecutions": true, "callerPolicy": "workflowsFromSameOwner", "errorWorkflow": "" },
+  "staticData": null,
+  "tags": ["team", "founder", "calendar", "focus", "beta"],
+  "triggerCount": 0,
+  "updatedAt": "2026-07-14T00:00:00.000Z",
+  "versionId": "92-calendar-audit-focus-protector-v0.1.0"
+}

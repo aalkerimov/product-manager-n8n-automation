@@ -1,0 +1,125 @@
+{
+  "name": "Research Insight Broadcaster",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Research Insight Broadcaster\n\n**Setup:**\n1. Create YOUR_SMTP_CREDENTIAL\n2. Set BROADCAST_EMAIL_TO and configure audience lists\n3. Feed a research insight or synthesis snippet\n4. Code node formats audience-appropriate versions — no LLM required\n5. Approval gate before broadcast is sent",
+        "height": 240,
+        "width": 400,
+        "color": 5
+      },
+      "id": "sticky-setup",
+      "name": "Setup Instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, -240]
+    },
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: {\n  insight_title: 'Recurring tasks: the hidden retention driver',\n  source_study: 'Q3 2026 Research Synthesis',\n  insight_type: 'product_finding',\n  core_insight: 'Recurring tasks is used by only 28% of accounts but drives 2x NPS and 3x retention for those accounts. Critically, usability testing shows 60% of new users fail to find the feature during their first session because it is buried in the date picker with no visual affordance.',\n  implication: 'Making recurring tasks more discoverable in onboarding could be the single highest-ROI product change this quarter.',\n  confidence: 'high',\n  action_required: true,\n  audiences: [\n    { group: 'engineering', summary: 'ACTION: Move recurring task button to task header — not inside date picker. Estimated effort: 2 sprints. Directly tied to 3x retention signal.', urgency: 'high' },\n    { group: 'design', summary: 'ACTION: Redesign recurring task entry point. Current: buried in date picker. Proposed: prominent labelled button in task header with clock icon. See usability test report for participant failure clips.', urgency: 'high' },\n    { group: 'company-all-hands', summary: 'INSIGHT: We have a feature that drives 3x customer retention but only 28% of customers use it — because they can\\'t find it. Our top priority this quarter is making it discoverable. That\\'s it. That\\'s the insight.', urgency: 'normal' },\n    { group: 'sales', summary: 'SALES TALKING POINT: Recurring tasks (one of our core features) saves customers 2+ hours per week. In Q3, we are making it more visible in the product so you can demo the value on first contact. Talking point: \"ProjectFlow\\'s recurring tasks saves your team 2 hours per week on average — and it takes 30 seconds to set up.\"', urgency: 'normal' }\n  ]\n} }];"
+      },
+      "id": "load-sample",
+      "name": "Load Sample Insight",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format the insight broadcast deterministically — no LLM needed\nconst { insight_title, source_study, core_insight, implication, confidence, action_required, audiences } = $input.first().json;\nconst formatted = audiences.map(a => ({\n  group: a.group,\n  urgency: a.urgency,\n  subject: `Research Insight [${a.urgency === 'high' ? 'ACTION REQUIRED' : 'FYI'}]: ${insight_title}`,\n  body: [\n    `Source: ${source_study} | Confidence: ${confidence.toUpperCase()}${action_required?' | ACTION REQUIRED':''}`,\n    ``,\n    `CORE INSIGHT: ${core_insight}`,\n    ``,\n    `IMPLICATION: ${implication}`,\n    ``,\n    `FOR ${a.group.toUpperCase()}:`,\n    a.summary,\n  ].join('\\n')\n}));\nconst preview = formatted.map(f => `  [${f.urgency}] ${f.group}: ${f.subject}`).join('\\n');\nreturn [{ json: { ...$input.first().json, formatted_messages: formatted, preview_text: preview, meta: { broadcast_count: formatted.length, generated_at: new Date().toISOString() } } }];"
+      },
+      "id": "format-broadcast",
+      "name": "Format Broadcast Messages",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [740, 200]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.BROADCAST_APPROVER_EMAIL || $env.BROADCAST_EMAIL_TO }}",
+        "subject": "=APPROVAL REQUIRED: Research Broadcast — {{ $json.insight_title }} ({{ $json.meta.broadcast_count }} audience versions)",
+        "emailType": "html",
+        "message": "=<p><strong>{{ $json.insight_title }}</strong></p><p>{{ $json.meta.broadcast_count }} audience-specific messages ready:</p><pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $json.preview_text }}\n\n---\nFull messages:\n{{ $json.formatted_messages.map(m => m.group.toUpperCase() + ':\n' + m.body).join('\n\n---\n') }}</pre><p><a href=\"{{ $execution.resumeUrl }}?decision=approved\">Approve and broadcast</a> | <a href=\"{{ $execution.resumeUrl }}?decision=rejected\">Reject</a></p>",
+        "options": {}
+      },
+      "id": "send-approval",
+      "name": "Send for Approval",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [960, 200],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": { "resume": "webhook", "options": { "webhookSuffix": "/approval" } },
+      "id": "wait-approval",
+      "name": "Wait for Approval",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [1180, 200],
+      "webhookId": "insight-broadcast-approval"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "cd", "leftValue": "={{ $json.query?.decision || $json.body?.decision }}", "rightValue": "approved", "operator": { "type": "string", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-decision",
+      "name": "Approved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1400, 200]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.BROADCAST_EMAIL_TO }}",
+        "subject": "=Research Insight: {{ $('Load Sample Insight').first().json.insight_title }}",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $('Format Broadcast Messages').first().json.formatted_messages[0].body }}</pre>",
+        "options": {}
+      },
+      "id": "broadcast-email",
+      "name": "Send Broadcast",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1620, 100],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": { "assignments": { "assignments": [{ "id": "r1", "name": "status", "value": "rejected", "type": "string" }] }, "options": {} },
+      "id": "log-rejection",
+      "name": "Log Rejection",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1620, 300]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": { "main": [[{ "node": "Load Sample Insight", "type": "main", "index": 0 }]] },
+    "Load Sample Insight": { "main": [[{ "node": "Format Broadcast Messages", "type": "main", "index": 0 }]] },
+    "Format Broadcast Messages": { "main": [[{ "node": "Send for Approval", "type": "main", "index": 0 }]] },
+    "Send for Approval": { "main": [[{ "node": "Wait for Approval", "type": "main", "index": 0 }]] },
+    "Wait for Approval": { "main": [[{ "node": "Approved?", "type": "main", "index": 0 }]] },
+    "Approved?": { "main": [[{ "node": "Send Broadcast", "type": "main", "index": 0 }], [{ "node": "Log Rejection", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1", "saveManualExecutions": true, "callerPolicy": "workflowsFromSameOwner", "errorWorkflow": "" },
+  "staticData": null,
+  "tags": ["research", "discovery", "broadcast", "insights", "beta"],
+  "triggerCount": 0,
+  "updatedAt": "2026-07-14T00:00:00.000Z",
+  "versionId": "79-research-insight-broadcaster-v0.1.0"
+}

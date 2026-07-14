@@ -1,0 +1,14 @@
+{
+  "_comment": "Illustrative LLM output. Actual scores will vary.",
+  "result": {
+    "paydown_recommendation": "With 8 story points of sprint capacity, prioritise TD-003 (5pt) as the single highest-risk item — it can cause a full database connection pool exhaustion that would take down the entire API. Use the remaining 3 points to begin TD-001 (replace bcrypt.compareSync with async), which is the second-highest blast radius item and its risk is increasing with traffic growth.",
+    "total_estimated_effort": 16,
+    "scored_items": [
+      { "id": "TD-003", "blast_radius": "high", "velocity_tax": "medium", "risk_trajectory": "increasing", "priority_rank": 1, "estimated_effort_points": 5, "recommended_action": "pay-now", "rationale": "22 months old, no workaround, and directly risks database connection pool exhaustion. This is the most dangerous item: a slow query on any of the three unprotected routes could make the entire API unresponsive. Risk trajectory is increasing as traffic grows." },
+      { "id": "TD-001", "blast_radius": "high", "velocity_tax": "low", "risk_trajectory": "increasing", "priority_rank": 2, "estimated_effort_points": 5, "recommended_action": "pay-now", "rationale": "Synchronous bcrypt in the event loop is a latency bomb under concurrent load. The current rate-limit workaround reduces — but does not eliminate — the risk. As the user base grows, the probability of a concurrent login spike increases." },
+      { "id": "TD-002", "blast_radius": "medium", "velocity_tax": "high", "risk_trajectory": "increasing", "priority_rank": 3, "estimated_effort_points": 3, "recommended_action": "schedule-next-quarter", "rationale": "High velocity tax: every developer working on the task list must work around the re-render behaviour. Blast radius is medium — it degrades UX but does not cause failures. Memoisation refactor is a well-understood fix — schedule for next quarter." },
+      { "id": "TD-004", "blast_radius": "low", "velocity_tax": "low", "risk_trajectory": "stable", "priority_rank": 4, "estimated_effort_points": 3, "recommended_action": "accept", "rationale": "Minimal blast radius, no functional risk, no velocity tax. Configure PurgeCSS as part of a build system modernisation effort, not as a standalone sprint item." }
+    ]
+  },
+  "meta": { "item_count": 4, "sprint_capacity": 8, "generated_at": "2026-07-14T09:00:00.000Z" }
+}

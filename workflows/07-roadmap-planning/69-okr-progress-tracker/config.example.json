@@ -1,0 +1,21 @@
+{
+  "_comment": "config.example.json for OKR Progress Tracker",
+  "workflow_id": "69-okr-progress-tracker",
+  "workflow_name": "OKR Progress Tracker",
+  "collection": "07-roadmap-planning",
+  "status": "beta",
+  "configuration": {
+    "OKR_EMAIL_TO": { "default": "", "description": "Weekly pulse recipients", "required": "Required" },
+    "OKR_SCHEDULE": { "default": "0 9 * * 1", "description": "Weekly cron (Monday 09:00)", "required": "Optional" },
+    "NOTIFICATION_EMAIL_FROM": { "default": "automation@acme-analytics.com", "description": "Sender address", "required": "Optional" }
+  },
+  "n8n_credentials_required": [
+    { "name": "YOUR_SMTP_CREDENTIAL", "type": "smtp", "required": true, "purpose": "Send weekly OKR pulse" }
+  ],
+  "scoring": {
+    "on_track_threshold_pct": 70,
+    "at_risk_threshold_pct": 40,
+    "kr_types": ["numeric", "binary", "numeric_inverse", "binary_inverse"]
+  },
+  "notes": "No LLM required. KR values must be updated weekly — manually or via Google Sheets read."
+}

@@ -1,0 +1,20 @@
+{
+  "_comment": "config.example.json for ICP Drift Detector",
+  "workflow_id": "58-icp-drift-detector",
+  "workflow_name": "ICP Drift Detector",
+  "collection": "06-strategy-market-intelligence",
+  "status": "beta",
+  "configuration": {
+    "ICP_SHEET_ID": { "default": "", "description": "Google Sheet ID containing customer data", "required": "Required for scheduled runs", "example": "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms" },
+    "ICP_DEFINITION": { "default": "B2B SaaS, 50-500 employees, software/technology industry, US or EU, mid-market or SMB segment", "description": "Your stated ICP — appears in the report header for human comparison", "required": "Required" },
+    "ICP_EMAIL_TO": { "default": "", "description": "Monthly report recipient", "required": "Required" },
+    "ICP_SCHEDULE": { "default": "0 9 1 * *", "description": "Monthly cron (1st of month at 09:00)", "required": "Optional" },
+    "NOTIFICATION_EMAIL_FROM": { "default": "automation@acme-analytics.com", "description": "Sender address", "required": "Optional" }
+  },
+  "n8n_credentials_required": [
+    { "name": "YOUR_GOOGLE_SHEETS_CREDENTIAL", "type": "googleSheetsOAuth2Api", "required": true, "purpose": "Read customer data from Google Sheets" },
+    { "name": "YOUR_SMTP_CREDENTIAL", "type": "smtp", "required": true, "purpose": "Send monthly report" }
+  ],
+  "required_sheet_columns": ["id", "company", "segment", "employees", "industry", "region", "arr", "status", "months_retained"],
+  "notes": "No LLM required. Statistical analysis only."
+}

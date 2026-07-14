@@ -1,0 +1,352 @@
+{
+  "name": "Market Sizing Assistant",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Market Sizing Assistant\n\n**Setup checklist:**\n1. Create credential `SMTP Email` (Settings → Credentials)\n2. Create credential `Google Sheets OAuth2` (optional — for logging)\n3. Set env vars: OPENAI_API_KEY, OPENAI_BASE_URL, MARKET_SIZING_EMAIL_TO, COMPANY_NAME\n4. Replace YOUR_GOOGLE_SHEET_ID with your sheet ID in the Log node\n5. Test with Manual Trigger first — uses built-in sample data\n\n**What this does:**\n- Accepts market context via webhook or manual trigger\n- Builds TAM / SAM / SOM with explicit numbered assumptions\n- Produces bull / base / bear sensitivity ranges\n- Requires human approval before the report is sent",
+        "height": 380,
+        "width": 500,
+        "color": 6
+      },
+      "id": "sticky-setup",
+      "name": "Setup Instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, -320]
+    },
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 100]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "market-sizing",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook: Receive Brief",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "market-sizing-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Sample data for testing without external accounts.\n// Replace this node's output with a real webhook payload in production.\nreturn [{\n  json: {\n    product_category: \"B2B project management software\",\n    target_segments: [\"SMB (10-200 employees)\", \"Mid-market (201-1000 employees)\"],\n    geography: \"North America\",\n    pricing_model: \"SaaS subscription\",\n    avg_contract_value_usd: 2400,\n    revenue_proxies: [\n      { name: \"US SMB count (SBA 2024)\", value: 5800000 },\n      { name: \"Software adoption rate (SMB)\", value: 0.38 },\n      { name: \"Competitor revenue (est.)\", value: 180000000 }\n    ],\n    competitors: [\"Asana\", \"Monday.com\", \"ClickUp\"],\n    assumptions_to_flag: [\"adoption rate may be stale\", \"ACV is blended average\"],\n    requested_by: \"strategy-team@acme-analytics.com\",\n    run_id: `manual_${Date.now()}`\n  }\n}];"
+      },
+      "id": "load-sample-data",
+      "name": "Load Sample Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 100]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Normalise input from webhook or sample data.\nconst raw = $input.first().json;\nconst body = raw.body || raw;\n\nconst required = ['product_category', 'target_segments', 'geography'];\nconst missing = required.filter(k => !body[k]);\nif (missing.length > 0) {\n  throw new Error(`Missing required fields: ${missing.join(', ')}`);\n}\n\nconst segments = Array.isArray(body.target_segments)\n  ? body.target_segments\n  : [body.target_segments];\n\nreturn [{\n  json: {\n    product_category: String(body.product_category).trim(),\n    target_segments: segments,\n    geography: String(body.geography).trim(),\n    pricing_model: body.pricing_model || 'SaaS subscription',\n    avg_contract_value_usd: Number(body.avg_contract_value_usd) || 0,\n    revenue_proxies: Array.isArray(body.revenue_proxies) ? body.revenue_proxies : [],\n    competitors: Array.isArray(body.competitors) ? body.competitors : [],\n    assumptions_to_flag: Array.isArray(body.assumptions_to_flag) ? body.assumptions_to_flag : [],\n    requested_by: body.requested_by || 'unknown',\n    run_id: body.run_id || `run_${Date.now()}`,\n    validated_at: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "validate-input",
+      "name": "Validate Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [740, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $input.first().json;\nconst proxiesText = d.revenue_proxies\n  .map((p, i) => `  ${i+1}. ${p.name}: ${p.value}`).join('\\n');\nconst flagsText = d.assumptions_to_flag.length > 0\n  ? d.assumptions_to_flag.join('; ')\n  : 'none provided';\n\nconst systemPrompt = `You are a market research analyst. You build TAM/SAM/SOM estimates with explicit, numbered assumptions and sensitivity ranges. You never give a single number without a range. You cite the data proxies provided. Return ONLY valid JSON matching the schema exactly.`;\n\nconst userPrompt = `Build a market sizing analysis for the following context.\n\nProduct category: ${d.product_category}\nTarget segments: ${d.target_segments.join(', ')}\nGeography: ${d.geography}\nPricing model: ${d.pricing_model}\nAverage contract value: $${d.avg_contract_value_usd}/year\nKnown competitors: ${d.competitors.join(', ') || 'none specified'}\n\nRevenue proxies provided:\n${proxiesText || '  (none provided)'}\n\nAssumptions to flag as uncertain: ${flagsText}\n\nReturn JSON with this exact structure:\n{\n  \"tam\": {\n    \"definition\": \"string — one sentence defining TAM scope\",\n    \"base_usd\": number,\n    \"bull_usd\": number,\n    \"bear_usd\": number,\n    \"methodology\": \"top-down | bottom-up | value-theory\",\n    \"key_assumptions\": [\n      { \"id\": \"A1\", \"statement\": \"string\", \"confidence\": \"low|medium|high\", \"source\": \"string\" }\n    ]\n  },\n  \"sam\": {\n    \"definition\": \"string\",\n    \"base_usd\": number,\n    \"bull_usd\": number,\n    \"bear_usd\": number,\n    \"segmentation_rationale\": \"string\"\n  },\n  \"som\": {\n    \"definition\": \"string\",\n    \"base_usd\": number,\n    \"bull_usd\": number,\n    \"bear_usd\": number,\n    \"market_share_assumption_pct\": number,\n    \"rationale\": \"string\"\n  },\n  \"sensitivity_drivers\": [\n    { \"driver\": \"string\", \"impact\": \"high|medium|low\", \"direction\": \"upside|downside|both\" }\n  ],\n  \"data_gaps\": [\"string\"],\n  \"confidence_overall\": \"low|medium|high\",\n  \"confidence_rationale\": \"string\"\n}`;\n\nreturn [{\n  json: {\n    ...d,\n    system_prompt: systemPrompt,\n    user_prompt: userPrompt\n  }\n}];"
+      },
+      "id": "prepare-prompt",
+      "name": "Prepare LLM Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [960, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.OPENAI_BASE_URL || 'https://api.openai.com' }}/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "={{ $env.AI_MODEL || 'gpt-4o-mini' }}"
+            },
+            {
+              "name": "messages",
+              "value": "=[{\"role\":\"system\",\"content\":\"{{ $json.system_prompt }}\"},{\"role\":\"user\",\"content\":\"{{ $json.user_prompt }}\"}]"
+            },
+            { "name": "temperature", "value": "=0.2" },
+            { "name": "response_format", "value": "={\"type\":\"json_object\"}" }
+          ]
+        },
+        "options": { "timeout": 60000 }
+      },
+      "id": "llm-call",
+      "name": "LLM: Build Market Estimates",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1180, 200],
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "YOUR_OPENAI_CREDENTIAL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst upstream = $('Prepare LLM Prompt').first().json;\n\nlet parsed;\ntry {\n  const content = response.choices?.[0]?.message?.content;\n  if (!content) throw new Error('LLM returned no content');\n  parsed = JSON.parse(content);\n} catch (e) {\n  return [{ json: { _error: true, reason: `JSON parse failed: ${e.message}`, raw: JSON.stringify(response).substring(0, 500) } }];\n}\n\n// Structural validation\nconst required = ['tam', 'sam', 'som', 'sensitivity_drivers', 'confidence_overall'];\nconst missing = required.filter(k => !parsed[k]);\nif (missing.length > 0) {\n  return [{ json: { _error: true, reason: `Missing fields: ${missing.join(', ')}`, raw: JSON.stringify(parsed).substring(0, 500) } }];\n}\n\n// Range sanity checks\nif (parsed.tam.base_usd <= 0 || parsed.sam.base_usd <= 0 || parsed.som.base_usd <= 0) {\n  return [{ json: { _error: true, reason: 'One or more estimates are zero or negative', raw: JSON.stringify(parsed).substring(0, 200) } }];\n}\nif (parsed.sam.base_usd > parsed.tam.base_usd) {\n  return [{ json: { _error: true, reason: 'SAM cannot exceed TAM', raw: '' } }];\n}\n\nreturn [{ json: { _error: false, sizing: parsed, meta: {\n  product_category: upstream.product_category,\n  geography: upstream.geography,\n  run_id: upstream.run_id,\n  requested_by: upstream.requested_by,\n  validated_at: upstream.validated_at\n} } }];"
+      },
+      "id": "validate-llm-output",
+      "name": "Validate LLM Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1400, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [
+            {
+              "id": "check-error",
+              "leftValue": "={{ $json._error }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "equals" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "error-check",
+      "name": "LLM Error?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1620, 200]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "err-status", "name": "status", "value": "error", "type": "string" },
+            { "id": "err-msg", "name": "message", "value": "={{ $json.reason }}", "type": "string" },
+            { "id": "err-time", "name": "failed_at", "value": "={{ $now.toISO() }}", "type": "string" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "llm-error-handler",
+      "name": "LLM Error Handler",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1840, 100]
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $input.first().json;\nconst s = d.sizing;\nconst m = d.meta;\n\nconst fmt = (n) => n >= 1e9\n  ? `$${(n/1e9).toFixed(1)}B`\n  : n >= 1e6\n    ? `$${(n/1e6).toFixed(0)}M`\n    : `$${(n/1e3).toFixed(0)}K`;\n\nconst assumptionsList = (s.tam.key_assumptions || []).map(\n  a => `  [${a.id}] ${a.statement} (confidence: ${a.confidence}, source: ${a.source})`\n).join('\\n');\n\nconst sensitivityList = (s.sensitivity_drivers || []).map(\n  dr => `  - ${dr.driver}: ${dr.impact} impact, ${dr.direction}`\n).join('\\n');\n\nconst gapsList = (s.data_gaps || []).map(g => `  - ${g}`).join('\\n');\n\nconst reportText = [\n  `MARKET SIZING REPORT`,\n  `Product category: ${m.product_category}`,\n  `Geography: ${m.geography}`,\n  `Run ID: ${m.run_id}`,\n  `Generated: ${new Date().toISOString()}`,\n  `Overall confidence: ${s.confidence_overall.toUpperCase()} — ${s.confidence_rationale}`,\n  ``,\n  `--- TAM ---`,\n  `Definition: ${s.tam.definition}`,\n  `Methodology: ${s.tam.methodology}`,\n  `Base: ${fmt(s.tam.base_usd)} | Bull: ${fmt(s.tam.bull_usd)} | Bear: ${fmt(s.tam.bear_usd)}`,\n  ``,\n  `--- SAM ---`,\n  `Definition: ${s.sam.definition}`,\n  `Segmentation: ${s.sam.segmentation_rationale}`,\n  `Base: ${fmt(s.sam.base_usd)} | Bull: ${fmt(s.sam.bull_usd)} | Bear: ${fmt(s.sam.bear_usd)}`,\n  ``,\n  `--- SOM ---`,\n  `Definition: ${s.som.definition}`,\n  `Market share assumption: ${s.som.market_share_assumption_pct}%`,\n  `Rationale: ${s.som.rationale}`,\n  `Base: ${fmt(s.som.base_usd)} | Bull: ${fmt(s.som.bull_usd)} | Bear: ${fmt(s.som.bear_usd)}`,\n  ``,\n  `--- KEY ASSUMPTIONS ---`,\n  assumptionsList || '  (none listed)',\n  ``,\n  `--- SENSITIVITY DRIVERS ---`,\n  sensitivityList || '  (none listed)',\n  ``,\n  `--- DATA GAPS ---`,\n  gapsList || '  (none identified)',\n].join('\\n');\n\nreturn [{\n  json: {\n    ...d,\n    report_text: reportText,\n    report_html: `<pre style=\"font-family:monospace;white-space:pre-wrap\">${reportText}</pre>`\n  }\n}];"
+      },
+      "id": "format-report",
+      "name": "Format Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1840, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.MARKET_SIZING_EMAIL_TO || 'strategy@acme-analytics.com' }}",
+        "subject": "=APPROVAL REQUIRED: Market Sizing — {{ $json.meta.product_category }}",
+        "emailType": "html",
+        "message": "=<p>A market sizing report is ready for your review.</p><p><strong>Product:</strong> {{ $json.meta.product_category }}<br><strong>Geography:</strong> {{ $json.meta.geography }}<br><strong>Confidence:</strong> {{ $json.sizing.confidence_overall }}</p>{{ $json.report_html }}<p><a href=\"{{ $execution.resumeUrl }}?decision=approved\">Approve and send report</a> | <a href=\"{{ $execution.resumeUrl }}?decision=rejected\">Reject</a></p><p><em>This link expires in 48 hours. If you take no action, the report will not be sent.</em></p>",
+        "options": {}
+      },
+      "id": "send-approval-email",
+      "name": "Send Approval Request",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [2060, 300],
+      "credentials": {
+        "smtp": {
+          "name": "YOUR_SMTP_CREDENTIAL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resume": "webhook",
+        "options": { "webhookSuffix": "/approval" }
+      },
+      "id": "wait-for-approval",
+      "name": "Wait for Approval",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [2280, 300],
+      "webhookId": "market-sizing-approval"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [
+            {
+              "id": "check-decision",
+              "leftValue": "={{ $json.query?.decision || $json.body?.decision }}",
+              "rightValue": "approved",
+              "operator": { "type": "string", "operation": "equals" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-decision",
+      "name": "Approved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2500, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.MARKET_SIZING_EMAIL_TO || 'strategy@acme-analytics.com' }}",
+        "subject": "=Market Sizing Report: {{ $('Format Report').first().json.meta.product_category }} ({{ $('Format Report').first().json.meta.geography }})",
+        "emailType": "html",
+        "message": "={{ $('Format Report').first().json.report_html }}",
+        "options": {}
+      },
+      "id": "send-final-report",
+      "name": "Send Final Report",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [2720, 200],
+      "credentials": {
+        "smtp": {
+          "name": "YOUR_SMTP_CREDENTIAL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "rej-status", "name": "status", "value": "rejected", "type": "string" },
+            { "id": "rej-time", "name": "rejected_at", "value": "={{ $now.toISO() }}", "type": "string" },
+            { "id": "rej-note", "name": "note", "value": "Report rejected at approval gate. Not sent.", "type": "string" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "log-rejection",
+      "name": "Log Rejection",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2720, 400]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": { "value": "YOUR_GOOGLE_SHEET_ID", "mode": "id" },
+        "sheetName": { "value": "market-sizing-log", "mode": "name" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "run_id": "={{ $('Format Report').first().json.meta.run_id }}",
+            "product_category": "={{ $('Format Report').first().json.meta.product_category }}",
+            "geography": "={{ $('Format Report').first().json.meta.geography }}",
+            "tam_base": "={{ $('Format Report').first().json.sizing.tam.base_usd }}",
+            "sam_base": "={{ $('Format Report').first().json.sizing.sam.base_usd }}",
+            "som_base": "={{ $('Format Report').first().json.sizing.som.base_usd }}",
+            "confidence": "={{ $('Format Report').first().json.sizing.confidence_overall }}",
+            "status": "sent",
+            "sent_at": "={{ $now.toISO() }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "log-to-sheets",
+      "name": "Log to Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [2940, 200],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "name": "YOUR_GOOGLE_SHEETS_CREDENTIAL"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [[{ "node": "Load Sample Data", "type": "main", "index": 0 }]]
+    },
+    "Webhook: Receive Brief": {
+      "main": [[{ "node": "Validate Input", "type": "main", "index": 0 }]]
+    },
+    "Load Sample Data": {
+      "main": [[{ "node": "Validate Input", "type": "main", "index": 0 }]]
+    },
+    "Validate Input": {
+      "main": [[{ "node": "Prepare LLM Prompt", "type": "main", "index": 0 }]]
+    },
+    "Prepare LLM Prompt": {
+      "main": [[{ "node": "LLM: Build Market Estimates", "type": "main", "index": 0 }]]
+    },
+    "LLM: Build Market Estimates": {
+      "main": [[{ "node": "Validate LLM Output", "type": "main", "index": 0 }]]
+    },
+    "Validate LLM Output": {
+      "main": [[{ "node": "LLM Error?", "type": "main", "index": 0 }]]
+    },
+    "LLM Error?": {
+      "main": [
+        [{ "node": "LLM Error Handler", "type": "main", "index": 0 }],
+        [{ "node": "Format Report", "type": "main", "index": 0 }]
+      ]
+    },
+    "Format Report": {
+      "main": [[{ "node": "Send Approval Request", "type": "main", "index": 0 }]]
+    },
+    "Send Approval Request": {
+      "main": [[{ "node": "Wait for Approval", "type": "main", "index": 0 }]]
+    },
+    "Wait for Approval": {
+      "main": [[{ "node": "Approved?", "type": "main", "index": 0 }]]
+    },
+    "Approved?": {
+      "main": [
+        [{ "node": "Send Final Report", "type": "main", "index": 0 }],
+        [{ "node": "Log Rejection", "type": "main", "index": 0 }]
+      ]
+    },
+    "Send Final Report": {
+      "main": [[{ "node": "Log to Google Sheets", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": ""
+  },
+  "staticData": null,
+  "tags": ["strategy", "market-intelligence", "beta"],
+  "triggerCount": 0,
+  "updatedAt": "2026-07-14T00:00:00.000Z",
+  "versionId": "51-market-sizing-assistant-v0.1.0"
+}

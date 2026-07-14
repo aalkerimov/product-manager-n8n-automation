@@ -1,0 +1,19 @@
+{
+  "_comment": "config.example.json for LLM Prompt Regression Tester",
+  "workflow_id": "86-llm-prompt-regression-tester",
+  "workflow_name": "LLM Prompt Regression Tester",
+  "collection": "09-engineering-ai-reliability",
+  "status": "beta",
+  "configuration": {
+    "REGRESSION_EMAIL_TO": { "default": "", "description": "Engineering recipients", "required": "Required" },
+    "REGRESSION_APPROVER_EMAIL": { "default": "", "description": "PM approver. Defaults to REGRESSION_EMAIL_TO.", "required": "Optional" },
+    "AI_MODEL": { "default": "gpt-4o-mini", "description": "LLM model to test", "required": "Required" },
+    "OPENAI_BASE_URL": { "default": "https://api.openai.com", "description": "LLM base URL", "required": "Optional" },
+    "NOTIFICATION_EMAIL_FROM": { "default": "automation@acme-analytics.com", "description": "Sender address", "required": "Optional" }
+  },
+  "n8n_credentials_required": [
+    { "name": "YOUR_OPENAI_CREDENTIAL", "type": "httpHeaderAuth", "required": true, "purpose": "LLM prompt execution for regression testing" },
+    { "name": "YOUR_SMTP_CREDENTIAL", "type": "smtp", "required": true, "purpose": "Approval and results delivery" }
+  ],
+  "notes": "Replace simulated_responses in 'Run Regression Tests' with real HTTP Request calls for production use."
+}

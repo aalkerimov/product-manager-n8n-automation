@@ -1,0 +1,201 @@
+{
+  "name": "Release Notes Generator",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Release Notes Generator\n\n**Setup:**\n1. Create YOUR_OPENAI_CREDENTIAL and YOUR_SMTP_CREDENTIAL\n2. Feed completed ticket/changelog data via webhook or use sample\n3. Set RELEASE_EMAIL_TO\n4. LLM transforms technical ticket titles into user-facing notes\n5. Approval gate before notes go out",
+        "height": 260,
+        "width": 420,
+        "color": 5
+      },
+      "id": "sticky-setup",
+      "name": "Setup Instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, -260]
+    },
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 200]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "generate-release-notes",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook: Post-Deploy",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 380],
+      "webhookId": "release-notes-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "const tickets = [\n  { id: 'ENG-451', type: 'feature', title: 'Add bulk CSV export for projects', jira_link: 'https://acme.atlassian.net/browse/ENG-451' },\n  { id: 'ENG-412', type: 'feature', title: 'Implement SAML 2.0 SSO integration', jira_link: 'https://acme.atlassian.net/browse/ENG-412' },\n  { id: 'ENG-438', type: 'feature', title: 'Recurring tasks — weekly and monthly cadence support', jira_link: 'https://acme.atlassian.net/browse/ENG-438' },\n  { id: 'ENG-467', type: 'improvement', title: 'Increase pagination limit on project list endpoint from 50 to 500', jira_link: 'https://acme.atlassian.net/browse/ENG-467' },\n  { id: 'ENG-471', type: 'improvement', title: 'Reduce search index rebuild time from 4s to 0.8s', jira_link: 'https://acme.atlassian.net/browse/ENG-471' },\n  { id: 'ENG-455', type: 'improvement', title: 'Optimise dashboard initial load — lazy-load widgets', jira_link: 'https://acme.atlassian.net/browse/ENG-455' },\n  { id: 'ENG-479', type: 'bugfix', title: 'Fix race condition on concurrent task status updates causing duplicate entries', jira_link: 'https://acme.atlassian.net/browse/ENG-479' },\n  { id: 'ENG-461', type: 'bugfix', title: 'Fix email notifications sent twice when task assigned to multiple users', jira_link: 'https://acme.atlassian.net/browse/ENG-461' },\n  { id: 'ENG-483', type: 'bugfix', title: 'Resolve 500 error on date filter when timezone offset is negative', jira_link: 'https://acme.atlassian.net/browse/ENG-483' },\n  { id: 'ENG-475', type: 'security', title: 'Update JWT library to address CVE-2026-1234 — token expiry bypass', jira_link: 'https://acme.atlassian.net/browse/ENG-475' }\n];\nreturn [{ json: { tickets, version: '2.14.0', release_date: new Date().toISOString().split('T')[0] } }];"
+      },
+      "id": "load-sample",
+      "name": "Load Sample Tickets",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { tickets, version, release_date } = $input.first().json;\nconst ticketText = tickets.map(t => `  [${t.type.toUpperCase()}] ${t.id}: ${t.title}`).join('\\n');\nconst system = `You are a technical writer creating user-facing release notes. You translate engineering ticket titles into clear, benefit-focused language that non-technical users understand. Features get benefit statements. Bugs get 'fixed' framing. Security items get reassurance. Return ONLY valid JSON.`;\nconst user = `Generate release notes for version ${version} (${release_date}) from these ${tickets.length} tickets:\n\n${ticketText}\n\nReturn JSON:\n{\n  \"release_title\": \"string — engaging but not hyperbolic\",\n  \"release_summary\": \"string — 2-3 sentences, what users should know about this release\",\n  \"whats_new\": [{ \"title\": \"string\", \"description\": \"string — 1-2 sentences from user benefit perspective\", \"ticket_id\": \"string\" }],\n  \"improvements\": [{ \"title\": \"string\", \"description\": \"string\", \"ticket_id\": \"string\" }],\n  \"bug_fixes\": [{ \"title\": \"string\", \"description\": \"string\", \"ticket_id\": \"string\" }],\n  \"security\": [{ \"title\": \"string\", \"description\": \"string\", \"ticket_id\": \"string\" }],\n  \"full_text_markdown\": \"string — complete formatted release notes in GitHub Flavored Markdown\"\n}`;\nreturn [{ json: { tickets, version, release_date, system_prompt: system, user_prompt: user } }];"
+      },
+      "id": "prepare-prompt",
+      "name": "Prepare Release Notes Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [740, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.OPENAI_BASE_URL || 'https://api.openai.com' }}/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParameters": {
+          "parameters": [
+            { "name": "model", "value": "={{ $env.AI_MODEL || 'gpt-4o-mini' }}" },
+            { "name": "messages", "value": "=[{\"role\":\"system\",\"content\":\"{{ $json.system_prompt }}\"},{\"role\":\"user\",\"content\":\"{{ $json.user_prompt }}\"}]" },
+            { "name": "temperature", "value": "=0.4" },
+            { "name": "response_format", "value": "={\"type\":\"json_object\"}" }
+          ]
+        },
+        "options": { "timeout": 60000 }
+      },
+      "id": "llm-call",
+      "name": "LLM: Generate Release Notes",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [960, 200],
+      "credentials": { "httpHeaderAuth": { "name": "YOUR_OPENAI_CREDENTIAL" } }
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst upstream = $('Prepare Release Notes Prompt').first().json;\nlet parsed;\ntry {\n  const c = response.choices?.[0]?.message?.content;\n  if (!c) throw new Error('No content');\n  parsed = JSON.parse(c);\n} catch(e) { return [{ json: { _error: true, reason: e.message } }]; }\nif (!parsed.full_text_markdown) return [{ json: { _error: true, reason: 'Missing full_text_markdown' } }];\nreturn [{ json: { _error: false, notes: parsed, meta: { version: upstream.version, release_date: upstream.release_date, ticket_count: upstream.tickets.length, generated_at: new Date().toISOString() } } }];"
+      },
+      "id": "validate-llm",
+      "name": "Validate LLM Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1180, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "ce", "leftValue": "={{ $json._error }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "error-check",
+      "name": "LLM Error?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1400, 200]
+    },
+    {
+      "parameters": { "assignments": { "assignments": [{ "id": "e1", "name": "status", "value": "error", "type": "string" }] }, "options": {} },
+      "id": "error-handler",
+      "name": "LLM Error Handler",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1600, 100]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.RELEASE_EMAIL_TO || 'product@acme-analytics.com' }}",
+        "subject": "=APPROVAL REQUIRED: Release Notes v{{ $json.meta.version }}",
+        "emailType": "html",
+        "message": "=<p>Release notes for <strong>{{ $json.meta.version }}</strong> ({{ $json.meta.release_date }}) generated from {{ $json.meta.ticket_count }} tickets.</p><p><strong>Summary:</strong> {{ $json.notes.release_summary }}</p><hr/><pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $json.notes.full_text_markdown }}</pre><p><a href=\"{{ $execution.resumeUrl }}?decision=approved\">Approve and publish</a> | <a href=\"{{ $execution.resumeUrl }}?decision=rejected\">Reject — needs editing</a></p>",
+        "options": {}
+      },
+      "id": "send-approval",
+      "name": "Send for Approval",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1600, 300],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": { "resume": "webhook", "options": { "webhookSuffix": "/approval" } },
+      "id": "wait-approval",
+      "name": "Wait for Approval",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [1820, 300],
+      "webhookId": "release-notes-approval"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "cd", "leftValue": "={{ $json.query?.decision || $json.body?.decision }}", "rightValue": "approved", "operator": { "type": "string", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-decision",
+      "name": "Approved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2040, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.RELEASE_DISTRIBUTION_EMAIL || $env.RELEASE_EMAIL_TO || 'product@acme-analytics.com' }}",
+        "subject": "={{ 'Release Notes: ' + $('Validate LLM Output').first().json.notes.release_title + ' (v' + $('Validate LLM Output').first().json.meta.version + ')' }}",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $('Validate LLM Output').first().json.notes.full_text_markdown }}</pre>",
+        "options": {}
+      },
+      "id": "send-notes",
+      "name": "Publish Release Notes",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [2260, 200],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": { "assignments": { "assignments": [{ "id": "r1", "name": "status", "value": "rejected", "type": "string" }] }, "options": {} },
+      "id": "log-rejection",
+      "name": "Log Rejection",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2260, 400]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": { "main": [[{ "node": "Load Sample Tickets", "type": "main", "index": 0 }]] },
+    "Webhook: Post-Deploy": { "main": [[{ "node": "Prepare Release Notes Prompt", "type": "main", "index": 0 }]] },
+    "Load Sample Tickets": { "main": [[{ "node": "Prepare Release Notes Prompt", "type": "main", "index": 0 }]] },
+    "Prepare Release Notes Prompt": { "main": [[{ "node": "LLM: Generate Release Notes", "type": "main", "index": 0 }]] },
+    "LLM: Generate Release Notes": { "main": [[{ "node": "Validate LLM Output", "type": "main", "index": 0 }]] },
+    "Validate LLM Output": { "main": [[{ "node": "LLM Error?", "type": "main", "index": 0 }]] },
+    "LLM Error?": { "main": [[{ "node": "LLM Error Handler", "type": "main", "index": 0 }], [{ "node": "Send for Approval", "type": "main", "index": 0 }]] },
+    "Send for Approval": { "main": [[{ "node": "Wait for Approval", "type": "main", "index": 0 }]] },
+    "Wait for Approval": { "main": [[{ "node": "Approved?", "type": "main", "index": 0 }]] },
+    "Approved?": { "main": [[{ "node": "Publish Release Notes", "type": "main", "index": 0 }], [{ "node": "Log Rejection", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1", "saveManualExecutions": true, "callerPolicy": "workflowsFromSameOwner", "errorWorkflow": "" },
+  "staticData": null,
+  "tags": ["roadmap", "planning", "release-notes", "beta"],
+  "triggerCount": 0,
+  "updatedAt": "2026-07-14T00:00:00.000Z",
+  "versionId": "65-release-notes-generator-v0.1.0"
+}

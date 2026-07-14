@@ -1,0 +1,19 @@
+{
+  "_comment": "config.example.json for Stakeholder Update Composer",
+  "workflow_id": "67-stakeholder-update-composer",
+  "workflow_name": "Stakeholder Update Composer",
+  "collection": "07-roadmap-planning",
+  "status": "beta",
+  "configuration": {
+    "STAKEHOLDER_EMAIL_TO": { "default": "", "description": "Stakeholder recipient list", "required": "Required" },
+    "STAKEHOLDER_APPROVER_EMAIL": { "default": "", "description": "PM approver. Defaults to STAKEHOLDER_EMAIL_TO if not set.", "required": "Optional" },
+    "STAKEHOLDER_SCHEDULE": { "default": "0 9 * * 5", "description": "Weekly cron (Friday 09:00)", "required": "Optional" },
+    "AI_MODEL": { "default": "gpt-4o-mini", "description": "LLM model", "required": "Required" },
+    "OPENAI_BASE_URL": { "default": "https://api.openai.com", "description": "LLM base URL", "required": "Optional" },
+    "NOTIFICATION_EMAIL_FROM": { "default": "automation@acme-analytics.com", "description": "Sender address", "required": "Optional" }
+  },
+  "n8n_credentials_required": [
+    { "name": "YOUR_OPENAI_CREDENTIAL", "type": "httpHeaderAuth", "required": true, "purpose": "LLM draft generation" },
+    { "name": "YOUR_SMTP_CREDENTIAL", "type": "smtp", "required": true, "purpose": "Approval and stakeholder delivery" }
+  ]
+}

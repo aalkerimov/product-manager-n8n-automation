@@ -1,0 +1,18 @@
+{
+  "_comment": "config.example.json for AI Cost Monitor",
+  "workflow_id": "87-ai-cost-monitor",
+  "workflow_name": "AI Cost Monitor",
+  "collection": "09-engineering-ai-reliability",
+  "status": "beta",
+  "configuration": {
+    "AI_COST_EMAIL_TO": { "default": "", "description": "Engineering and PM recipients", "required": "Required" },
+    "AI_COST_APPROVER_EMAIL": { "default": "", "description": "PM approver. Defaults to AI_COST_EMAIL_TO.", "required": "Optional" },
+    "NOTIFICATION_EMAIL_FROM": { "default": "automation@acme-analytics.com", "description": "Sender address", "required": "Optional" }
+  },
+  "n8n_credentials_required": [
+    { "name": "YOUR_SMTP_CREDENTIAL", "type": "smtp", "required": true, "purpose": "Approval and cost report distribution" }
+  ],
+  "ai_required": false,
+  "schedule": "Every Monday at 09:00",
+  "budget_defaults": { "weekly_budget_usd": 25.00, "alert_threshold_pct": 80, "per_workflow_budget_usd": 10.00 }
+}

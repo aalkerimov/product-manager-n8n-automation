@@ -1,0 +1,14 @@
+[
+  { "id": "C001", "company": "Globex Corp", "segment": "enterprise", "employees": 1200, "industry": "manufacturing", "region": "US", "arr": 24000, "status": "active", "months_retained": 18 },
+  { "id": "C002", "company": "Initech LLC", "segment": "smb", "employees": 45, "industry": "software", "region": "US", "arr": 3600, "status": "active", "months_retained": 6 },
+  { "id": "C003", "company": "Umbrella Ltd", "segment": "mid-market", "employees": 320, "industry": "healthcare", "region": "EU", "arr": 12000, "status": "active", "months_retained": 24 },
+  { "id": "C004", "company": "Hooli Inc", "segment": "enterprise", "employees": 5000, "industry": "technology", "region": "US", "arr": 60000, "status": "churned", "months_retained": 8 },
+  { "id": "C005", "company": "Pied Piper", "segment": "startup", "employees": 12, "industry": "software", "region": "US", "arr": 1200, "status": "active", "months_retained": 14 },
+  { "id": "C006", "company": "Dunder Mifflin", "segment": "smb", "employees": 90, "industry": "retail", "region": "US", "arr": 4800, "status": "active", "months_retained": 11 },
+  { "id": "C007", "company": "Vandelay Ind", "segment": "mid-market", "employees": 450, "industry": "finance", "region": "EU", "arr": 9600, "status": "active", "months_retained": 20 },
+  { "id": "C008", "company": "Sterling Cooper", "segment": "enterprise", "employees": 2200, "industry": "marketing", "region": "US", "arr": 36000, "status": "churned", "months_retained": 5 },
+  { "id": "C009", "company": "Wernham Hogg", "segment": "smb", "employees": 75, "industry": "logistics", "region": "UK", "arr": 2400, "status": "active", "months_retained": 9 },
+  { "id": "C010", "company": "Sabre Corp", "segment": "enterprise", "employees": 800, "industry": "technology", "region": "US", "arr": 18000, "status": "active", "months_retained": 30 },
+  { "id": "C011", "company": "Slate Rock", "segment": "smb", "employees": 30, "industry": "construction", "region": "US", "arr": 2400, "status": "active", "months_retained": 4 },
+  { "id": "C012", "company": "", "segment": "", "employees": null, "industry": "", "region": "", "arr": null, "status": "active", "months_retained": null }
+]

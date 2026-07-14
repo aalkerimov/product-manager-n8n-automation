@@ -1,0 +1,197 @@
+{
+  "name": "AI Output Quality Sampler",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## AI Output Quality Sampler\n\n**Setup:**\n1. Create YOUR_OPENAI_CREDENTIAL and YOUR_SMTP_CREDENTIAL\n2. Set QUALITY_SAMPLE_EMAIL_TO\n3. Provide a sample of recent AI workflow outputs\n4. LLM evaluates output quality on accuracy, format, usefulness dimensions\n5. Approval gate before quality report is shared",
+        "height": 240,
+        "width": 400,
+        "color": 7
+      },
+      "id": "sticky-setup",
+      "name": "Setup Instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, -240]
+    },
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Sample of real AI workflow outputs for quality evaluation\nconst samples = [\n  { sample_id: 'S001', workflow: 'Bug Triage Assistant', input: 'Dashboard fails to load when user has more than 200 projects. Affects 12 enterprise accounts. Started after v2.4.1 deployment.', output: { severity: 'P0', rationale: 'Production outage for 12 paying enterprise accounts — dashboard unusable.', engineering_area: 'backend/api', suggested_owner: 'backend engineer' }, criteria: ['correct P0 severity for production outage', 'identifies regression correctly', 'specific engineering area', 'actionable owner suggestion'] },\n  { sample_id: 'S002', workflow: 'Survey Response Analyser', input: 'NPS survey with 45 responses: 28 promoters (62%), 9 passives (20%), 8 detractors (18%). Top themes from detractors: slow load times (6), missing bulk actions (5).', output: { nps: 44, primary_theme: 'Performance concerns centred on load times', actionable_insight: 'Optimise dashboard load time for large projects as highest-priority fix', sentiment: 'mixed-positive' }, criteria: ['NPS calculation correct (62-18=44)', 'connects detractor feedback to specific feature', 'actionable insight is specific'] },\n  { sample_id: 'S003', workflow: 'JTBD Extractor', input: 'I just want to get to my dashboard and immediately see what everyone is blocked on, without reading through 40 Slack messages.', output: { job: 'See blocked work immediately without reading messages', functional_job: 'Get status visibility', emotional_job: 'Feel in control without communication overhead' }, criteria: ['captures core job accurately', 'separates functional from emotional job', 'job statement is user-voice, not feature-voice'] }\n];\nreturn [{ json: { samples, evaluator_model: process.env.AI_MODEL || 'gpt-4o-mini', sampled_at: new Date().toISOString() } }];"
+      },
+      "id": "load-samples",
+      "name": "Load Output Samples",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { samples, evaluator_model } = $input.first().json;\nconst samplesText = samples.map(s => `[${s.sample_id}] ${s.workflow}\\nInput: ${s.input}\\nOutput: ${JSON.stringify(s.output, null, 2)}\\nEvaluation criteria: ${s.criteria.join('; ')}`).join('\\n\\n---\\n\\n');\nconst system = `You are a quality evaluator for AI workflow outputs. You score each output on three dimensions (1-5): (1) Accuracy — factually correct and criterion-meeting; (2) Usefulness — actionable and specific for a PM; (3) Format compliance — matches expected structure. You identify specific issues where score is below 4. Return ONLY valid JSON.`;\nconst user = `Evaluate these ${samples.length} AI workflow output samples:\\n\\n${samplesText}\\n\\nReturn JSON:\\n{\\n  \"evaluations\": [\\n    {\\n      \"sample_id\": \"string\",\\n      \"workflow\": \"string\",\\n      \"accuracy_score\": 5,\\n      \"usefulness_score\": 5,\\n      \"format_score\": 5,\\n      \"overall_score\": 5.0,\\n      \"issues\": [\"string\"],\\n      \"highlights\": [\"string\"]\\n    }\\n  ],\\n  \"quality_summary\": \"string — overall health of AI output quality across sampled workflows\",\\n  \"recommended_actions\": [\"string\"]\\n}`;\nreturn [{ json: { samples, evaluator_model, system_prompt: system, user_prompt: user } }];"
+      },
+      "id": "prepare-eval-prompt",
+      "name": "Prepare Evaluation Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [740, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.OPENAI_BASE_URL || 'https://api.openai.com' }}/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParameters": {
+          "parameters": [
+            { "name": "model", "value": "={{ $env.AI_MODEL || 'gpt-4o-mini' }}" },
+            { "name": "messages", "value": "=[{\"role\":\"system\",\"content\":\"{{ $json.system_prompt }}\"},{\"role\":\"user\",\"content\":\"{{ $json.user_prompt }}\"}]" },
+            { "name": "temperature", "value": "=0.1" },
+            { "name": "response_format", "value": "={\"type\":\"json_object\"}" }
+          ]
+        },
+        "options": { "timeout": 60000 }
+      },
+      "id": "llm-call",
+      "name": "LLM: Evaluate Quality",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [960, 200],
+      "credentials": { "httpHeaderAuth": { "name": "YOUR_OPENAI_CREDENTIAL" } }
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst upstream = $('Prepare Evaluation Prompt').first().json;\nlet parsed;\ntry {\n  const c = response.choices?.[0]?.message?.content;\n  if (!c) throw new Error('No content');\n  parsed = JSON.parse(c);\n} catch(e) { return [{ json: { _error: true, reason: e.message } }]; }\nif (!parsed.evaluations || !Array.isArray(parsed.evaluations)) return [{ json: { _error: true, reason: 'Missing evaluations' } }];\nconst avg = parsed.evaluations.reduce((s,e) => s + e.overall_score, 0) / parsed.evaluations.length;\nconst low_quality = parsed.evaluations.filter(e => e.overall_score < 3.5);\nreturn [{ json: { _error: false, result: parsed, meta: { sample_count: upstream.samples.length, avg_overall_score: parseFloat(avg.toFixed(2)), low_quality_count: low_quality.length, generated_at: new Date().toISOString() } } }];"
+      },
+      "id": "validate-llm",
+      "name": "Validate LLM Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1180, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "ce", "leftValue": "={{ $json._error }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "error-check",
+      "name": "LLM Error?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1400, 200]
+    },
+    {
+      "parameters": { "assignments": { "assignments": [{ "id": "e1", "name": "status", "value": "error", "type": "string" }] }, "options": {} },
+      "id": "error-handler",
+      "name": "LLM Error Handler",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1600, 100]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { result: r, meta: m } = $input.first().json;\nconst lines = (r.evaluations||[]).map(e => [\n  `  [${e.overall_score}/5] ${e.sample_id} — ${e.workflow}`,\n  `  Accuracy: ${e.accuracy_score} | Usefulness: ${e.usefulness_score} | Format: ${e.format_score}`,\n  e.highlights?.length ? `  ✓ ${e.highlights.join('; ')}` : '',\n  e.issues?.length ? `  ⚠ ${e.issues.join('; ')}` : '',\n  ''\n].filter(Boolean).join('\\n')).join('\\n');\nconst report = [\n  `AI OUTPUT QUALITY REPORT`,\n  `Samples: ${m.sample_count} | Avg score: ${m.avg_overall_score}/5 | Low quality: ${m.low_quality_count} | ${m.generated_at}`,\n  ``,\n  `SUMMARY: ${r.quality_summary}`,\n  ``,\n  `EVALUATIONS:`,\n  lines,\n  `RECOMMENDED ACTIONS:`,\n  ...(r.recommended_actions||[]).map(a => `  • ${a}`),\n].join('\\n');\nreturn [{ json: { ...($input.first().json), report_text: report } }];"
+      },
+      "id": "format-report",
+      "name": "Format Quality Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1600, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.QUALITY_SAMPLE_APPROVER_EMAIL || $env.QUALITY_SAMPLE_EMAIL_TO }}",
+        "subject": "=APPROVAL REQUIRED: AI Quality Report — avg {{ $json.meta.avg_overall_score }}/5 across {{ $json.meta.sample_count }} samples",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $json.report_text }}</pre><p><a href=\"{{ $execution.resumeUrl }}?decision=approved\">Approve and share</a> | <a href=\"{{ $execution.resumeUrl }}?decision=rejected\">Reject</a></p>",
+        "options": {}
+      },
+      "id": "send-approval",
+      "name": "Send for Approval",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1820, 300],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": { "resume": "webhook", "options": { "webhookSuffix": "/approval" } },
+      "id": "wait-approval",
+      "name": "Wait for Approval",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [2040, 300],
+      "webhookId": "quality-sampler-approval"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "cd", "leftValue": "={{ $json.query?.decision || $json.body?.decision }}", "rightValue": "approved", "operator": { "type": "string", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-decision",
+      "name": "Approved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2260, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.QUALITY_SAMPLE_EMAIL_TO || 'engineering@acme-analytics.com' }}",
+        "subject": "=AI Output Quality: avg {{ $('Format Quality Report').first().json.meta.avg_overall_score }}/5 — {{ $('Format Quality Report').first().json.meta.sample_count }} samples",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $('Format Quality Report').first().json.report_text }}</pre>",
+        "options": {}
+      },
+      "id": "send-report",
+      "name": "Distribute Quality Report",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [2480, 200],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": { "assignments": { "assignments": [{ "id": "r1", "name": "status", "value": "rejected", "type": "string" }] }, "options": {} },
+      "id": "log-rejection",
+      "name": "Log Rejection",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2480, 400]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": { "main": [[{ "node": "Load Output Samples", "type": "main", "index": 0 }]] },
+    "Load Output Samples": { "main": [[{ "node": "Prepare Evaluation Prompt", "type": "main", "index": 0 }]] },
+    "Prepare Evaluation Prompt": { "main": [[{ "node": "LLM: Evaluate Quality", "type": "main", "index": 0 }]] },
+    "LLM: Evaluate Quality": { "main": [[{ "node": "Validate LLM Output", "type": "main", "index": 0 }]] },
+    "Validate LLM Output": { "main": [[{ "node": "LLM Error?", "type": "main", "index": 0 }]] },
+    "LLM Error?": { "main": [[{ "node": "LLM Error Handler", "type": "main", "index": 0 }], [{ "node": "Format Quality Report", "type": "main", "index": 0 }]] },
+    "Format Quality Report": { "main": [[{ "node": "Send for Approval", "type": "main", "index": 0 }]] },
+    "Send for Approval": { "main": [[{ "node": "Wait for Approval", "type": "main", "index": 0 }]] },
+    "Wait for Approval": { "main": [[{ "node": "Approved?", "type": "main", "index": 0 }]] },
+    "Approved?": { "main": [[{ "node": "Distribute Quality Report", "type": "main", "index": 0 }], [{ "node": "Log Rejection", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1", "saveManualExecutions": true, "callerPolicy": "workflowsFromSameOwner", "errorWorkflow": "" },
+  "staticData": null,
+  "tags": ["engineering", "reliability", "ai", "quality", "beta"],
+  "triggerCount": 0,
+  "updatedAt": "2026-07-14T00:00:00.000Z",
+  "versionId": "88-ai-output-quality-sampler-v0.1.0"
+}

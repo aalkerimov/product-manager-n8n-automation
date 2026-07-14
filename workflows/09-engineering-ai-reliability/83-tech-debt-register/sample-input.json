@@ -1,0 +1,10 @@
+{
+  "items": [
+    { "id": "TD-001", "title": "Legacy auth middleware still uses synchronous bcrypt", "area": "backend/auth", "description": "The auth middleware uses bcrypt.compareSync() which blocks the event loop. Under concurrent login spikes this creates latency for all active requests, not just authentication ones.", "age_months": 14, "reported_by": "Senior BE engineer", "workaround": "Rate limit login endpoint", "risk": "Under a DDoS-style login flood this could take down all API endpoints simultaneously" },
+    { "id": "TD-002", "title": "Frontend task list re-renders entire list on any state change", "area": "frontend/performance", "description": "The task list component has no memoisation. Any change to any task (even in another project) triggers a full re-render of the entire task list. With 200+ tasks this causes noticeable jank.", "age_months": 8, "reported_by": "Frontend engineer", "workaround": "None — visible to users with large projects", "risk": "Users with large projects experience degraded UI performance" },
+    { "id": "TD-003", "title": "Direct database access in three API routes bypasses ORM", "area": "backend/data", "description": "Routes /api/v1/admin/stats, /api/v1/reports/export, and /api/v1/billing/usage use raw SQL queries that bypass the ORM layer. These routes are not covered by the connection pool and lack the query timeout middleware.", "age_months": 22, "reported_by": "Staff engineer", "workaround": "None", "risk": "A slow query on these routes can exhaust the database connection pool, affecting all other queries" },
+    { "id": "TD-004", "title": "CSS bundle includes unused component styles", "area": "frontend/build", "description": "The CSS bundle (340kb gzipped) includes styles for 12 deprecated components that were removed from the UI 6 months ago. PurgeCSS is not configured.", "age_months": 6, "reported_by": "Frontend engineer", "workaround": "None needed — cosmetic issue only", "risk": "Bundle size slightly increases initial page load time" }
+  ],
+  "product": "ProjectFlow",
+  "sprint_capacity_available": 8
+}

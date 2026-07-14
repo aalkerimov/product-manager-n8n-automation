@@ -1,0 +1,34 @@
+{
+  "_comment": "Sample snapshot data for testing. In production, this is produced by HTTP fetches to G2/Capterra.",
+  "captured_at": "2026-07-14T08:00:00.000Z",
+  "companies": [
+    {
+      "name": "Acme Analytics",
+      "g2": { "rating": 4.6, "review_count": 312, "category_rank": 3, "top_tags": ["easy to use", "great support", "good reporting"], "recent_reviews": [
+        { "stars": 5, "excerpt": "Onboarding was fast and the support team responded in hours.", "date": "2026-07-10" },
+        { "stars": 2, "excerpt": "Wish there was a mobile app. Everything else is great.", "date": "2026-07-08" }
+      ]},
+      "capterra": { "rating": 4.5, "review_count": 187, "category_rank": 4, "recent_reviews": [
+        { "stars": 5, "excerpt": "Best reporting I have seen in this category.", "date": "2026-07-09" }
+      ]}
+    },
+    {
+      "name": "CompetitorX",
+      "g2": { "rating": 4.3, "review_count": 890, "category_rank": 1, "top_tags": ["feature-rich", "steep learning curve", "expensive"], "recent_reviews": [
+        { "stars": 3, "excerpt": "Good tool but onboarding took us 3 weeks and pricing jumped at renewal.", "date": "2026-07-11" }
+      ]},
+      "capterra": { "rating": 4.2, "review_count": 645, "category_rank": 2, "recent_reviews": [
+        { "stars": 2, "excerpt": "Hidden costs in enterprise tier. Watch your contract.", "date": "2026-07-07" }
+      ]}
+    },
+    {
+      "name": "CompetitorY",
+      "g2": { "rating": 4.5, "review_count": 430, "category_rank": 2, "top_tags": ["affordable", "simple UI", "limited integrations"], "recent_reviews": [
+        { "stars": 5, "excerpt": "Perfect for small teams. Simple and affordable.", "date": "2026-07-12" }
+      ]},
+      "capterra": { "rating": 4.4, "review_count": 290, "category_rank": 3, "recent_reviews": [
+        { "stars": 4, "excerpt": "Would love more integrations but the core product is solid.", "date": "2026-07-06" }
+      ]}
+    }
+  ]
+}

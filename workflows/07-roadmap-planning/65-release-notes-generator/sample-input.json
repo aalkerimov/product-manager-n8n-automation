@@ -1,0 +1,12 @@
+[
+  { "id": "ENG-451", "type": "feature", "title": "Add bulk CSV export for projects", "jira_link": "https://acme.atlassian.net/browse/ENG-451" },
+  { "id": "ENG-412", "type": "feature", "title": "Implement SAML 2.0 SSO integration", "jira_link": "https://acme.atlassian.net/browse/ENG-412" },
+  { "id": "ENG-438", "type": "feature", "title": "Recurring tasks — weekly and monthly cadence support", "jira_link": "https://acme.atlassian.net/browse/ENG-438" },
+  { "id": "ENG-467", "type": "improvement", "title": "Increase pagination limit on project list endpoint from 50 to 500", "jira_link": "https://acme.atlassian.net/browse/ENG-467" },
+  { "id": "ENG-471", "type": "improvement", "title": "Reduce search index rebuild time from 4s to 0.8s", "jira_link": "https://acme.atlassian.net/browse/ENG-471" },
+  { "id": "ENG-455", "type": "improvement", "title": "Optimise dashboard initial load — lazy-load widgets", "jira_link": "https://acme.atlassian.net/browse/ENG-455" },
+  { "id": "ENG-479", "type": "bugfix", "title": "Fix race condition on concurrent task status updates causing duplicate entries", "jira_link": "https://acme.atlassian.net/browse/ENG-479" },
+  { "id": "ENG-461", "type": "bugfix", "title": "Fix email notifications sent twice when task assigned to multiple users", "jira_link": "https://acme.atlassian.net/browse/ENG-461" },
+  { "id": "ENG-483", "type": "bugfix", "title": "Resolve 500 error on date filter when timezone offset is negative", "jira_link": "https://acme.atlassian.net/browse/ENG-483" },
+  { "id": "ENG-475", "type": "security", "title": "Update JWT library to address CVE-2026-1234 — token expiry bypass", "jira_link": "https://acme.atlassian.net/browse/ENG-475" }
+]

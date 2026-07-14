@@ -1,0 +1,20 @@
+{
+  "_comment": "config.example.json for Interview Question Generator",
+  "workflow_id": "71-interview-question-generator",
+  "workflow_name": "Interview Question Generator",
+  "collection": "08-user-research-discovery",
+  "status": "beta",
+  "configuration": {
+    "INTERVIEW_EMAIL_TO": { "default": "", "description": "Research team recipients", "required": "Required" },
+    "INTERVIEW_APPROVER_EMAIL": { "default": "", "description": "PM approver email. Defaults to INTERVIEW_EMAIL_TO if not set.", "required": "Optional" },
+    "AI_MODEL": { "default": "gpt-4o-mini", "description": "LLM model", "required": "Required" },
+    "OPENAI_BASE_URL": { "default": "https://api.openai.com", "description": "LLM base URL", "required": "Optional" },
+    "NOTIFICATION_EMAIL_FROM": { "default": "automation@acme-analytics.com", "description": "Sender address", "required": "Optional" }
+  },
+  "n8n_credentials_required": [
+    { "name": "YOUR_OPENAI_CREDENTIAL", "type": "httpHeaderAuth", "required": true, "purpose": "LLM interview guide generation" },
+    { "name": "YOUR_SMTP_CREDENTIAL", "type": "smtp", "required": true, "purpose": "Approval and research team delivery" }
+  ],
+  "webhook_path": "/webhook/generate-interview-guide",
+  "webhook_method": "POST"
+}

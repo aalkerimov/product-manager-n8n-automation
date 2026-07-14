@@ -1,0 +1,212 @@
+{
+  "name": "Bug Triage Assistant",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Bug Triage Assistant\n\n**Setup:**\n1. Create YOUR_OPENAI_CREDENTIAL and YOUR_SMTP_CREDENTIAL\n2. Set BUG_TRIAGE_EMAIL_TO\n3. Feed new bug reports via webhook or use sample\n4. LLM classifies severity, assigns area, and suggests reproduction steps\n5. Approval gate before triage is sent to engineering",
+        "height": 240,
+        "width": 400,
+        "color": 7
+      },
+      "id": "sticky-setup",
+      "name": "Setup Instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, -240]
+    },
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 200]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "triage-bug",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook: Bug Report",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 380],
+      "webhookId": "bug-triage-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "const bugs = [\n  { id: 'BUG-2041', title: 'Dashboard fails to load when user has more than 200 projects', reporter: 'user@acme.com', description: 'When a workspace has more than 200 projects, the main dashboard page returns a 504 Gateway Timeout. This affects approximately 12 enterprise accounts. The error started appearing after the v2.4.1 deployment on July 12.', environment: 'production', browser: 'Chrome 126, Firefox 127', affected_users: 12, steps_to_reproduce: 'Create a workspace with 200+ projects, log in, navigate to dashboard' },\n  { id: 'BUG-2042', title: 'Task assignee dropdown loses selection on mobile Safari', reporter: 'support@acme.com', description: 'On iOS 17.4 with Safari, selecting an assignee from the dropdown in a task card resets to empty when the user scrolls the page. Does not occur on Chrome mobile.', environment: 'production', browser: 'Safari iOS 17.4', affected_users: null, steps_to_reproduce: 'Open a task on mobile Safari, tap assignee dropdown, select a user, scroll page' },\n  { id: 'BUG-2043', title: 'CSV export missing custom field columns', reporter: 'pm@acme.com', description: 'When exporting tasks to CSV, columns for custom fields (text, number, date) are missing from the exported file. Standard fields (title, due date, assignee) are present. This was working before the v2.4.0 release.', environment: 'production', browser: 'N/A', affected_users: null, steps_to_reproduce: 'Create a project with custom fields, add tasks with custom field values, export to CSV' }\n];\nreturn [{ json: { bugs, product: 'ProjectFlow', engineering_team_context: 'Three engineers on web, two on mobile, one on data/exports' } }];"
+      },
+      "id": "load-sample",
+      "name": "Load Sample Bug Reports",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { bugs, product, engineering_team_context } = $input.first().json;\nconst bugsText = bugs.map(b => `  [${b.id}] ${b.title}\\n  Reporter: ${b.reporter} | Env: ${b.environment} | Affected users: ${b.affected_users ?? 'unknown'}\\n  Description: ${b.description}\\n  Steps: ${b.steps_to_reproduce}`).join('\\n\\n');\nconst system = `You are a senior engineer performing bug triage for a SaaS product. You classify severity accurately (P0 = production down/data loss risk, P1 = major feature broken for many users, P2 = feature broken for some users/workaround exists, P3 = minor/cosmetic). You identify the engineering area, estimate reproduction difficulty, and suggest precise reproduction steps. Return ONLY valid JSON.`;\nconst user = `Triage these ${bugs.length} bug reports for: ${product}\\nEngineering context: ${engineering_team_context}\\n\\nBugs:\\n${bugsText}\\n\\nReturn JSON:\\n{\\n  \"triaged_bugs\": [\\n    {\\n      \"id\": \"string\",\\n      \"severity\": \"P0|P1|P2|P3\",\\n      \"severity_rationale\": \"string\",\\n      \"engineering_area\": \"string — e.g. backend/api, frontend/web, mobile/ios, data/exports\",\\n      \"likely_cause\": \"string — hypothesis about root cause\",\\n      \"reproduction_steps\": [\"string\"],\\n      \"reproduction_difficulty\": \"easy|medium|hard\",\\n      \"suggested_owner\": \"string — which team/role should own this\",\\n      \"workaround\": \"string|null\",\\n      \"regression\": true\\n    }\\n  ],\\n  \"triage_summary\": \"string — 2-3 sentences covering the most critical issue and overall health signal\"\\n}`;\nreturn [{ json: { bugs, product, system_prompt: system, user_prompt: user } }];"
+      },
+      "id": "prepare-prompt",
+      "name": "Prepare Triage Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [740, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.OPENAI_BASE_URL || 'https://api.openai.com' }}/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParameters": {
+          "parameters": [
+            { "name": "model", "value": "={{ $env.AI_MODEL || 'gpt-4o-mini' }}" },
+            { "name": "messages", "value": "=[{\"role\":\"system\",\"content\":\"{{ $json.system_prompt }}\"},{\"role\":\"user\",\"content\":\"{{ $json.user_prompt }}\"}]" },
+            { "name": "temperature", "value": "=0.1" },
+            { "name": "response_format", "value": "={\"type\":\"json_object\"}" }
+          ]
+        },
+        "options": { "timeout": 60000 }
+      },
+      "id": "llm-call",
+      "name": "LLM: Triage Bugs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [960, 200],
+      "credentials": { "httpHeaderAuth": { "name": "YOUR_OPENAI_CREDENTIAL" } }
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst upstream = $('Prepare Triage Prompt').first().json;\nlet parsed;\ntry {\n  const c = response.choices?.[0]?.message?.content;\n  if (!c) throw new Error('No content');\n  parsed = JSON.parse(c);\n} catch(e) { return [{ json: { _error: true, reason: e.message } }]; }\nif (!parsed.triaged_bugs || !Array.isArray(parsed.triaged_bugs)) return [{ json: { _error: true, reason: 'Missing triaged_bugs' } }];\nconst p0 = parsed.triaged_bugs.filter(b => b.severity === 'P0').length;\nreturn [{ json: { _error: false, triage: parsed, meta: { product: upstream.product, bug_count: upstream.bugs.length, p0_count: p0, generated_at: new Date().toISOString() } } }];"
+      },
+      "id": "validate-llm",
+      "name": "Validate LLM Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1180, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "ce", "leftValue": "={{ $json._error }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "error-check",
+      "name": "LLM Error?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1400, 200]
+    },
+    {
+      "parameters": { "assignments": { "assignments": [{ "id": "e1", "name": "status", "value": "error", "type": "string" }] }, "options": {} },
+      "id": "error-handler",
+      "name": "LLM Error Handler",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1600, 100]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { triage: t, meta: m } = $input.first().json;\nconst severityOrder = ['P0','P1','P2','P3'];\nconst sorted = [...(t.triaged_bugs||[])].sort((a,b) => severityOrder.indexOf(a.severity) - severityOrder.indexOf(b.severity));\nconst bugLines = sorted.map(b => [\n  `  [${b.severity}] ${b.id} | ${b.engineering_area} | Owner: ${b.suggested_owner}${b.regression?' [REGRESSION]':''}`,\n  `  Rationale: ${b.severity_rationale}`,\n  `  Likely cause: ${b.likely_cause}`,\n  `  Workaround: ${b.workaround || 'none'}`,\n  `  Repro (${b.reproduction_difficulty}): ${b.reproduction_steps.join(' → ')}`,\n  ''\n].join('\\n')).join('\\n');\nconst report = [\n  `BUG TRIAGE: ${m.product}`,\n  `Generated: ${m.generated_at} | Bugs: ${m.bug_count}${m.p0_count > 0 ? ' | ⚠️ P0 COUNT: '+m.p0_count : ''}`,\n  ``,\n  `SUMMARY: ${t.triage_summary}`,\n  ``,\n  `TRIAGED BUGS (severity order):`,\n  bugLines,\n].join('\\n');\nreturn [{ json: { ...($input.first().json), report_text: report } }];"
+      },
+      "id": "format-triage",
+      "name": "Format Triage Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1600, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.BUG_TRIAGE_APPROVER_EMAIL || $env.BUG_TRIAGE_EMAIL_TO }}",
+        "subject": "=APPROVAL REQUIRED: Bug Triage — {{ $json.meta.bug_count }} bugs{{ $json.meta.p0_count > 0 ? ' ⚠️ '+$json.meta.p0_count+' P0' : '' }}",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $json.report_text }}</pre><p><a href=\"{{ $execution.resumeUrl }}?decision=approved\">Approve and send to engineering</a> | <a href=\"{{ $execution.resumeUrl }}?decision=rejected\">Reject</a></p>",
+        "options": {}
+      },
+      "id": "send-approval",
+      "name": "Send for Approval",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1820, 300],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": { "resume": "webhook", "options": { "webhookSuffix": "/approval" } },
+      "id": "wait-approval",
+      "name": "Wait for Approval",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [2040, 300],
+      "webhookId": "bug-triage-approval"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "cd", "leftValue": "={{ $json.query?.decision || $json.body?.decision }}", "rightValue": "approved", "operator": { "type": "string", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-decision",
+      "name": "Approved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2260, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.BUG_TRIAGE_EMAIL_TO || 'engineering@acme-analytics.com' }}",
+        "subject": "=Bug Triage: {{ $('Format Triage Report').first().json.meta.bug_count }} bugs — {{ $('Format Triage Report').first().json.meta.product }}",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $('Format Triage Report').first().json.report_text }}</pre>",
+        "options": {}
+      },
+      "id": "send-triage",
+      "name": "Send Triage to Engineering",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [2480, 200],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": { "assignments": { "assignments": [{ "id": "r1", "name": "status", "value": "rejected", "type": "string" }] }, "options": {} },
+      "id": "log-rejection",
+      "name": "Log Rejection",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2480, 400]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": { "main": [[{ "node": "Load Sample Bug Reports", "type": "main", "index": 0 }]] },
+    "Webhook: Bug Report": { "main": [[{ "node": "Prepare Triage Prompt", "type": "main", "index": 0 }]] },
+    "Load Sample Bug Reports": { "main": [[{ "node": "Prepare Triage Prompt", "type": "main", "index": 0 }]] },
+    "Prepare Triage Prompt": { "main": [[{ "node": "LLM: Triage Bugs", "type": "main", "index": 0 }]] },
+    "LLM: Triage Bugs": { "main": [[{ "node": "Validate LLM Output", "type": "main", "index": 0 }]] },
+    "Validate LLM Output": { "main": [[{ "node": "LLM Error?", "type": "main", "index": 0 }]] },
+    "LLM Error?": { "main": [[{ "node": "LLM Error Handler", "type": "main", "index": 0 }], [{ "node": "Format Triage Report", "type": "main", "index": 0 }]] },
+    "Format Triage Report": { "main": [[{ "node": "Send for Approval", "type": "main", "index": 0 }]] },
+    "Send for Approval": { "main": [[{ "node": "Wait for Approval", "type": "main", "index": 0 }]] },
+    "Wait for Approval": { "main": [[{ "node": "Approved?", "type": "main", "index": 0 }]] },
+    "Approved?": { "main": [[{ "node": "Send Triage to Engineering", "type": "main", "index": 0 }], [{ "node": "Log Rejection", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1", "saveManualExecutions": true, "callerPolicy": "workflowsFromSameOwner", "errorWorkflow": "" },
+  "staticData": null,
+  "tags": ["engineering", "reliability", "bugs", "triage", "beta"],
+  "triggerCount": 0,
+  "updatedAt": "2026-07-14T00:00:00.000Z",
+  "versionId": "81-bug-triage-assistant-v0.1.0"
+}

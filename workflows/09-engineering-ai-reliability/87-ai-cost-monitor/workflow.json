@@ -1,0 +1,145 @@
+{
+  "name": "AI Cost Monitor",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## AI Cost Monitor\n\n**Setup:**\n1. Create YOUR_SMTP_CREDENTIAL\n2. Set AI_COST_EMAIL_TO and spending limits\n3. Feed usage data from OpenAI API or internal tracking\n4. Code nodes compute costs per model, per workflow, budget burn rate — no LLM needed\n5. Approval gate before cost report is distributed",
+        "height": 240,
+        "width": 400,
+        "color": 7
+      },
+      "id": "sticky-setup",
+      "name": "Setup Instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, -240]
+    },
+    {
+      "parameters": { "rule": { "interval": [{ "field": "weeks", "triggerAtDay": [1], "triggerAtHour": 9 }] } },
+      "id": "cron-trigger",
+      "name": "Weekly Schedule (Monday 9am)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 200]
+    },
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 380]
+    },
+    {
+      "parameters": {
+        "jsCode": "// In production: call GET https://api.openai.com/v1/usage to get real usage data\n// Sample week of AI cost data across workflows\nconst usage_data = [\n  { workflow: '72-survey-response-analyser', model: 'gpt-4o-mini', input_tokens: 45200, output_tokens: 12800, calls: 34, period: 'week' },\n  { workflow: '78-synthesis-report-builder', model: 'gpt-4o', input_tokens: 38000, output_tokens: 22000, calls: 8, period: 'week' },\n  { workflow: '81-bug-triage-assistant', model: 'gpt-4o-mini', input_tokens: 18600, output_tokens: 5400, calls: 42, period: 'week' },\n  { workflow: '74-persona-generator', model: 'gpt-4o', input_tokens: 22000, output_tokens: 14000, calls: 6, period: 'week' }\n];\nconst budget_config = {\n  weekly_budget_usd: 25.00,\n  alert_threshold_pct: 80,\n  per_workflow_budget_usd: 10.00\n};\nconst pricing = { 'gpt-4o-mini': { input: 0.000150, output: 0.000600 }, 'gpt-4o': { input: 0.005, output: 0.015 } }; // per 1k tokens\nreturn [{ json: { usage_data, budget_config, pricing, period: 'week', period_start: '2026-07-07', period_end: '2026-07-13' } }];"
+      },
+      "id": "load-usage",
+      "name": "Load AI Usage Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 280]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { usage_data, budget_config, pricing, period_start, period_end } = $input.first().json;\nconst per_workflow = usage_data.map(u => {\n  const p = pricing[u.model] || { input: 0.001, output: 0.002 };\n  const cost = (u.input_tokens / 1000 * p.input) + (u.output_tokens / 1000 * p.output);\n  const over_budget = cost > budget_config.per_workflow_budget_usd;\n  return { ...u, cost_usd: parseFloat(cost.toFixed(4)), over_budget };\n});\nconst total_cost = per_workflow.reduce((s,w) => s + w.cost_usd, 0);\nconst budget_pct = (total_cost / budget_config.weekly_budget_usd) * 100;\nconst alert = budget_pct >= budget_config.alert_threshold_pct;\nconst model_totals = {};\nper_workflow.forEach(w => { model_totals[w.model] = (model_totals[w.model] || 0) + w.cost_usd; });\nconst sorted = [...per_workflow].sort((a,b) => b.cost_usd - a.cost_usd);\nreturn [{ json: { per_workflow: sorted, model_totals, total_cost: parseFloat(total_cost.toFixed(4)), budget_config, budget_pct: parseFloat(budget_pct.toFixed(1)), alert, period: { start: period_start, end: period_end }, generated_at: new Date().toISOString() } }];"
+      },
+      "id": "compute-costs",
+      "name": "Compute AI Costs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [740, 280]
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $input.first().json;\nconst wfLines = d.per_workflow.map(w => `  ${w.over_budget?'⚠️':'  '} ${w.workflow} [${w.model}]: $${w.cost_usd} (${w.calls} calls, ${(w.input_tokens+w.output_tokens).toLocaleString()} tokens)${w.over_budget?' OVER BUDGET':''}`).join('\\n');\nconst modelLines = Object.entries(d.model_totals).map(([m,c])=>`  ${m}: $${c.toFixed(4)}`).join('\\n');\nconst report = [\n  `AI COST REPORT: ${d.period.start} → ${d.period.end}`,\n  `Generated: ${d.generated_at}`,\n  ``,\n  `TOTAL COST: $${d.total_cost} / $${d.budget_config.weekly_budget_usd} weekly budget (${d.budget_pct}%)${d.alert ? ' ⚠️ ALERT: above '+d.budget_config.alert_threshold_pct+'% threshold' : ''}`,\n  ``,\n  `BY WORKFLOW (highest cost first):`,\n  wfLines,\n  ``,\n  `BY MODEL:`,\n  modelLines,\n].join('\\n');\nreturn [{ json: { ...($input.first().json), report_text: report } }];"
+      },
+      "id": "format-report",
+      "name": "Format Cost Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [960, 280]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.AI_COST_APPROVER_EMAIL || $env.AI_COST_EMAIL_TO }}",
+        "subject": "=APPROVAL REQUIRED: AI Cost Report — ${{ $json.total_cost }} spent ({{ $json.budget_pct }}% of budget){{ $json.alert ? ' ⚠️' : '' }}",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $json.report_text }}</pre><p><a href=\"{{ $execution.resumeUrl }}?decision=approved\">Approve and distribute</a> | <a href=\"{{ $execution.resumeUrl }}?decision=rejected\">Reject</a></p>",
+        "options": {}
+      },
+      "id": "send-approval",
+      "name": "Send for Approval",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1180, 280],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": { "resume": "webhook", "options": { "webhookSuffix": "/approval" } },
+      "id": "wait-approval",
+      "name": "Wait for Approval",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [1400, 280],
+      "webhookId": "ai-cost-approval"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "cd", "leftValue": "={{ $json.query?.decision || $json.body?.decision }}", "rightValue": "approved", "operator": { "type": "string", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-decision",
+      "name": "Approved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1620, 280]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.AI_COST_EMAIL_TO || 'engineering@acme-analytics.com' }}",
+        "subject": "=AI Cost Report: ${{ $('Format Cost Report').first().json.total_cost }} — {{ $('Format Cost Report').first().json.period.start }}",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $('Format Cost Report').first().json.report_text }}</pre>",
+        "options": {}
+      },
+      "id": "send-report",
+      "name": "Distribute Cost Report",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1840, 180],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": { "assignments": { "assignments": [{ "id": "r1", "name": "status", "value": "rejected", "type": "string" }] }, "options": {} },
+      "id": "log-rejection",
+      "name": "Log Rejection",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1840, 380]
+    }
+  ],
+  "connections": {
+    "Weekly Schedule (Monday 9am)": { "main": [[{ "node": "Load AI Usage Data", "type": "main", "index": 0 }]] },
+    "Manual Trigger": { "main": [[{ "node": "Load AI Usage Data", "type": "main", "index": 0 }]] },
+    "Load AI Usage Data": { "main": [[{ "node": "Compute AI Costs", "type": "main", "index": 0 }]] },
+    "Compute AI Costs": { "main": [[{ "node": "Format Cost Report", "type": "main", "index": 0 }]] },
+    "Format Cost Report": { "main": [[{ "node": "Send for Approval", "type": "main", "index": 0 }]] },
+    "Send for Approval": { "main": [[{ "node": "Wait for Approval", "type": "main", "index": 0 }]] },
+    "Wait for Approval": { "main": [[{ "node": "Approved?", "type": "main", "index": 0 }]] },
+    "Approved?": { "main": [[{ "node": "Distribute Cost Report", "type": "main", "index": 0 }], [{ "node": "Log Rejection", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1", "saveManualExecutions": true, "callerPolicy": "workflowsFromSameOwner", "errorWorkflow": "" },
+  "staticData": null,
+  "tags": ["engineering", "reliability", "ai", "cost", "beta"],
+  "triggerCount": 0,
+  "updatedAt": "2026-07-14T00:00:00.000Z",
+  "versionId": "87-ai-cost-monitor-v0.1.0"
+}

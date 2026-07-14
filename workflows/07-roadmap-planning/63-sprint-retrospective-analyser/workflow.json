@@ -1,0 +1,218 @@
+{
+  "name": "Sprint Retrospective Analyser",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Sprint Retrospective Analyser\n\n**Setup:**\n1. Create YOUR_OPENAI_CREDENTIAL and YOUR_SMTP_CREDENTIAL\n2. Set RETRO_EMAIL_TO\n3. Trigger manually after each sprint or connect to your retro board tool via webhook\n4. LLM clusters items into went-well / improve / action themes\n5. Approval gate before results go to the team",
+        "height": 280,
+        "width": 440,
+        "color": 5
+      },
+      "id": "sticky-setup",
+      "name": "Setup Instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, -260]
+    },
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 200]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "retro-analyse",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook: Post-Sprint Retro",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 380],
+      "webhookId": "retro-analyse-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = [\n  { id: 'r001', category: 'went_well', text: 'Pair programming sessions improved code quality significantly' },\n  { id: 'r002', category: 'went_well', text: 'Daily standups were short and focused — under 15 minutes every day' },\n  { id: 'r003', category: 'went_well', text: 'We shipped the onboarding flow on time and under budget' },\n  { id: 'r004', category: 'went_well', text: 'Design reviews were earlier in the sprint — fewer last-minute changes' },\n  { id: 'r005', category: 'went_well', text: 'Team communication in Slack channels improved vs last sprint' },\n  { id: 'r006', category: 'to_improve', text: 'Ticket estimates were consistently off — most took 2x longer than planned' },\n  { id: 'r007', category: 'to_improve', text: 'Too many context switches — engineers were pulled into meetings mid-task' },\n  { id: 'r008', category: 'to_improve', text: 'QA was bottlenecked in the last 2 days of the sprint' },\n  { id: 'r009', category: 'to_improve', text: 'Unclear acceptance criteria on 4 of 12 tickets caused rework' },\n  { id: 'r010', category: 'to_improve', text: 'We had no buffer for unexpected bugs from production' },\n  { id: 'r011', category: 'action', text: 'Add 10% buffer to all estimates next sprint' },\n  { id: 'r012', category: 'action', text: 'PM to write acceptance criteria before sprint planning — not during' },\n  { id: 'r013', category: 'action', text: 'Block 2 hours per engineer per day as focus time (no meetings)' },\n  { id: 'r014', category: 'action', text: 'QA to start testing on day 5, not day 8 of a 10-day sprint' }\n];\nreturn [{ json: { items, sprint: 'Sprint 23', team: 'Product Engineering', total: items.length } }];"
+      },
+      "id": "load-sample",
+      "name": "Load Sample Retro Items",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { items, sprint, team } = $input.first().json;\nconst byCategory = {};\nfor (const item of items) {\n  byCategory[item.category] = byCategory[item.category] || [];\n  byCategory[item.category].push(item.text);\n}\nconst format = (cat) => (byCategory[cat] || []).map((t, i) => `  [${i+1}] ${t}`).join('\\n');\nconst system = `You are a sprint coach helping a product engineering team extract actionable patterns from their retrospective. Identify recurring themes, not just list items. Be specific. Return ONLY valid JSON.`;\nconst user = `Analyse these ${items.length} retrospective items from ${sprint} (${team}) and produce a structured retrospective report.\n\nWENT WELL:\n${format('went_well')}\n\nTO IMPROVE:\n${format('to_improve')}\n\nACTIONS:\n${format('action')}\n\nReturn JSON:\n{\n  \"went_well_themes\": [{ \"theme\": \"string\", \"items_count\": 2, \"key_insight\": \"string\" }],\n  \"improvement_themes\": [{ \"theme\": \"string\", \"items_count\": 2, \"root_cause\": \"string\", \"recurring\": true }],\n  \"prioritised_actions\": [{ \"action\": \"string\", \"owner\": \"string or 'team'\", \"by_when\": \"next sprint | this week | ongoing\", \"addresses_theme\": \"string\" }],\n  \"team_health_signal\": \"improving|stable|declining\",\n  \"team_health_rationale\": \"string\",\n  \"patterns_to_watch\": [\"string\"]\n}`;\nreturn [{ json: { items, sprint, team, system_prompt: system, user_prompt: user } }];"
+      },
+      "id": "prepare-prompt",
+      "name": "Prepare Analysis Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [740, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.OPENAI_BASE_URL || 'https://api.openai.com' }}/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParameters": {
+          "parameters": [
+            { "name": "model", "value": "={{ $env.AI_MODEL || 'gpt-4o-mini' }}" },
+            { "name": "messages", "value": "=[{\"role\":\"system\",\"content\":\"{{ $json.system_prompt }}\"},{\"role\":\"user\",\"content\":\"{{ $json.user_prompt }}\"}]" },
+            { "name": "temperature", "value": "=0.3" },
+            { "name": "response_format", "value": "={\"type\":\"json_object\"}" }
+          ]
+        },
+        "options": { "timeout": 60000 }
+      },
+      "id": "llm-call",
+      "name": "LLM: Analyse Retro",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [960, 200],
+      "credentials": { "httpHeaderAuth": { "name": "YOUR_OPENAI_CREDENTIAL" } }
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst upstream = $('Prepare Analysis Prompt').first().json;\nlet parsed;\ntry {\n  const content = response.choices?.[0]?.message?.content;\n  if (!content) throw new Error('No content');\n  parsed = JSON.parse(content);\n} catch(e) { return [{ json: { _error: true, reason: e.message } }]; }\nconst req = ['went_well_themes', 'improvement_themes', 'prioritised_actions'];\nconst missing = req.filter(k => !parsed[k]);\nif (missing.length) return [{ json: { _error: true, reason: `Missing: ${missing.join(',')}` } }];\nreturn [{ json: { _error: false, analysis: parsed, meta: { sprint: upstream.sprint, team: upstream.team, total: upstream.items.length, generated_at: new Date().toISOString() } } }];"
+      },
+      "id": "validate-llm",
+      "name": "Validate LLM Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1180, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "ce", "leftValue": "={{ $json._error }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "error-check",
+      "name": "LLM Error?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1400, 200]
+    },
+    {
+      "parameters": {
+        "assignments": { "assignments": [{ "id": "e1", "name": "status", "value": "error", "type": "string" }] },
+        "options": {}
+      },
+      "id": "error-handler",
+      "name": "LLM Error Handler",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1620, 100]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { analysis: a, meta: m } = $input.first().json;\nconst report = [\n  `SPRINT RETROSPECTIVE — ${m.sprint} | ${m.team}`,\n  `Items analysed: ${m.total} | Generated: ${m.generated_at}`,\n  `Team health signal: ${a.team_health_signal?.toUpperCase()} — ${a.team_health_rationale}`,\n  ``,\n  `WENT WELL (themes):`,\n  (a.went_well_themes||[]).map(t => `  ✓ ${t.theme} (${t.items_count} items)\\n    Insight: ${t.key_insight}`).join('\\n'),\n  ``,\n  `TO IMPROVE (themes):`,\n  (a.improvement_themes||[]).map(t => `  ✗ ${t.theme} (${t.items_count} items)${t.recurring?' [RECURRING]':''}\\n    Root cause: ${t.root_cause}`).join('\\n'),\n  ``,\n  `PRIORITISED ACTIONS FOR NEXT SPRINT:`,\n  (a.prioritised_actions||[]).map(ac => `  → ${ac.action}\\n    Owner: ${ac.owner} | By: ${ac.by_when} | Addresses: ${ac.addresses_theme}`).join('\\n'),\n  ``,\n  `PATTERNS TO WATCH:`,\n  (a.patterns_to_watch||[]).map(p => `  - ${p}`).join('\\n'),\n].join('\\n');\nreturn [{ json: { ...($input.first().json), report_text: report } }];"
+      },
+      "id": "format-report",
+      "name": "Format Retro Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1620, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.RETRO_EMAIL_TO || 'team@acme-analytics.com' }}",
+        "subject": "=APPROVAL REQUIRED: {{ $json.meta.sprint }} Retrospective Analysis",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $json.report_text }}</pre><p><a href=\"{{ $execution.resumeUrl }}?decision=approved\">Approve and share with team</a> | <a href=\"{{ $execution.resumeUrl }}?decision=rejected\">Reject</a></p>",
+        "options": {}
+      },
+      "id": "send-approval",
+      "name": "Send for Approval",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1840, 300],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": { "resume": "webhook", "options": { "webhookSuffix": "/approval" } },
+      "id": "wait-approval",
+      "name": "Wait for Approval",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [2060, 300],
+      "webhookId": "retro-analyser-approval"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "cd", "leftValue": "={{ $json.query?.decision || $json.body?.decision }}", "rightValue": "approved", "operator": { "type": "string", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-decision",
+      "name": "Approved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2280, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.RETRO_EMAIL_TO || 'team@acme-analytics.com' }}",
+        "subject": "={{ $('Format Retro Report').first().json.meta.sprint }} Retrospective Summary",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $('Format Retro Report').first().json.report_text }}</pre>",
+        "options": {}
+      },
+      "id": "send-report",
+      "name": "Send to Team",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [2500, 200],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": {
+        "assignments": { "assignments": [{ "id": "r1", "name": "status", "value": "rejected", "type": "string" }] },
+        "options": {}
+      },
+      "id": "log-rejection",
+      "name": "Log Rejection",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2500, 400]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": { "main": [[{ "node": "Load Sample Retro Items", "type": "main", "index": 0 }]] },
+    "Webhook: Post-Sprint Retro": { "main": [[{ "node": "Prepare Analysis Prompt", "type": "main", "index": 0 }]] },
+    "Load Sample Retro Items": { "main": [[{ "node": "Prepare Analysis Prompt", "type": "main", "index": 0 }]] },
+    "Prepare Analysis Prompt": { "main": [[{ "node": "LLM: Analyse Retro", "type": "main", "index": 0 }]] },
+    "LLM: Analyse Retro": { "main": [[{ "node": "Validate LLM Output", "type": "main", "index": 0 }]] },
+    "Validate LLM Output": { "main": [[{ "node": "LLM Error?", "type": "main", "index": 0 }]] },
+    "LLM Error?": { "main": [[{ "node": "LLM Error Handler", "type": "main", "index": 0 }], [{ "node": "Format Retro Report", "type": "main", "index": 0 }]] },
+    "Format Retro Report": { "main": [[{ "node": "Send for Approval", "type": "main", "index": 0 }]] },
+    "Send for Approval": { "main": [[{ "node": "Wait for Approval", "type": "main", "index": 0 }]] },
+    "Wait for Approval": { "main": [[{ "node": "Approved?", "type": "main", "index": 0 }]] },
+    "Approved?": { "main": [[{ "node": "Send to Team", "type": "main", "index": 0 }], [{ "node": "Log Rejection", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1", "saveManualExecutions": true, "callerPolicy": "workflowsFromSameOwner", "errorWorkflow": "" },
+  "staticData": null,
+  "tags": ["roadmap", "planning", "retrospective", "beta"],
+  "triggerCount": 0,
+  "updatedAt": "2026-07-14T00:00:00.000Z",
+  "versionId": "63-sprint-retrospective-analyser-v0.1.0"
+}

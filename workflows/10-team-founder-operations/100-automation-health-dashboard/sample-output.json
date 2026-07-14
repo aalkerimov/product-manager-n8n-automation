@@ -1,0 +1,33 @@
+{
+  "_comment": "Deterministic output. 9 workflows, 111 total runs, 6 errors = 94.6% pass rate.",
+  "metrics": {
+    "total_workflows": 9,
+    "total_executions": 111,
+    "total_errors": 6,
+    "pass_rate": 94.6,
+    "total_minutes_saved": 1350,
+    "total_hours_saved": 22.5
+  },
+  "failing": [
+    { "name": "Bug Triage Assistant", "collection": "09-engineering", "executions": 23, "errors": 3, "error_rate_pct": 13.0 },
+    { "name": "LLM Prompt Regression Tester", "collection": "09-engineering", "executions": 12, "errors": 2, "error_rate_pct": 16.7 },
+    { "name": "Competitor Radar", "collection": "06-market-intel", "executions": 7, "errors": 1, "error_rate_pct": 14.3 }
+  ],
+  "most_active": [
+    { "name": "User Feedback Classifier", "executions": 47 },
+    { "name": "Bug Triage Assistant", "executions": 23 },
+    { "name": "LLM Prompt Regression Tester", "executions": 12 }
+  ],
+  "highest_savings": [
+    { "name": "User Feedback Classifier", "minutes_saved": 235 },
+    { "name": "Dependency Deprecation Watcher", "minutes_saved": 175 },
+    { "name": "LLM Prompt Regression Tester", "minutes_saved": 360 }
+  ],
+  "by_collection": {
+    "09-engineering": { "runs": 49, "errors": 5 },
+    "01-user-research": { "runs": 47, "errors": 0 },
+    "06-market-intel": { "runs": 7, "errors": 1 },
+    "03-retention": { "runs": 7, "errors": 0 },
+    "10-team": { "runs": 1, "errors": 0 }
+  }
+}

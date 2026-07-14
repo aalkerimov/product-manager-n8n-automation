@@ -1,0 +1,10 @@
+{
+  "services": [
+    { "name": "ProjectFlow Web App", "sla_target_pct": 99.9, "uptime_minutes": 10069, "total_minutes": 10080, "incidents": [{ "id": "INC-089", "start": "2026-07-12T08:43:00Z", "end": "2026-07-12T09:30:00Z", "duration_minutes": 47, "severity": "P0", "description": "Dashboard timeout — enterprise accounts" }] },
+    { "name": "ProjectFlow API", "sla_target_pct": 99.95, "uptime_minutes": 10069, "total_minutes": 10080, "incidents": [{ "id": "INC-089", "start": "2026-07-12T08:43:00Z", "end": "2026-07-12T09:30:00Z", "duration_minutes": 47, "severity": "P0", "description": "Same root cause as Web App" }] },
+    { "name": "Webhook Delivery", "sla_target_pct": 99.5, "uptime_minutes": 10080, "total_minutes": 10080, "incidents": [] },
+    { "name": "Data Export Service", "sla_target_pct": 99.0, "uptime_minutes": 10050, "total_minutes": 10080, "incidents": [{ "id": "INC-090", "start": "2026-07-09T14:00:00Z", "end": "2026-07-09T14:30:00Z", "duration_minutes": 30, "severity": "P2", "description": "CSV export errors after v2.4.0" }] }
+  ],
+  "period": { "start": "2026-07-07", "end": "2026-07-13", "period_type": "week" },
+  "product": "ProjectFlow"
+}

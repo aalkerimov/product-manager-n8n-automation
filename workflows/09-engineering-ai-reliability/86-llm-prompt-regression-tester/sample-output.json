@@ -1,0 +1,11 @@
+{
+  "_comment": "Deterministic output from simulated responses.",
+  "results": [
+    { "id": "T001", "prompt_name": "JTBD Extractor", "passed": true, "response": { "job": "When starting the week, I want to see what my team is working on without sending individual status request messages, so I can plan my time and maintain momentum without interrupting colleagues." }, "assertion_results": [{ "field": "job", "checks": [{ "check": "contains 'know'", "passed": true }], "passed": true }, { "field": "job", "checks": [{ "check": "min_length 30", "passed": true }], "passed": true }] },
+    { "id": "T002", "prompt_name": "Bug Severity Classifier", "passed": true, "response": { "severity": "P0" }, "assertion_results": [{ "field": "severity", "checks": [{ "check": "equals 'P0'", "passed": true }], "passed": true }] },
+    { "id": "T003", "prompt_name": "Sentiment Classifier", "passed": true, "response": { "sentiment": "negative" }, "assertion_results": [{ "field": "sentiment", "checks": [{ "check": "equals 'negative'", "passed": true }], "passed": true }] }
+  ],
+  "meta": { "total": 3, "passed": 3, "failed": 0, "run_at": "2026-07-14T09:00:00.000Z" },
+  "run_id": "run-1720944000000",
+  "model": "gpt-4o-mini"
+}

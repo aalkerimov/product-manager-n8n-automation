@@ -1,0 +1,19 @@
+{
+  "_comment": "config.example.json for Technology Trend Radar",
+  "workflow_id": "56-technology-trend-radar",
+  "workflow_name": "Technology Trend Radar",
+  "collection": "06-strategy-market-intelligence",
+  "status": "beta",
+  "configuration": {
+    "TREND_EMAIL_TO": { "default": "", "description": "Weekly digest recipient", "required": "Required" },
+    "TREND_DOMAINS": { "default": "AI, developer tools, data infrastructure", "description": "Your technology domain focus — used in LLM prompt to focus analysis", "required": "Required" },
+    "TREND_SCHEDULE": { "default": "0 8 * * 5", "description": "Weekly cron (default: Friday 08:00)", "required": "Optional" },
+    "AI_MODEL": { "default": "gpt-4o-mini", "description": "LLM model", "required": "Required" },
+    "OPENAI_BASE_URL": { "default": "https://api.openai.com", "description": "LLM base URL", "required": "Optional" },
+    "NOTIFICATION_EMAIL_FROM": { "default": "automation@acme-analytics.com", "description": "Sender address", "required": "Optional" }
+  },
+  "n8n_credentials_required": [
+    { "name": "YOUR_OPENAI_CREDENTIAL", "type": "httpHeaderAuth", "required": true, "purpose": "LLM digest generation" },
+    { "name": "YOUR_SMTP_CREDENTIAL", "type": "smtp", "required": true, "purpose": "Approval and digest delivery" }
+  ]
+}

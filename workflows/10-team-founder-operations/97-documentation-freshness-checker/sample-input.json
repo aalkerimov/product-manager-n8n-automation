@@ -1,0 +1,12 @@
+{
+  "docs": [
+    { "title": "Product Roadmap — Q3 2026", "owner": "Head of Product", "category": "strategy", "last_updated": "2026-07-01", "stale_threshold_days": 14 },
+    { "title": "API Authentication Guide", "owner": "Maria Santos", "category": "technical", "last_updated": "2026-04-15", "stale_threshold_days": 60 },
+    { "title": "Onboarding Flow Spec", "owner": "Head of Product", "category": "product", "last_updated": "2026-02-20", "stale_threshold_days": 30 },
+    { "title": "Design System Components", "owner": "James Kim", "category": "design", "last_updated": "2026-06-28", "stale_threshold_days": 30 },
+    { "title": "Sprint Retro Template", "owner": "Alex Chen", "category": "process", "last_updated": "2026-07-05", "stale_threshold_days": 90 },
+    { "title": "Incident Response Runbook", "owner": "Maria Santos", "category": "operations", "last_updated": "2026-01-10", "stale_threshold_days": 30 },
+    { "title": "Pricing & Packaging Overview", "owner": "Head of Product", "category": "strategy", "last_updated": "2026-05-01", "stale_threshold_days": 60 }
+  ],
+  "today": "2026-07-14"
+}

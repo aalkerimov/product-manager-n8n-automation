@@ -1,0 +1,30 @@
+{
+  "_comment": "Deterministic output. Sofia is Day 14. All milestones due by Day 14 are either completed or due today.",
+  "reports": [
+    {
+      "name": "Sofia Park",
+      "role": "Junior Frontend Engineer",
+      "manager": "Alex Chen",
+      "start_date": "2026-06-30",
+      "days_in_role": 14,
+      "week_in_role": 2,
+      "pct_complete": 57,
+      "completed": 4,
+      "total": 7,
+      "overdue_items": [],
+      "next_due": { "name": "Complete first independent task (PM-assigned)", "due_day": 14, "due_date": "2026-07-14" },
+      "milestones": [
+        { "name": "Complete IT setup", "due_day": 1, "completed": true, "completed_date": "2026-06-30", "due_date": "2026-07-01", "overdue": false, "days_overdue": 0 },
+        { "name": "Meet entire team", "due_day": 3, "completed": true, "completed_date": "2026-07-02", "due_date": "2026-07-03", "overdue": false, "days_overdue": 0 },
+        { "name": "Read product onboarding docs", "due_day": 5, "completed": true, "completed_date": "2026-07-04", "due_date": "2026-07-05", "overdue": false, "days_overdue": 0 },
+        { "name": "First PR submitted", "due_day": 10, "completed": true, "completed_date": "2026-07-09", "due_date": "2026-07-10", "overdue": false, "days_overdue": 0 },
+        { "name": "Complete first independent task (PM-assigned)", "due_day": 14, "completed": false, "completed_date": null, "due_date": "2026-07-14", "overdue": false, "days_overdue": 0 },
+        { "name": "30-day check-in with manager", "due_day": 30, "completed": false, "completed_date": null, "due_date": "2026-07-30", "overdue": false, "days_overdue": 0 },
+        { "name": "Ship first user-facing feature", "due_day": 45, "completed": false, "completed_date": null, "due_date": "2026-08-14", "overdue": false, "days_overdue": 0 }
+      ],
+      "manager_notes": "Sofia is integrating well. First PR merged independently. Gaining confidence quickly.",
+      "buddy": "James Kim"
+    }
+  ],
+  "meta": { "hire_count": 1, "total_overdue": 0 }
+}

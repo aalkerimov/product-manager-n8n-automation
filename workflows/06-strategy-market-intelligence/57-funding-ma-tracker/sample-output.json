@@ -1,0 +1,16 @@
+{
+  "_comment": "Illustrative output. Actual LLM output will vary.",
+  "analysis": {
+    "event_assessments": [
+      { "id": "e001", "company": "CompetitorX", "event_type": "funding", "significance": "high", "positioning_implications": "An $80M Series C from Sequoia and a16z signals CompetitorX is entering aggressive enterprise expansion. Expect: higher outbound SDR volume, enterprise-tier pricing bundling, and possible free tier reduction to push users to paid.", "estimated_timeline_impact": "Sales motion change likely in 3-6 months. Enterprise tier launch: 6-12 months.", "recommended_response": "Brief sales team immediately. Update battlecard. Prioritise SOC 2 certification if not done." },
+      { "id": "e002", "company": "CompetitorY", "event_type": "acquisition", "significance": "medium", "positioning_implications": "DataMesh acquisition adds native data pipeline connectors to CompetitorY. This closes a gap vs our native integration strength. Impact depends on how fast they ship the integration.", "estimated_timeline_impact": "Integration likely 9-18 months to reach GA. Monitor their release blog monthly.", "recommended_response": "Track DataMesh integration shipping velocity. Reinforce our current integration depth in mid-market sales collateral." },
+      { "id": "e003", "company": "CompetitorX", "event_type": "key_hire", "significance": "high", "positioning_implications": "A VP Enterprise Sales from Salesforce is the clearest possible signal of upmarket motion. She will bring Salesforce-style MEDDIC qualification and enterprise sales process. Expect larger deal sizes, longer sales cycles, and more formal RFP competition.", "estimated_timeline_impact": "Full enterprise motion ramping in 6-9 months. First impact in competitive deals within 3 months.", "recommended_response": "Alert enterprise sales reps. Build enterprise-specific ROI calculator and competitive position one-pager." },
+      { "id": "e004", "company": "NewEntrant Co", "event_type": "funding", "significance": "low", "positioning_implications": "Seed-stage AI-native entrant. Too early to assess impact. Worth monitoring if they show strong traction at 12 months.", "estimated_timeline_impact": "No near-term deal impact expected.", "recommended_response": "Add to watch list. Review again in Q4." }
+    ],
+    "aggregate_signal": "CompetitorX is executing a clear upmarket pivot — Series C + VP Enterprise Sales hire in the same week is not a coincidence. This accelerates the timeline on which they will be a serious competitor in enterprise deals. CompetitorY is quietly strengthening integrations. A new AI-native entrant at seed stage is worth monitoring but poses no near-term threat.",
+    "our_biggest_risk": "CompetitorX's enterprise motion will make us look like an SMB tool unless we accelerate SOC 2 and enterprise-tier positioning in the next 6 months.",
+    "our_biggest_opportunity": "CompetitorX's pivot upmarket may cause them to de-prioritise SMB. This opens a window to capture mid-market accounts that feel underserved.",
+    "confidence": "high"
+  },
+  "meta": { "period": "week of 2026-07-07 to 2026-07-14", "total": 4, "generated_at": "2026-07-14T09:00:00.000Z" }
+}

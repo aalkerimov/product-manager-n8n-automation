@@ -1,0 +1,6 @@
+[
+  { "id": "e001", "type": "funding", "company": "CompetitorX", "amount_usd": 80000000, "round": "Series C", "investors": ["Sequoia", "Andreessen Horowitz"], "date": "2026-07-10", "source": "TechCrunch", "url": "https://example.com/competitorx-series-c", "notes": "Plans to expand sales team and launch enterprise tier." },
+  { "id": "e002", "type": "acquisition", "company": "CompetitorY", "acquired": "DataMesh Inc", "price_usd": 12000000, "date": "2026-07-08", "source": "Crunchbase", "url": "https://example.com/competitory-datamesh", "notes": "DataMesh builds data pipeline tooling. Likely adds native connectors to CompetitorY product." },
+  { "id": "e003", "type": "key_hire", "company": "CompetitorX", "hire_name": "Sarah Chen", "hire_role": "VP Enterprise Sales (from Salesforce)", "date": "2026-07-07", "source": "LinkedIn", "url": "https://example.com/competitorx-vp-hire", "notes": "Chen scaled Salesforce enterprise motion from $10M to $150M ARR." },
+  { "id": "e004", "type": "funding", "company": "NewEntrant Co", "amount_usd": 5000000, "round": "Seed", "investors": ["YCombinator"], "date": "2026-07-06", "source": "YC", "url": "https://example.com/newentrant-seed", "notes": "Building AI-native project management. YC S26. 200 waitlist signups." }
+]

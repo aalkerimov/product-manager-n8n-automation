@@ -1,0 +1,45 @@
+{
+  "_comment": "Sample pricing snapshots — current vs previous week. CompetitorX has changes; CompetitorY does not.",
+  "snapshots": [
+    {
+      "competitor": "CompetitorX",
+      "url": "https://competitorx.com/pricing",
+      "previous": {
+        "captured_at": "2026-07-07",
+        "plans": [
+          { "name": "Starter", "price_monthly": 29, "price_annual_monthly": 24, "features": ["5 users", "10 projects", "Basic reporting"] },
+          { "name": "Pro", "price_monthly": 79, "price_annual_monthly": 65, "features": ["25 users", "Unlimited projects", "Advanced reporting", "API access"] },
+          { "name": "Enterprise", "price_monthly": null, "price_annual_monthly": null, "features": ["Unlimited users", "SSO", "SLA", "Custom contract"], "contact_sales": true }
+        ]
+      },
+      "current": {
+        "captured_at": "2026-07-14",
+        "plans": [
+          { "name": "Starter", "price_monthly": 29, "price_annual_monthly": 24, "features": ["5 users", "10 projects", "Basic reporting"] },
+          { "name": "Pro", "price_monthly": 63, "price_annual_monthly": 52, "features": ["25 users", "Unlimited projects", "Advanced reporting", "API access", "AI assistant (beta)"] },
+          { "name": "Enterprise", "price_monthly": null, "price_annual_monthly": null, "features": ["Unlimited users", "SSO", "SLA", "Custom contract"], "contact_sales": true }
+        ]
+      }
+    },
+    {
+      "competitor": "CompetitorY",
+      "url": "https://competitory.com/pricing",
+      "previous": {
+        "captured_at": "2026-07-07",
+        "plans": [
+          { "name": "Free", "price_monthly": 0, "price_annual_monthly": 0, "features": ["3 users", "5 projects"] },
+          { "name": "Growth", "price_monthly": 49, "price_annual_monthly": 39, "features": ["15 users", "Unlimited projects"] },
+          { "name": "Business", "price_monthly": 129, "price_annual_monthly": 99, "features": ["50 users", "Analytics", "Priority support"] }
+        ]
+      },
+      "current": {
+        "captured_at": "2026-07-14",
+        "plans": [
+          { "name": "Free", "price_monthly": 0, "price_annual_monthly": 0, "features": ["3 users", "5 projects"] },
+          { "name": "Growth", "price_monthly": 49, "price_annual_monthly": 39, "features": ["15 users", "Unlimited projects"] },
+          { "name": "Business", "price_monthly": 129, "price_annual_monthly": 99, "features": ["50 users", "Analytics", "Priority support"] }
+        ]
+      }
+    }
+  ]
+}

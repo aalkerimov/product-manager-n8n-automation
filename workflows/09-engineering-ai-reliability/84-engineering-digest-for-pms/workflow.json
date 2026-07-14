@@ -1,0 +1,206 @@
+{
+  "name": "Engineering Digest for PMs",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Engineering Digest for PMs\n\n**Setup:**\n1. Create YOUR_OPENAI_CREDENTIAL and YOUR_SMTP_CREDENTIAL\n2. Set DIGEST_EMAIL_TO and configure weekly schedule\n3. Feed engineering activity (PRs, incidents, deployments) or use sample\n4. LLM translates engineering activity into a PM-readable weekly digest\n5. Approval gate before digest is distributed",
+        "height": 240,
+        "width": 400,
+        "color": 7
+      },
+      "id": "sticky-setup",
+      "name": "Setup Instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, -240]
+    },
+    {
+      "parameters": { "rule": { "interval": [{ "field": "weeks", "triggerAtDay": [5], "triggerAtHour": 9 }] } },
+      "id": "cron-trigger",
+      "name": "Weekly Schedule (Friday 9am)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 200]
+    },
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 380]
+    },
+    {
+      "parameters": {
+        "jsCode": "const week = 'Week of July 7–11, 2026';\nconst activity = {\n  week,\n  deployments: [\n    { version: 'v2.4.1', date: 'July 12', type: 'patch', summary: 'Fixed dashboard timeout for workspaces with 200+ projects. Resolved mobile Safari assignee dropdown reset. Emergency patch triggered by BUG-2041.' },\n    { version: 'v2.4.0', date: 'July 8', type: 'minor', summary: 'Shipped custom fields v2 (text, number, date types). Refactored CSV export pipeline. Added project template library.' }\n  ],\n  incidents: [\n    { id: 'INC-089', severity: 'P0', title: 'Dashboard 504 timeout — 12 enterprise accounts', duration_minutes: 47, resolved: true, root_cause: 'Missing query limit in dashboard projects endpoint introduced in v2.4.1' }\n  ],\n  prs_merged: [\n    { id: 'PR-1847', title: 'Migrate auth middleware to async bcrypt', author: 'Backend team', area: 'backend/auth' },\n    { id: 'PR-1851', title: 'Add memoisation to TaskList component', author: 'Frontend team', area: 'frontend/performance' },\n    { id: 'PR-1855', title: 'Add task dependency graph endpoint', author: 'Backend team', area: 'backend/api' }\n  ],\n  upcoming_this_week: 'v2.5.0 planned — includes recurring tasks discoverability redesign (3 FE engineers, estimate 5 days)'\n};\nreturn [{ json: { activity } }];"
+      },
+      "id": "load-sample",
+      "name": "Load Sample Engineering Activity",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 280]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { activity: a } = $input.first().json;\nconst depText = a.deployments.map(d => `  ${d.version} (${d.type}, ${d.date}): ${d.summary}`).join('\\n');\nconst incText = a.incidents.map(i => `  [${i.severity}] ${i.title} — ${i.duration_minutes}min, ${i.resolved?'RESOLVED':'ONGOING'}. Root cause: ${i.root_cause}`).join('\\n');\nconst prText = a.prs_merged.map(p => `  ${p.id}: ${p.title} (${p.area})`).join('\\n');\nconst system = `You are an engineering lead writing a weekly digest for a non-technical PM. You translate engineering activity into clear business language: what shipped, what broke and is fixed, what engineering is doing that matters for the roadmap. You are concise, avoid jargon, and always connect engineering work to product and customer outcomes. Return ONLY valid JSON.`;\nconst user = `Write a PM-readable engineering digest for: ${a.week}\\n\\nDeployments:\\n${depText}\\n\\nIncidents:\\n${incText}\\n\\nPRs merged:\\n${prText}\\n\\nUpcoming:\\n${a.upcoming_this_week}\\n\\nReturn JSON:\\n{\\n  \"digest_title\": \"string\",\\n  \"tldr\": \"string — 2 sentences max: what PMs most need to know this week\",\\n  \"what_shipped\": [{ \"item\": \"string\", \"customer_impact\": \"string\" }],\\n  \"what_broke_and_is_fixed\": [{ \"incident\": \"string\", \"customer_impact\": \"string\", \"status\": \"resolved|ongoing\" }],\\n  \"what_engineering_is_doing\": [{ \"work\": \"string\", \"why_it_matters\": \"string\" }],\\n  \"next_week_preview\": \"string\",\\n  \"action_required_from_pm\": \"string|null\"\\n}`;\nreturn [{ json: { activity: a, system_prompt: system, user_prompt: user } }];"
+      },
+      "id": "prepare-prompt",
+      "name": "Prepare Digest Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [740, 280]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.OPENAI_BASE_URL || 'https://api.openai.com' }}/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParameters": {
+          "parameters": [
+            { "name": "model", "value": "={{ $env.AI_MODEL || 'gpt-4o-mini' }}" },
+            { "name": "messages", "value": "=[{\"role\":\"system\",\"content\":\"{{ $json.system_prompt }}\"},{\"role\":\"user\",\"content\":\"{{ $json.user_prompt }}\"}]" },
+            { "name": "temperature", "value": "=0.3" },
+            { "name": "response_format", "value": "={\"type\":\"json_object\"}" }
+          ]
+        },
+        "options": { "timeout": 60000 }
+      },
+      "id": "llm-call",
+      "name": "LLM: Write Digest",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [960, 280],
+      "credentials": { "httpHeaderAuth": { "name": "YOUR_OPENAI_CREDENTIAL" } }
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst upstream = $('Prepare Digest Prompt').first().json;\nlet parsed;\ntry {\n  const c = response.choices?.[0]?.message?.content;\n  if (!c) throw new Error('No content');\n  parsed = JSON.parse(c);\n} catch(e) { return [{ json: { _error: true, reason: e.message } }]; }\nif (!parsed.tldr) return [{ json: { _error: true, reason: 'Missing tldr field' } }];\nreturn [{ json: { _error: false, digest: parsed, meta: { week: upstream.activity.week, generated_at: new Date().toISOString() } } }];"
+      },
+      "id": "validate-llm",
+      "name": "Validate LLM Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1180, 280]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "ce", "leftValue": "={{ $json._error }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "error-check",
+      "name": "LLM Error?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1400, 280]
+    },
+    {
+      "parameters": { "assignments": { "assignments": [{ "id": "e1", "name": "status", "value": "error", "type": "string" }] }, "options": {} },
+      "id": "error-handler",
+      "name": "LLM Error Handler",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1600, 180]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { digest: d, meta: m } = $input.first().json;\nconst fmt = (arr, fn) => (arr||[]).map(fn).join('\\n') || '  (none)';\nconst report = [\n  d.digest_title,\n  `Generated: ${m.generated_at}`,\n  ``,\n  `TL;DR: ${d.tldr}`,\n  ``,\n  `WHAT SHIPPED:`,\n  fmt(d.what_shipped, s => `  • ${s.item}\\n    Customer impact: ${s.customer_impact}`),\n  ``,\n  `WHAT BROKE & IS FIXED:`,\n  fmt(d.what_broke_and_is_fixed, i => `  • ${i.incident} [${i.status.toUpperCase()}]\\n    Customer impact: ${i.customer_impact}`),\n  ``,\n  `WHAT ENGINEERING IS DOING:`,\n  fmt(d.what_engineering_is_doing, w => `  • ${w.work}\\n    Why it matters: ${w.why_it_matters}`),\n  ``,\n  `NEXT WEEK: ${d.next_week_preview}`,\n  d.action_required_from_pm ? `\\nACTION REQUIRED FROM PM: ${d.action_required_from_pm}` : '',\n].join('\\n');\nreturn [{ json: { ...($input.first().json), report_text: report } }];"
+      },
+      "id": "format-digest",
+      "name": "Format Digest",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1600, 380]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.DIGEST_APPROVER_EMAIL || $env.DIGEST_EMAIL_TO }}",
+        "subject": "=APPROVAL REQUIRED: Engineering Digest — {{ $json.meta.week }}",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $json.report_text }}</pre><p><a href=\"{{ $execution.resumeUrl }}?decision=approved\">Approve and distribute</a> | <a href=\"{{ $execution.resumeUrl }}?decision=rejected\">Reject</a></p>",
+        "options": {}
+      },
+      "id": "send-approval",
+      "name": "Send for Approval",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1820, 380],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": { "resume": "webhook", "options": { "webhookSuffix": "/approval" } },
+      "id": "wait-approval",
+      "name": "Wait for Approval",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [2040, 380],
+      "webhookId": "digest-approval"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "cd", "leftValue": "={{ $json.query?.decision || $json.body?.decision }}", "rightValue": "approved", "operator": { "type": "string", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-decision",
+      "name": "Approved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2260, 380]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.DIGEST_EMAIL_TO || 'product@acme-analytics.com' }}",
+        "subject": "=Engineering Digest: {{ $('Format Digest').first().json.meta.week }}",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $('Format Digest').first().json.report_text }}</pre>",
+        "options": {}
+      },
+      "id": "send-digest",
+      "name": "Distribute Digest",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [2480, 280],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": { "assignments": { "assignments": [{ "id": "r1", "name": "status", "value": "rejected", "type": "string" }] }, "options": {} },
+      "id": "log-rejection",
+      "name": "Log Rejection",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2480, 480]
+    }
+  ],
+  "connections": {
+    "Weekly Schedule (Friday 9am)": { "main": [[{ "node": "Load Sample Engineering Activity", "type": "main", "index": 0 }]] },
+    "Manual Trigger": { "main": [[{ "node": "Load Sample Engineering Activity", "type": "main", "index": 0 }]] },
+    "Load Sample Engineering Activity": { "main": [[{ "node": "Prepare Digest Prompt", "type": "main", "index": 0 }]] },
+    "Prepare Digest Prompt": { "main": [[{ "node": "LLM: Write Digest", "type": "main", "index": 0 }]] },
+    "LLM: Write Digest": { "main": [[{ "node": "Validate LLM Output", "type": "main", "index": 0 }]] },
+    "Validate LLM Output": { "main": [[{ "node": "LLM Error?", "type": "main", "index": 0 }]] },
+    "LLM Error?": { "main": [[{ "node": "LLM Error Handler", "type": "main", "index": 0 }], [{ "node": "Format Digest", "type": "main", "index": 0 }]] },
+    "Format Digest": { "main": [[{ "node": "Send for Approval", "type": "main", "index": 0 }]] },
+    "Send for Approval": { "main": [[{ "node": "Wait for Approval", "type": "main", "index": 0 }]] },
+    "Wait for Approval": { "main": [[{ "node": "Approved?", "type": "main", "index": 0 }]] },
+    "Approved?": { "main": [[{ "node": "Distribute Digest", "type": "main", "index": 0 }], [{ "node": "Log Rejection", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1", "saveManualExecutions": true, "callerPolicy": "workflowsFromSameOwner", "errorWorkflow": "" },
+  "staticData": null,
+  "tags": ["engineering", "reliability", "digest", "weekly", "beta"],
+  "triggerCount": 0,
+  "updatedAt": "2026-07-14T00:00:00.000Z",
+  "versionId": "84-engineering-digest-for-pms-v0.1.0"
+}

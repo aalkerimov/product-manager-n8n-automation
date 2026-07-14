@@ -1,0 +1,11 @@
+{
+  "checks": [
+    { "table": "events.page_views", "check_type": "freshness", "description": "Last row inserted more than 4 hours ago", "threshold_hours": 4, "actual_hours_since_last": 6.2, "passed": false },
+    { "table": "events.page_views", "check_type": "volume", "description": "Row count dropped >30% vs 7-day average", "threshold_pct_drop": 30, "actual_pct_drop": 41, "passed": false },
+    { "table": "users.accounts", "check_type": "completeness", "description": "NULL rate in email column above 2%", "threshold_null_pct": 2, "actual_null_pct": 0.3, "passed": true },
+    { "table": "billing.transactions", "check_type": "uniqueness", "description": "Duplicate transaction_id rows", "threshold_duplicate_pct": 0, "actual_duplicate_pct": 0, "passed": true },
+    { "table": "nps.responses", "check_type": "freshness", "description": "Last NPS import older than 25 hours", "threshold_hours": 25, "actual_hours_since_last": 18, "passed": true },
+    { "table": "product.feature_flags", "check_type": "completeness", "description": "NULL rate in enabled column", "threshold_null_pct": 0, "actual_null_pct": 0, "passed": true }
+  ],
+  "product": "ProjectFlow Analytics"
+}

@@ -1,0 +1,136 @@
+{
+  "name": "Discovery Session Scheduler",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Discovery Session Scheduler\n\n**Setup:**\n1. Create YOUR_SMTP_CREDENTIAL\n2. Set SCHEDULER_EMAIL_TO and SCHEDULER_RESEARCHER_EMAIL\n3. Feed a list of participants with timezones and availability\n4. Code nodes compute scheduling recommendations — no LLM required\n5. Approval gate before session invitations are sent to participants",
+        "height": 240,
+        "width": 400,
+        "color": 5
+      },
+      "id": "sticky-setup",
+      "name": "Setup Instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, -240]
+    },
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const study = {\n  study_name: 'Mid-Market PM Adoption Study — Q3 2026',\n  session_duration_minutes: 45,\n  buffer_minutes: 15,\n  researcher_timezone: 'UTC+0',\n  preferred_windows_utc: [\n    { day: 'Monday', from: '10:00', to: '16:00' },\n    { day: 'Tuesday', from: '10:00', to: '16:00' },\n    { day: 'Wednesday', from: '09:00', to: '12:00' },\n    { day: 'Thursday', from: '13:00', to: '17:00' }\n  ],\n  target_sessions: 6,\n  scheduling_horizon_weeks: 3\n};\nconst participants = [\n  { id: 'A001', name: 'Participant A', email: 'a@example.com', timezone: 'UTC+2', available_days: ['Monday', 'Tuesday', 'Thursday'], preferred_time: 'morning' },\n  { id: 'A003', name: 'Participant C', email: 'c@example.com', timezone: 'UTC+0', available_days: ['Monday', 'Wednesday', 'Friday'], preferred_time: 'afternoon' },\n  { id: 'A005', name: 'Participant E', email: 'e@example.com', timezone: 'UTC-8', available_days: ['Tuesday', 'Thursday'], preferred_time: 'morning' }\n];\nreturn [{ json: { study, participants } }];"
+      },
+      "id": "load-sample",
+      "name": "Load Sample Session Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { study, participants } = $input.first().json;\n// Compute session schedule deterministically\nconst dayOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];\n\nconst tzOffset = (tz) => {\n  const m = tz.match(/UTC([+-])(\\d+)/);\n  if (!m) return 0;\n  return (m[1] === '+' ? 1 : -1) * parseInt(m[2]);\n};\n\nconst researcherOffset = tzOffset(study.researcher_timezone);\n\nconst sessions = [];\nconst unscheduled = [];\n\nfor (const p of participants) {\n  const pOffset = tzOffset(p.timezone);\n  const diffHours = researcherOffset - pOffset; // positive = participant is behind researcher\n  \n  // Find overlapping days\n  const overlappingDays = study.preferred_windows_utc\n    .filter(w => p.available_days.includes(w.day))\n    .map(w => {\n      // Convert researcher window to participant local time\n      const fromH = parseInt(w.from.split(':')[0]);\n      const toH = parseInt(w.to.split(':')[0]);\n      const pFromH = fromH + diffHours;\n      const pToH = toH + diffHours;\n      return { day: w.day, researcher_window_utc: `${w.from}–${w.to} UTC`, participant_local: `${pFromH}:00–${pToH}:00 ${p.timezone}` };\n    })\n    .filter(w => {\n      const h = parseInt(w.participant_local.split(':')[0]);\n      return h >= 7 && h <= 18; // reasonable hours\n    });\n  \n  if (overlappingDays.length === 0) {\n    unscheduled.push({ ...p, reason: 'No overlapping availability within reasonable hours' });\n  } else {\n    const best = overlappingDays[0];\n    sessions.push({\n      participant_id: p.id,\n      participant_name: p.name,\n      participant_email: p.email,\n      participant_timezone: p.timezone,\n      suggested_day: best.day,\n      researcher_window_utc: best.researcher_window_utc,\n      participant_local_time: best.participant_local,\n      session_duration_minutes: study.session_duration_minutes,\n      status: 'to_confirm'\n    });\n  }\n}\n\nreturn [{ json: { study, sessions, unscheduled, meta: { scheduled: sessions.length, unscheduled: unscheduled.length, total: participants.length, generated_at: new Date().toISOString() } } }];"
+      },
+      "id": "compute-schedule",
+      "name": "Compute Session Schedule",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [740, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { study, sessions, unscheduled, meta } = $input.first().json;\nconst sessionLines = sessions.map(s =>\n  `  [TO CONFIRM] ${s.participant_id} | ${s.suggested_day} | ${s.researcher_window_utc} | Participant sees: ${s.participant_local_time} | ${s.session_duration_minutes} min`\n).join('\\n');\nconst unschLines = unscheduled.map(u =>\n  `  [UNSCHEDULED] ${u.id} | ${u.reason}`\n).join('\\n');\nconst report = [\n  `DISCOVERY SESSION SCHEDULE: ${study.study_name}`,\n  `Generated: ${meta.generated_at}`,\n  `Scheduled: ${meta.scheduled} | Unscheduled: ${meta.unscheduled} | Target: ${study.target_sessions}`,\n  `Session duration: ${study.session_duration_minutes} min + ${study.buffer_minutes} min buffer`,\n  `Researcher timezone: ${study.researcher_timezone}`,\n  ``,\n  `SESSIONS TO CONFIRM:`,\n  sessionLines || '  (none)',\n  ``,\n  `UNSCHEDULED PARTICIPANTS:`,\n  unschLines || '  (none)',\n  ``,\n  `NEXT STEP: Review and confirm sessions, then send Calendly/invite links to each participant.`,\n].join('\\n');\nreturn [{ json: { ...($input.first().json), report_text: report } }];"
+      },
+      "id": "format-schedule",
+      "name": "Format Schedule Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [960, 200]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.SCHEDULER_APPROVER_EMAIL || $env.SCHEDULER_RESEARCHER_EMAIL }}",
+        "subject": "=APPROVAL REQUIRED: Session Schedule — {{ $json.study.study_name }} ({{ $json.meta.scheduled }} sessions)",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $json.report_text }}</pre><p><a href=\"{{ $execution.resumeUrl }}?decision=approved\">Approve — send invitations</a> | <a href=\"{{ $execution.resumeUrl }}?decision=rejected\">Reject</a></p>",
+        "options": {}
+      },
+      "id": "send-approval",
+      "name": "Send for Approval",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1180, 200],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": { "resume": "webhook", "options": { "webhookSuffix": "/approval" } },
+      "id": "wait-approval",
+      "name": "Wait for Approval",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [1400, 200],
+      "webhookId": "session-scheduler-approval"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "cd", "leftValue": "={{ $json.query?.decision || $json.body?.decision }}", "rightValue": "approved", "operator": { "type": "string", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-decision",
+      "name": "Approved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1620, 200]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.SCHEDULER_RESEARCHER_EMAIL || $env.SCHEDULER_EMAIL_TO }}",
+        "subject": "=Session Schedule Confirmed: {{ $('Load Sample Session Data').first().json.study.study_name }}",
+        "emailType": "html",
+        "message": "=<p>Schedule approved. Send calendar invites / Calendly links to each participant per the confirmed schedule.</p><pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $('Format Schedule Report').first().json.report_text }}</pre>",
+        "options": {}
+      },
+      "id": "send-schedule",
+      "name": "Send Schedule to Researcher",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1840, 100],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": { "assignments": { "assignments": [{ "id": "r1", "name": "status", "value": "rejected", "type": "string" }] }, "options": {} },
+      "id": "log-rejection",
+      "name": "Log Rejection",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1840, 300]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": { "main": [[{ "node": "Load Sample Session Data", "type": "main", "index": 0 }]] },
+    "Load Sample Session Data": { "main": [[{ "node": "Compute Session Schedule", "type": "main", "index": 0 }]] },
+    "Compute Session Schedule": { "main": [[{ "node": "Format Schedule Report", "type": "main", "index": 0 }]] },
+    "Format Schedule Report": { "main": [[{ "node": "Send for Approval", "type": "main", "index": 0 }]] },
+    "Send for Approval": { "main": [[{ "node": "Wait for Approval", "type": "main", "index": 0 }]] },
+    "Wait for Approval": { "main": [[{ "node": "Approved?", "type": "main", "index": 0 }]] },
+    "Approved?": { "main": [[{ "node": "Send Schedule to Researcher", "type": "main", "index": 0 }], [{ "node": "Log Rejection", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1", "saveManualExecutions": true, "callerPolicy": "workflowsFromSameOwner", "errorWorkflow": "" },
+  "staticData": null,
+  "tags": ["research", "discovery", "scheduling", "beta"],
+  "triggerCount": 0,
+  "updatedAt": "2026-07-14T00:00:00.000Z",
+  "versionId": "80-discovery-session-scheduler-v0.1.0"
+}

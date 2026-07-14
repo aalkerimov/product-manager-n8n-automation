@@ -1,0 +1,27 @@
+{
+  "_comment": "Illustrative output. CompetitorY has no changes and is skipped. CompetitorX has 3 changes.",
+  "diffs": [
+    {
+      "competitor": "CompetitorX",
+      "url": "https://competitorx.com/pricing",
+      "changes": [
+        { "type": "price_change", "plan": "Pro", "direction": "decrease", "prev_price": 79, "new_price": 63, "pct_change": -20 },
+        { "type": "price_change", "plan": "Pro (annual)", "direction": "decrease", "prev_price": 65, "new_price": 52, "pct_change": -20 },
+        { "type": "feature_added", "plan": "Pro", "feature": "AI assistant (beta)" }
+      ],
+      "has_changes": true,
+      "previous_date": "2026-07-07",
+      "current_date": "2026-07-14"
+    },
+    { "competitor": "CompetitorY", "url": "https://competitory.com/pricing", "changes": [], "has_changes": false, "previous_date": "2026-07-07", "current_date": "2026-07-14" }
+  ],
+  "total_changes": 3,
+  "analysis": {
+    "change_summaries": [
+      { "competitor": "CompetitorX", "headline": "CompetitorX cut Pro plan price by 20% ($79→$63/mo) and added an AI assistant to the plan in the same week", "implication": "This is a deliberate competitive move — price cut + AI feature together positions them as cheaper AND more capable. In mid-market deals where Pro is the comparison point, we will face pricing pressure immediately. Their AI feature is beta and limited, but it will come up in demos.", "recommended_response": "Update sales team today. Add CompetitorX pricing comparison to battlecard. Prepare a rebuttal for their AI assistant claim (beta, limited). Consider whether to match the price reduction or defend value.", "urgency": "immediate" }
+    ],
+    "aggregate_assessment": "CompetitorX's simultaneous price cut and feature addition is a coordinated competitive move, likely timed to their Series C announcement. This is the most significant competitive pricing event in the last 6 months. CompetitorY made no changes. Alert the sales team today — do not let this arrive via a prospect.",
+    "confidence": "high"
+  },
+  "run_at": "2026-07-14T09:00:00.000Z"
+}

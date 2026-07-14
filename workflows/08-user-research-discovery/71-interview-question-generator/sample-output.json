@@ -1,0 +1,76 @@
+{
+  "_comment": "Illustrative LLM output. Actual question wording will vary.",
+  "guide": {
+    "interview_title": "Mid-Market PM Adoption Research — Switching & Onboarding",
+    "estimated_duration_minutes": 45,
+    "research_goal": "Understand why mid-market project managers switch from incumbent tools to ours, and what barriers prevent full adoption after signing",
+    "screener_questions": [
+      "Are you the primary or co-owner of project management tool selection at your company?",
+      "Have you been using our product for 3-6 months after switching from Asana or Monday.com?",
+      "Are you working in a company with 50-500 employees?"
+    ],
+    "warm_up_questions": [
+      "Tell me a bit about your role and the types of projects you typically manage.",
+      "What does a typical Monday morning look like for you in terms of project work?"
+    ],
+    "sections": [
+      {
+        "section_title": "Switching motivation",
+        "section_goal": "Understand what drove the decision to switch tools",
+        "estimated_time_minutes": 8,
+        "questions": [
+          { "question": "Tell me about how you came to be using [our product] — what led up to that decision?", "type": "open", "probes": ["What was happening at the time that made you look at alternatives?", "Who else was involved in the decision?", "What would have had to happen for you to stay with your previous tool?"] },
+          { "question": "What specifically about your previous tool was getting in the way?", "type": "open", "probes": ["Can you give me a concrete example of a time it caused a problem?", "How long had that been an issue before you acted on it?"] }
+        ]
+      },
+      {
+        "section_title": "Onboarding experience",
+        "section_goal": "Understand the quality and friction of the first weeks",
+        "estimated_time_minutes": 8,
+        "questions": [
+          { "question": "Walk me through what happened in your first week after signing up.", "type": "open", "probes": ["What did you try first?", "Was there a moment where you felt stuck or confused?", "What did you do when that happened?"] },
+          { "question": "When did you first feel like the tool was working for you the way you expected?", "type": "open", "probes": ["What changed?", "Was there a specific thing you did or discovered that made it click?"] }
+        ]
+      },
+      {
+        "section_title": "Daily workflow fit",
+        "section_goal": "Understand how the tool integrates into day-to-day work",
+        "estimated_time_minutes": 8,
+        "questions": [
+          { "question": "Describe how you use the tool on a typical day.", "type": "open", "probes": ["Which parts do you use most?", "Are there things you do outside the tool that you wish you could do inside it?"] },
+          { "question": "Tell me about a time in the last month when the tool really helped you.", "type": "open", "probes": ["And is there a time when it frustrated you or got in your way?", "How did you work around it?"] }
+        ]
+      },
+      {
+        "section_title": "Collaboration with non-PM stakeholders",
+        "section_goal": "Understand how other roles interact with the tool",
+        "estimated_time_minutes": 8,
+        "questions": [
+          { "question": "Tell me about how your colleagues — engineers, designers, or executives — use the tool.", "type": "open", "probes": ["Who uses it most consistently? Who resists?", "What do those who resist typically say?"] },
+          { "question": "How do you share project status with stakeholders who aren't in the tool every day?", "type": "open", "probes": ["Do you export anything? Send manual updates? What tool do you use for that?"] }
+        ]
+      },
+      {
+        "section_title": "Blockers to full team adoption",
+        "section_goal": "Identify what is preventing broader usage across the team",
+        "estimated_time_minutes": 8,
+        "questions": [
+          { "question": "Thinking about your broader team — would you say everyone is fully using the tool, or is adoption partial?", "type": "open", "probes": ["What's stopping the people who aren't using it?", "Have you tried to get them on board? What happened?"] },
+          { "question": "If you could change one thing about how the tool works that would make adoption easier, what would it be?", "type": "hypothetical", "probes": ["Why is that the thing that would make the biggest difference?"] }
+        ]
+      }
+    ],
+    "closing_questions": [
+      "If you were recommending this tool to a friend who manages projects at a similar company, how would you describe it?",
+      "Is there anything about your experience we haven't talked about that you think would be useful for us to understand?",
+      "If you could only keep one thing about this tool, what would it be — and what would you be fine to give up?"
+    ],
+    "do_not_ask": [
+      "Avoid: 'Would you use feature X if we built it?' — leads to false positives",
+      "Avoid: 'Do you like our product?' — evaluative framing",
+      "Avoid: Any question that implies our product is better than their previous tool — let them volunteer comparisons"
+    ],
+    "analysis_framework": "Use affinity mapping across interviews. Group insights by theme: switching triggers, onboarding moments of delight vs friction, workflow integration gaps, collaboration barriers, adoption blockers. Flag quotes that appear in 3+ interviews as strong signals."
+  },
+  "meta": { "research_goal": "Understand switching motivation and adoption barriers", "participant_profile": "Mid-market PM, 3-6 months, ex-Asana/Monday", "generated_at": "2026-07-14T09:00:00.000Z" }
+}

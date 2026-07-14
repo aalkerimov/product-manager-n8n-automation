@@ -1,0 +1,206 @@
+{
+  "name": "Weekly Priorities Planner",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Weekly Priorities Planner\n\n**Setup:**\n1. Create YOUR_OPENAI_CREDENTIAL and YOUR_SMTP_CREDENTIAL\n2. Set PRIORITIES_EMAIL_TO\n3. Fill in this week's context: OKRs, backlog items, commitments, meetings\n4. LLM produces a ranked weekly priority plan with time allocation\n5. Approval gate before the plan is sent to team",
+        "height": 240,
+        "width": 400,
+        "color": 4
+      },
+      "id": "sticky-setup",
+      "name": "Setup Instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, -240]
+    },
+    {
+      "parameters": { "rule": { "interval": [{ "field": "weeks", "triggerAtDay": [1], "triggerAtHour": 7 }] } },
+      "id": "cron-trigger",
+      "name": "Weekly Schedule (Monday 7am)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 200]
+    },
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 380]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: {\n  week: 'July 14–18, 2026',\n  role: 'Head of Product',\n  okrs_this_quarter: [\n    'OKR1: Reduce time-to-first-value from 14 days to 7 days (KR: 60% of new signups complete onboarding in ≤7 days)',\n    'OKR2: Improve NPS from 38 to 50 (KR: NPS ≥50 by EoQ)',\n    'OKR3: Launch recurring tasks feature (KR: GA release by July 31)'\n  ],\n  top_backlog_items: [\n    { id: 'P-412', title: 'Recurring tasks: final QA pass and smoke test', estimate: '1d', urgency: 'high', linked_okr: 'OKR3' },\n    { id: 'P-421', title: 'Onboarding flow redesign: review Figma mockups with design', estimate: '2h', urgency: 'high', linked_okr: 'OKR1' },\n    { id: 'P-389', title: 'Write spec for bulk task actions (v1)', estimate: '3h', urgency: 'medium', linked_okr: 'OKR2' },\n    { id: 'P-401', title: 'Review user research synthesis from Q3 study', estimate: '1.5h', urgency: 'medium', linked_okr: 'OKR1' },\n    { id: 'P-415', title: 'Stakeholder update deck for board prep', estimate: '2h', urgency: 'high', linked_okr: null }\n  ],\n  committed_deliverables: [\n    'Recurring tasks release notes final draft by Wednesday',\n    'Board deck draft to CEO by Friday'\n  ],\n  key_meetings: [\n    { day: 'Monday', meeting: 'Sprint planning 2h', type: 'engineering' },\n    { day: 'Tuesday', meeting: 'Customer discovery call 1h', type: 'research' },\n    { day: 'Thursday', meeting: 'CEO 1:1 30m', type: 'internal' },\n    { day: 'Friday', meeting: 'Team retro 1h', type: 'team' }\n  ],\n  focus_hours_available: 20,\n  last_week_carry_over: 'Spec for bulk actions was not started last week'\n} }];"
+      },
+      "id": "load-context",
+      "name": "Load Weekly Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 280]
+    },
+    {
+      "parameters": {
+        "jsCode": "const ctx = $input.first().json;\nconst okrText = ctx.okrs_this_quarter.map((o,i) => `  ${o}`).join('\\n');\nconst backlogText = ctx.top_backlog_items.map(b => `  [${b.urgency.toUpperCase()}] ${b.id}: ${b.title} (${b.estimate})${b.linked_okr ? ' → '+b.linked_okr : ''}`).join('\\n');\nconst commitText = ctx.committed_deliverables.map(c => `  • ${c}`).join('\\n');\nconst mtgText = ctx.key_meetings.map(m => `  ${m.day}: ${m.meeting}`).join('\\n');\nconst system = `You are an executive coach and product leadership advisor. You help PMs prioritise their week with ruthless clarity: what to do, what to defer, what to delegate, and how to protect focus time. You always tie priorities back to OKRs and flag risks. Return ONLY valid JSON.`;\nconst user = `Create a weekly priority plan for: ${ctx.role} | ${ctx.week}\\nAvailable focus hours: ${ctx.focus_hours_available}h\\n\\nOKRs this quarter:\\n${okrText}\\n\\nTop backlog items:\\n${backlogText}\\n\\nCommitted deliverables:\\n${commitText}\\n\\nKey meetings (already scheduled):\\n${mtgText}\\n\\nCarry-over from last week: ${ctx.last_week_carry_over}\\n\\nReturn JSON:\\n{\\n  \"weekly_theme\": \"string — a 5-10 word statement of what this week is about\",\\n  \"top_3_priorities\": [\\n    {\\n      \"rank\": 1,\\n      \"item\": \"string\",\\n      \"why_this_week\": \"string\",\\n      \"linked_okr\": \"string|null\",\\n      \"estimated_hours\": 3,\\n      \"suggested_day\": \"string\"\\n    }\\n  ],\\n  \"defer_list\": [{\"item\": \"string\", \"reason\": \"string\"}],\\n  \"delegate_list\": [{\"item\": \"string\", \"to\": \"string\", \"reason\": \"string\"}],\\n  \"risks_this_week\": [\"string\"],\\n  \"focus_time_allocation\": {\"okr_work_hours\": 12, \"admin_hours\": 4, \"meetings_hours\": 4},\\n  \"end_of_week_success_criteria\": [\"string\"]\\n}`;\nreturn [{ json: { ctx, system_prompt: system, user_prompt: user } }];"
+      },
+      "id": "prepare-prompt",
+      "name": "Prepare Planning Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [740, 280]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.OPENAI_BASE_URL || 'https://api.openai.com' }}/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParameters": {
+          "parameters": [
+            { "name": "model", "value": "={{ $env.AI_MODEL || 'gpt-4o-mini' }}" },
+            { "name": "messages", "value": "=[{\"role\":\"system\",\"content\":\"{{ $json.system_prompt }}\"},{\"role\":\"user\",\"content\":\"{{ $json.user_prompt }}\"}]" },
+            { "name": "temperature", "value": "=0.4" },
+            { "name": "response_format", "value": "={\"type\":\"json_object\"}" }
+          ]
+        },
+        "options": { "timeout": 60000 }
+      },
+      "id": "llm-call",
+      "name": "LLM: Generate Priority Plan",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [960, 280],
+      "credentials": { "httpHeaderAuth": { "name": "YOUR_OPENAI_CREDENTIAL" } }
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst upstream = $('Prepare Planning Prompt').first().json;\nlet parsed;\ntry {\n  const c = response.choices?.[0]?.message?.content;\n  if (!c) throw new Error('No content');\n  parsed = JSON.parse(c);\n} catch(e) { return [{ json: { _error: true, reason: e.message } }]; }\nif (!parsed.top_3_priorities || !Array.isArray(parsed.top_3_priorities)) return [{ json: { _error: true, reason: 'Missing top_3_priorities' } }];\nreturn [{ json: { _error: false, plan: parsed, ctx: upstream.ctx, meta: { week: upstream.ctx.week, generated_at: new Date().toISOString() } } }];"
+      },
+      "id": "validate-llm",
+      "name": "Validate LLM Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1180, 280]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "ce", "leftValue": "={{ $json._error }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "error-check",
+      "name": "LLM Error?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1400, 280]
+    },
+    {
+      "parameters": { "assignments": { "assignments": [{ "id": "e1", "name": "status", "value": "error", "type": "string" }] }, "options": {} },
+      "id": "error-handler",
+      "name": "LLM Error Handler",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1600, 180]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { plan: p, ctx, meta: m } = $input.first().json;\nconst top3 = p.top_3_priorities.map(t => `  [#${t.rank}] ${t.item}\\n  Why this week: ${t.why_this_week}\\n  OKR: ${t.linked_okr||'n/a'} | Est: ${t.estimated_hours}h | Day: ${t.suggested_day}`).join('\\n\\n');\nconst defer = (p.defer_list||[]).map(d => `  • ${d.item} — ${d.reason}`).join('\\n');\nconst delegate = (p.delegate_list||[]).map(d => `  • ${d.item} → ${d.to}: ${d.reason}`).join('\\n');\nconst alloc = p.focus_time_allocation;\nconst report = [\n  `WEEKLY PLAN: ${ctx.week} | ${ctx.role}`,\n  `Theme: \"${p.weekly_theme}\"`,\n  `Generated: ${m.generated_at}`,\n  ``,\n  `TOP 3 PRIORITIES:`,\n  top3,\n  ``,\n  `DEFER:`,\n  defer || '  (none)',\n  ``,\n  `DELEGATE:`,\n  delegate || '  (none)',\n  ``,\n  `TIME ALLOCATION: OKR work ${alloc.okr_work_hours}h | Meetings ${alloc.meetings_hours}h | Admin ${alloc.admin_hours}h`,\n  ``,\n  `RISKS: ${(p.risks_this_week||[]).join(' | ')}`,\n  ``,\n  `END-OF-WEEK SUCCESS CRITERIA:`,\n  ...(p.end_of_week_success_criteria||[]).map(c => `  ✓ ${c}`),\n].join('\\n');\nreturn [{ json: { ...($input.first().json), report_text: report } }];"
+      },
+      "id": "format-plan",
+      "name": "Format Weekly Plan",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1600, 380]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.PRIORITIES_APPROVER_EMAIL || $env.PRIORITIES_EMAIL_TO }}",
+        "subject": "=APPROVAL REQUIRED: Weekly Plan — {{ $json.meta.week }}",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $json.report_text }}</pre><p><a href=\"{{ $execution.resumeUrl }}?decision=approved\">Approve and share with team</a> | <a href=\"{{ $execution.resumeUrl }}?decision=rejected\">Reject</a></p>",
+        "options": {}
+      },
+      "id": "send-approval",
+      "name": "Send for Approval",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1820, 380],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": { "resume": "webhook", "options": { "webhookSuffix": "/approval" } },
+      "id": "wait-approval",
+      "name": "Wait for Approval",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [2040, 380],
+      "webhookId": "priorities-approval"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "cd", "leftValue": "={{ $json.query?.decision || $json.body?.decision }}", "rightValue": "approved", "operator": { "type": "string", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-decision",
+      "name": "Approved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2260, 380]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.PRIORITIES_EMAIL_TO || 'team@acme-analytics.com' }}",
+        "subject": "=Weekly Plan: {{ $('Format Weekly Plan').first().json.meta.week }}",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $('Format Weekly Plan').first().json.report_text }}</pre>",
+        "options": {}
+      },
+      "id": "send-plan",
+      "name": "Share Plan with Team",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [2480, 280],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": { "assignments": { "assignments": [{ "id": "r1", "name": "status", "value": "rejected", "type": "string" }] }, "options": {} },
+      "id": "log-rejection",
+      "name": "Log Rejection",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2480, 480]
+    }
+  ],
+  "connections": {
+    "Weekly Schedule (Monday 7am)": { "main": [[{ "node": "Load Weekly Context", "type": "main", "index": 0 }]] },
+    "Manual Trigger": { "main": [[{ "node": "Load Weekly Context", "type": "main", "index": 0 }]] },
+    "Load Weekly Context": { "main": [[{ "node": "Prepare Planning Prompt", "type": "main", "index": 0 }]] },
+    "Prepare Planning Prompt": { "main": [[{ "node": "LLM: Generate Priority Plan", "type": "main", "index": 0 }]] },
+    "LLM: Generate Priority Plan": { "main": [[{ "node": "Validate LLM Output", "type": "main", "index": 0 }]] },
+    "Validate LLM Output": { "main": [[{ "node": "LLM Error?", "type": "main", "index": 0 }]] },
+    "LLM Error?": { "main": [[{ "node": "LLM Error Handler", "type": "main", "index": 0 }], [{ "node": "Format Weekly Plan", "type": "main", "index": 0 }]] },
+    "Format Weekly Plan": { "main": [[{ "node": "Send for Approval", "type": "main", "index": 0 }]] },
+    "Send for Approval": { "main": [[{ "node": "Wait for Approval", "type": "main", "index": 0 }]] },
+    "Wait for Approval": { "main": [[{ "node": "Approved?", "type": "main", "index": 0 }]] },
+    "Approved?": { "main": [[{ "node": "Share Plan with Team", "type": "main", "index": 0 }], [{ "node": "Log Rejection", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1", "saveManualExecutions": true, "callerPolicy": "workflowsFromSameOwner", "errorWorkflow": "" },
+  "staticData": null,
+  "tags": ["team", "founder", "planning", "weekly", "beta"],
+  "triggerCount": 0,
+  "updatedAt": "2026-07-14T00:00:00.000Z",
+  "versionId": "91-weekly-priorities-planner-v0.1.0"
+}

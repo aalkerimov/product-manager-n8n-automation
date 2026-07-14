@@ -1,0 +1,9 @@
+{
+  "bugs": [
+    { "id": "BUG-2041", "title": "Dashboard fails to load when user has more than 200 projects", "reporter": "user@acme.com", "description": "When a workspace has more than 200 projects, the main dashboard page returns a 504 Gateway Timeout. This affects approximately 12 enterprise accounts. The error started appearing after the v2.4.1 deployment on July 12.", "environment": "production", "browser": "Chrome 126, Firefox 127", "affected_users": 12, "steps_to_reproduce": "Create a workspace with 200+ projects, log in, navigate to dashboard" },
+    { "id": "BUG-2042", "title": "Task assignee dropdown loses selection on mobile Safari", "reporter": "support@acme.com", "description": "On iOS 17.4 with Safari, selecting an assignee from the dropdown in a task card resets to empty when the user scrolls the page. Does not occur on Chrome mobile.", "environment": "production", "browser": "Safari iOS 17.4", "affected_users": null, "steps_to_reproduce": "Open a task on mobile Safari, tap assignee dropdown, select a user, scroll page" },
+    { "id": "BUG-2043", "title": "CSV export missing custom field columns", "reporter": "pm@acme.com", "description": "When exporting tasks to CSV, columns for custom fields (text, number, date) are missing from the exported file. Standard fields (title, due date, assignee) are present. This was working before the v2.4.0 release.", "environment": "production", "browser": "N/A", "affected_users": null, "steps_to_reproduce": "Create a project with custom fields, add tasks with custom field values, export to CSV" }
+  ],
+  "product": "ProjectFlow",
+  "engineering_team_context": "Three engineers on web, two on mobile, one on data/exports"
+}

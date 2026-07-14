@@ -1,0 +1,72 @@
+{
+  "_comment": "Copy relevant values into your .env file. See project .env.example for all variables.",
+  "workflow_id": "51-market-sizing-assistant",
+  "workflow_name": "Market Sizing Assistant",
+  "collection": "06-strategy-market-intelligence",
+  "status": "beta",
+  "configuration": {
+    "OPENAI_BASE_URL": {
+      "default": "https://api.openai.com",
+      "description": "Base URL for OpenAI or any compatible provider (OpenRouter, Azure OpenAI, Ollama, etc.)",
+      "required": "Optional",
+      "example": "https://api.openai.com"
+    },
+    "AI_MODEL": {
+      "default": "gpt-4o-mini",
+      "description": "Model name. Must support JSON mode (response_format: json_object).",
+      "required": "Required",
+      "example": "gpt-4o-mini"
+    },
+    "MARKET_SIZING_EMAIL_TO": {
+      "default": "",
+      "description": "Email address that receives the approval request and final report.",
+      "required": "Required",
+      "example": "strategy@yourcompany.com"
+    },
+    "NOTIFICATION_EMAIL_FROM": {
+      "default": "automation@acme-analytics.com",
+      "description": "Sender address for approval and report emails.",
+      "required": "Optional",
+      "example": "automation@yourcompany.com"
+    },
+    "COMPANY_NAME": {
+      "default": "Your Company",
+      "description": "Company name used in email subject lines.",
+      "required": "Optional",
+      "example": "Acme Analytics"
+    }
+  },
+  "node_placeholders_to_replace": [
+    {
+      "node": "Log to Google Sheets",
+      "field": "documentId.value",
+      "placeholder": "YOUR_GOOGLE_SHEET_ID",
+      "description": "The ID from your Google Sheet URL: docs.google.com/spreadsheets/d/THIS_PART/edit"
+    }
+  ],
+  "n8n_credentials_required": [
+    {
+      "name": "YOUR_OPENAI_CREDENTIAL",
+      "type": "httpHeaderAuth",
+      "required": true,
+      "purpose": "Authenticate LLM API calls. Header name: Authorization, value: Bearer <key>"
+    },
+    {
+      "name": "YOUR_SMTP_CREDENTIAL",
+      "type": "smtp",
+      "required": true,
+      "purpose": "Send approval request and final report emails"
+    },
+    {
+      "name": "YOUR_GOOGLE_SHEETS_CREDENTIAL",
+      "type": "googleSheetsOAuth2Api",
+      "required": false,
+      "purpose": "Optional: log each sizing run to a Google Sheet"
+    }
+  ],
+  "google_sheet_setup": {
+    "sheet_name": "market-sizing-log",
+    "columns": ["run_id", "product_category", "geography", "tam_base", "sam_base", "som_base", "confidence", "status", "sent_at"],
+    "note": "Create this sheet and add headers before enabling the Log node. Disable the Log node if not using Sheets."
+  }
+}

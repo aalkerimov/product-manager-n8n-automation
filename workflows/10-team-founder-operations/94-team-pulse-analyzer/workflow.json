@@ -1,0 +1,94 @@
+{
+  "name": "Team Pulse Analyzer",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Team Pulse Analyzer\n\n**Setup:**\n1. Create YOUR_SMTP_CREDENTIAL\n2. Set PULSE_EMAIL_TO\n3. Provide team check-in responses (manual or from Slack/Typeform)\n4. Code nodes compute sentiment distribution, flag at-risk members, surface themes — no LLM\n5. Sent to manager only — personal insight, no team distribution",
+        "height": 220,
+        "width": 400,
+        "color": 4
+      },
+      "id": "sticky-setup",
+      "name": "Setup Instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, -240]
+    },
+    {
+      "parameters": { "rule": { "interval": [{ "field": "weeks", "triggerAtDay": [5], "triggerAtHour": 16 }] } },
+      "id": "cron-trigger",
+      "name": "Weekly Schedule (Friday 4pm)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 200]
+    },
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 380]
+    },
+    {
+      "parameters": {
+        "jsCode": "const responses = [\n  { name: 'Alex Chen', role: 'Senior FE', mood_score: 2, blockers: 'Still not getting design specs before sprint. Had to stop mid-task twice to wait.', wins: 'Finished recurring tasks frontend, PR merged.', load: 'high', needs_help: true },\n  { name: 'Maria Santos', role: 'Backend Engineer', mood_score: 4, blockers: null, wins: 'Shipped auth migration. Team loved the performance gain.', load: 'medium', needs_help: false },\n  { name: 'James Kim', role: 'Product Designer', mood_score: 3, blockers: 'Unclear brief on onboarding redesign — need PM input before I can move forward.', wins: 'Finished custom fields UI design.', load: 'medium', needs_help: false },\n  { name: 'Sofia Park', role: 'Junior FE', mood_score: 4, blockers: null, wins: 'First PR merged independently!', load: 'medium', needs_help: false },\n  { name: 'David Osei', role: 'Backend Engineer', mood_score: 3, blockers: 'Waiting for API contract from PM for task dependency graph.', wins: 'Added new endpoint for dependency graph.', load: 'high', needs_help: true }\n];\nreturn [{ json: { responses, week: 'July 7–11, 2026', team_size: responses.length } }];"
+      },
+      "id": "load-responses",
+      "name": "Load Pulse Responses",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 280]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { responses, week, team_size } = $input.first().json;\nconst avg_mood = parseFloat((responses.reduce((s,r) => s + r.mood_score, 0) / responses.length).toFixed(2));\nconst at_risk = responses.filter(r => r.mood_score <= 2 || r.needs_help);\nconst high_load = responses.filter(r => r.load === 'high');\nconst with_blockers = responses.filter(r => r.blockers);\nconst mood_dist = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };\nresponses.forEach(r => mood_dist[r.mood_score]++);\nconst blocker_themes = ['design spec', 'API contract', 'PM input'].filter(theme => with_blockers.some(r => r.blockers && r.blockers.toLowerCase().includes(theme.toLowerCase().split(' ')[0])));\nconst wins = responses.filter(r => r.wins).map(r => `${r.name}: ${r.wins}`);\nreturn [{ json: { responses, week, team_size, metrics: { avg_mood, at_risk_count: at_risk.length, high_load_count: high_load.length, blocker_count: with_blockers.length, response_rate_pct: 100 }, mood_dist, at_risk, high_load, with_blockers, blocker_themes, wins, generated_at: new Date().toISOString() } }];"
+      },
+      "id": "analyse-pulse",
+      "name": "Analyse Team Pulse",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [740, 280]
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $input.first().json;\nconst moodBar = Object.entries(d.mood_dist).map(([s,c]) => `  ${s}/5: ${'█'.repeat(c)}${' '.repeat(5-c)} (${c})`).join('\\n');\nconst atRiskLines = d.at_risk.map(r => `  ⚠️ ${r.name} (${r.role}): mood ${r.mood_score}/5${r.needs_help?' + needs help':''}${r.blockers?' — '+r.blockers:''}`).join('\\n');\nconst blockerLines = d.with_blockers.map(r => `  ${r.name}: ${r.blockers}`).join('\\n');\nconst winLines = d.wins.map(w => `  ✓ ${w}`).join('\\n');\nconst report = [\n  `TEAM PULSE: ${d.week} | ${d.team_size} members`,\n  `Generated: ${d.generated_at}`,\n  `Avg mood: ${d.metrics.avg_mood}/5 | At risk: ${d.metrics.at_risk_count} | Blockers: ${d.metrics.blocker_count} | High load: ${d.metrics.high_load_count}`,\n  ``,\n  `MOOD DISTRIBUTION:`,\n  moodBar,\n  ``,\n  d.at_risk.length > 0 ? `AT-RISK MEMBERS (action required):` : '',\n  d.at_risk.length > 0 ? atRiskLines : '',\n  ``,\n  `BLOCKERS (review before next sprint):`,\n  blockerLines || '  (none)',\n  d.blocker_themes.length > 0 ? `  Recurring theme: ${d.blocker_themes.join(', ')} — PM action needed` : '',\n  ``,\n  `WINS THIS WEEK:`,\n  winLines,\n].filter(l => l !== null && l !== undefined).join('\\n');\nreturn [{ json: { ...($input.first().json), report_text: report } }];"
+      },
+      "id": "format-report",
+      "name": "Format Pulse Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [960, 280]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.PULSE_EMAIL_TO || 'pm@acme-analytics.com' }}",
+        "subject": "=Team Pulse: {{ $json.metrics.avg_mood }}/5 avg | {{ $json.metrics.at_risk_count }} at risk — {{ $json.week }}",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $json.report_text }}</pre>",
+        "options": {}
+      },
+      "id": "send-report",
+      "name": "Send Pulse to Manager",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1180, 280],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    }
+  ],
+  "connections": {
+    "Weekly Schedule (Friday 4pm)": { "main": [[{ "node": "Load Pulse Responses", "type": "main", "index": 0 }]] },
+    "Manual Trigger": { "main": [[{ "node": "Load Pulse Responses", "type": "main", "index": 0 }]] },
+    "Load Pulse Responses": { "main": [[{ "node": "Analyse Team Pulse", "type": "main", "index": 0 }]] },
+    "Analyse Team Pulse": { "main": [[{ "node": "Format Pulse Report", "type": "main", "index": 0 }]] },
+    "Format Pulse Report": { "main": [[{ "node": "Send Pulse to Manager", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1", "saveManualExecutions": true, "callerPolicy": "workflowsFromSameOwner", "errorWorkflow": "" },
+  "staticData": null,
+  "tags": ["team", "founder", "pulse", "morale", "beta"],
+  "triggerCount": 0,
+  "updatedAt": "2026-07-14T00:00:00.000Z",
+  "versionId": "94-team-pulse-analyzer-v0.1.0"
+}

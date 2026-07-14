@@ -1,0 +1,100 @@
+{
+  "name": "Opportunity Scoring Engine",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Opportunity Scoring Engine\n\n**Setup:**\n1. Create YOUR_GOOGLE_SHEETS_CREDENTIAL and YOUR_SMTP_CREDENTIAL\n2. Set OPP_SHEET_ID (sheet with opportunities: id, title, reach, impact, confidence, effort, strategic_fit)\n3. Set OPP_EMAIL_TO\n4. No LLM needed — pure RICE/ICE scoring math\n\n**RICE score = (Reach × Impact × Confidence) / Effort**\nAll inputs are normalised to 0-10 scale.\nOutput: ranked opportunity list with scores.",
+        "height": 300,
+        "width": 460,
+        "color": 5
+      },
+      "id": "sticky-setup",
+      "name": "Setup Instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, -280]
+    },
+    {
+      "parameters": {
+        "rule": { "interval": [{ "field": "cronExpression", "expression": "={{ $env.OPP_SCHEDULE || '0 9 1 * *' }}" }] }
+      },
+      "id": "schedule-trigger",
+      "name": "Monthly Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 100]
+    },
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 280]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": { "value": "={{ $env.OPP_SHEET_ID || 'YOUR_OPP_SHEET_ID' }}", "mode": "id" },
+        "sheetName": { "value": "opportunities", "mode": "name" },
+        "options": { "headerRow": 1 }
+      },
+      "id": "read-opps",
+      "name": "Read Opportunities from Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [500, 100],
+      "credentials": { "googleSheetsOAuth2Api": { "name": "YOUR_GOOGLE_SHEETS_CREDENTIAL" } }
+    },
+    {
+      "parameters": {
+        "jsCode": "const opportunities = [\n  { id: 'OPP-001', title: 'Native mobile app (iOS + Android)', reach: 8, impact: 7, confidence: 6, effort: 9, strategic_fit: 8, category: 'new-capability', tags: ['mobile', 'retention'] },\n  { id: 'OPP-002', title: 'Bulk CSV import for onboarding', reach: 6, impact: 8, confidence: 9, effort: 3, strategic_fit: 7, category: 'friction-removal', tags: ['onboarding', 'activation'] },\n  { id: 'OPP-003', title: 'AI-powered project risk detection', reach: 5, impact: 9, confidence: 5, effort: 8, strategic_fit: 9, category: 'ai-feature', tags: ['ai', 'enterprise'] },\n  { id: 'OPP-004', title: 'SSO (SAML 2.0) for enterprise', reach: 4, impact: 10, confidence: 9, effort: 5, strategic_fit: 10, category: 'enterprise-requirement', tags: ['enterprise', 'security'] },\n  { id: 'OPP-005', title: 'Slack integration (two-way sync)', reach: 7, impact: 6, confidence: 8, effort: 4, strategic_fit: 6, category: 'integration', tags: ['integrations', 'collaboration'] },\n  { id: 'OPP-006', title: 'Custom fields on projects and tasks', reach: 9, impact: 7, confidence: 8, effort: 5, strategic_fit: 7, category: 'customisation', tags: ['flexibility', 'enterprise'] },\n  { id: 'OPP-007', title: 'Advanced permissions (role-based access)', reach: 5, impact: 8, confidence: 7, effort: 6, strategic_fit: 8, category: 'enterprise-requirement', tags: ['enterprise', 'security'] },\n  { id: 'OPP-008', title: 'Executive dashboard view', reach: 4, impact: 7, confidence: 7, effort: 4, strategic_fit: 7, category: 'reporting', tags: ['reporting', 'enterprise'] },\n  { id: 'OPP-009', title: 'Time tracking built-in', reach: 5, impact: 5, confidence: 6, effort: 6, strategic_fit: 4, category: 'new-capability', tags: ['time-tracking'] },\n  { id: 'OPP-010', title: 'Dark mode UI', reach: 7, impact: 3, confidence: 9, effort: 2, strategic_fit: 3, category: 'ui-polish', tags: ['ui', 'delight'] }\n];\nreturn opportunities.map(o => ({ json: o }));"
+      },
+      "id": "load-sample",
+      "name": "Load Sample Opportunities",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 280]
+    },
+    {
+      "parameters": {
+        "jsCode": "const all = $input.all().map(i => i.json);\nconst valid = all.filter(o => o.id && o.title && o.reach != null && o.impact != null && o.confidence != null && o.effort != null);\nconst skipped = all.length - valid.length;\n// Compute RICE score for each\nconst scored = valid.map(o => {\n  const rice = o.effort > 0 ? Math.round(((o.reach * o.impact * (o.confidence/10)) / o.effort) * 10) / 10 : 0;\n  const strategic_bonus = ((o.strategic_fit || 5) - 5) * 0.1; // small modifier\n  const adjusted = Math.round((rice + strategic_bonus) * 10) / 10;\n  return { ...o, rice_score: rice, adjusted_score: adjusted };\n});\n// Sort by adjusted score descending\nscored.sort((a, b) => b.adjusted_score - a.adjusted_score);\n// Add rank\nscored.forEach((o, i) => { o.rank = i + 1; });\nconst lines = scored.map(o =>\n  `#${o.rank} [RICE: ${o.rice_score}] ${o.id}: ${o.title}\\n   Category: ${o.category} | Tags: ${(o.tags||[]).join(', ')}\\n   R:${o.reach} I:${o.impact} C:${o.confidence} E:${o.effort} Fit:${o.strategic_fit||'N/A'}`\n).join('\\n');\nconst report = [\n  `OPPORTUNITY SCORING REPORT`,\n  `Run: ${new Date().toISOString()} | Opportunities: ${valid.length} (${skipped} skipped)`,\n  `Method: RICE (Reach × Impact × Confidence% / Effort) + strategic fit modifier`,\n  `All scores on 0–10 scale per dimension.`,\n  ``,\n  `RANKED OPPORTUNITIES:`,\n  lines\n].join('\\n');\nreturn [{ json: { scored, report_text: report, skipped, total: valid.length } }];"
+      },
+      "id": "compute-scores",
+      "name": "Compute RICE Scores",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [760, 200]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.OPP_EMAIL_TO || 'product@acme-analytics.com' }}",
+        "subject": "Monthly Opportunity Scoring Report",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $json.report_text }}</pre>",
+        "options": {}
+      },
+      "id": "send-report",
+      "name": "Send Scoring Report",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [980, 200],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    }
+  ],
+  "connections": {
+    "Monthly Schedule": { "main": [[{ "node": "Read Opportunities from Sheets", "type": "main", "index": 0 }]] },
+    "Manual Trigger": { "main": [[{ "node": "Load Sample Opportunities", "type": "main", "index": 0 }]] },
+    "Read Opportunities from Sheets": { "main": [[{ "node": "Compute RICE Scores", "type": "main", "index": 0 }]] },
+    "Load Sample Opportunities": { "main": [[{ "node": "Compute RICE Scores", "type": "main", "index": 0 }]] },
+    "Compute RICE Scores": { "main": [[{ "node": "Send Scoring Report", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1", "saveManualExecutions": true, "callerPolicy": "workflowsFromSameOwner", "errorWorkflow": "" },
+  "staticData": null,
+  "tags": ["roadmap", "planning", "scoring", "beta"],
+  "triggerCount": 0,
+  "updatedAt": "2026-07-14T00:00:00.000Z",
+  "versionId": "61-opportunity-scoring-engine-v0.1.0"
+}

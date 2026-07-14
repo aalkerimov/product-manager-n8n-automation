@@ -1,0 +1,16 @@
+[
+  { "id": "r001", "category": "went_well", "text": "Pair programming sessions improved code quality significantly" },
+  { "id": "r002", "category": "went_well", "text": "Daily standups were short and focused — under 15 minutes every day" },
+  { "id": "r003", "category": "went_well", "text": "We shipped the onboarding flow on time and under budget" },
+  { "id": "r004", "category": "went_well", "text": "Design reviews were earlier in the sprint — fewer last-minute changes" },
+  { "id": "r005", "category": "went_well", "text": "Team communication in Slack channels improved vs last sprint" },
+  { "id": "r006", "category": "to_improve", "text": "Ticket estimates were consistently off — most took 2x longer than planned" },
+  { "id": "r007", "category": "to_improve", "text": "Too many context switches — engineers were pulled into meetings mid-task" },
+  { "id": "r008", "category": "to_improve", "text": "QA was bottlenecked in the last 2 days of the sprint" },
+  { "id": "r009", "category": "to_improve", "text": "Unclear acceptance criteria on 4 of 12 tickets caused rework" },
+  { "id": "r010", "category": "to_improve", "text": "We had no buffer for unexpected bugs from production" },
+  { "id": "r011", "category": "action", "text": "Add 10% buffer to all estimates next sprint" },
+  { "id": "r012", "category": "action", "text": "PM to write acceptance criteria before sprint planning — not during" },
+  { "id": "r013", "category": "action", "text": "Block 2 hours per engineer per day as focus time (no meetings)" },
+  { "id": "r014", "category": "action", "text": "QA to start testing on day 5, not day 8 of a 10-day sprint" }
+]

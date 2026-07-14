@@ -1,0 +1,23 @@
+{
+  "team_member": "Alex Chen",
+  "role": "Senior Frontend Engineer",
+  "manager_role": "Head of Product",
+  "last_meeting_date": "2026-07-07",
+  "last_meeting_summary": "Alex mentioned feeling stretched across too many projects. We agreed to reduce to 2 active work streams. Raised a concern about lack of design specs before sprint planning.",
+  "recent_work": [
+    { "item": "Led recurring tasks frontend — completed and in QA", "type": "delivery" },
+    { "item": "Refactored TaskList component (PR-1851) — performance improvement", "type": "quality" },
+    { "item": "Raised PR review process concerns in team channel", "type": "process" }
+  ],
+  "context": {
+    "current_sprint_status": "On track for recurring tasks QA sign-off",
+    "career_goal": "Move to Staff Engineer within 18 months",
+    "known_challenges": "Overloaded; needs clearer priorities from PM side before sprint",
+    "team_dynamics": "Mentoring junior FE; doing well but taking extra time"
+  },
+  "topics_to_discuss": [
+    "Recurring tasks QA — any blockers before sign-off?",
+    "Design spec process improvement — concrete steps",
+    "Mentorship load — is it sustainable?"
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "_comment": "Illustrative LLM output.",
+  "prep": {
+    "coaching_theme": "Clearing blockers so Alex can do his best work, without burning out",
+    "opening_check_in": "The recurring tasks delivery was the biggest thing on the sprint — how are you feeling now that it's over the line?",
+    "agenda_items": [
+      { "topic": "Recurring tasks QA: go/no-go decision", "type": "delivery", "suggested_questions": ["What's the one thing that could still block sign-off today?", "If you had to rate QA readiness 1-10 right now, what's the number?", "What do you need from me to close this out by Wednesday?"], "manager_action_before": "Review QA checklist and note any open P0 bugs before the meeting" },
+      { "topic": "Design spec process: from complaint to concrete fix", "type": "process", "suggested_questions": ["If you could change one step in how we hand off specs before sprint, what would it be?", "What would 'good enough to start' look like as a minimum spec bar?", "Are there other engineers who feel this way, or is it specific to your work stream?"], "manager_action_before": "Prepare a draft: spec-ready checklist with 3 items that must be done before sprint planning" },
+      { "topic": "Mentorship load and sustainability", "type": "coaching", "suggested_questions": ["How many hours a week are you currently spending with Sofia?", "What would need to change for this to feel sustainable for the next 3 months?", "How is mentoring Sofia connecting to your Staff Engineer goal — is it helping or taking time away from it?"], "manager_action_before": null }
+    ],
+    "recognition_moment": "The TaskList memoisation PR — that wasn't in the sprint but Alex spotted it and shipped it anyway. That's a Staff Engineer instinct: fixing the platform while delivering features. Call it out specifically.",
+    "manager_commitments_to_follow_up": [
+      "Send spec-ready checklist draft to Alex by Thursday for feedback",
+      "Block sprint planning for 30 minutes the week before to review design specs with Alex and James",
+      "Check in with Alex individually mid-week — don't wait until Friday pulse"
+    ]
+  },
+  "meta": { "team_member": "Alex Chen", "generated_at": "2026-07-14T09:30:00.000Z" }
+}

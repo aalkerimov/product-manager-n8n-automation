@@ -1,0 +1,23 @@
+{
+  "_comment": "Illustrative output. Actual LLM output will vary.",
+  "digest": {
+    "headline_insight": "The cost of reasoning-grade AI dropped ~40% this week — workflows that were too expensive to run in production 3 months ago are now worth revisiting.",
+    "signals_analysed": [
+      { "id": "s001", "title": "OpenAI o3-mini", "category": "ai-models", "relevance_to_us": "high", "so_what": "We should test o3-mini for our classification and data validation nodes — 40% cost reduction at comparable quality could halve our monthly AI spend.", "recommended_response": "investigate", "confidence": "medium" },
+      { "id": "s002", "title": "Constitutional AI v2", "category": "ai-research", "relevance_to_us": "low", "so_what": "Research-stage. Monitor for practical applications in 6-12 months.", "recommended_response": "monitor", "confidence": "high" },
+      { "id": "s003", "title": "Vercel AI SDK 4.0", "category": "developer-tools", "relevance_to_us": "medium", "so_what": "If we have a Next.js frontend with AI features, this simplifies streaming. Evaluate for our onboarding AI assistant.", "recommended_response": "investigate", "confidence": "medium" },
+      { "id": "s004", "title": "DuckDB + Parquet HN thread", "category": "data-engineering", "relevance_to_us": "high", "so_what": "Strong community signal that DuckDB is production-ready for analytics under 100GB. Relevant to how we could simplify our data pipeline for internal reporting.", "recommended_response": "investigate", "confidence": "high" },
+      { "id": "s005", "title": "Gemini 2.5 Pro 2M context", "category": "ai-models", "relevance_to_us": "medium", "so_what": "2M token context could enable whole-codebase analysis. Monitor for pricing drops before adopting.", "recommended_response": "monitor", "confidence": "medium" },
+      { "id": "s006", "title": "GitHub Copilot multi-file editing", "category": "developer-tools", "relevance_to_us": "low", "so_what": "Engineering productivity tool, not product-relevant. Inform engineering team.", "recommended_response": "ignore", "confidence": "high" },
+      { "id": "s007", "title": "Ray 3.0", "category": "ml-infrastructure", "relevance_to_us": "low", "so_what": "Relevant if we train ML models at scale. Currently not in our use case.", "recommended_response": "ignore", "confidence": "high" }
+    ],
+    "watch_list": ["o3-mini pricing stability over next 4 weeks", "DuckDB adoption in analytics SaaS", "Gemini 2.5 Pro price cuts"],
+    "actions_to_consider": [
+      { "action": "Run cost benchmark: o3-mini vs current model on our classification workflow", "urgency": "soon" },
+      { "action": "DuckDB spike: evaluate replacing internal reporting pipeline", "urgency": "later" }
+    ],
+    "confidence_overall": "medium",
+    "what_we_dont_know": ["Whether o3-mini quality holds for our specific classification tasks", "DuckDB performance at our exact data volume", "Gemini 2.5 Pro reliability in production workloads"]
+  },
+  "meta": { "period": "week of 2026-07-07 to 2026-07-14", "signal_count": 7, "generated_at": "2026-07-14T09:00:00.000Z" }
+}

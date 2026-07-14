@@ -1,0 +1,26 @@
+{
+  "_comment": "Deterministic output. Total 9h meetings / 40h = 77.5% focus time — above 40% threshold.",
+  "metrics": {
+    "total_meeting_hours": 9,
+    "total_available": 40,
+    "focus_hours": 31,
+    "focus_pct": 77.5,
+    "below_threshold": false,
+    "recurring_hours": 5.5,
+    "one_off_hours": 3.5
+  },
+  "by_category": { "engineering": 2, "internal": 3.5, "customer": 1, "company": 1, "team": 1, "recruiting": 1 },
+  "by_day": {
+    "Monday": { "hours": 2.5, "events": ["Sprint Planning", "CEO 1:1"] },
+    "Tuesday": { "hours": 2, "events": ["Customer Discovery Call", "Design Review"] },
+    "Wednesday": { "hours": 2, "events": ["All Hands", "PM Sync"] },
+    "Thursday": { "hours": 2, "events": ["Candidate Interview", "Stakeholder Update"] },
+    "Friday": { "hours": 1, "events": ["Team Retro"] }
+  },
+  "heaviest_day": "Monday",
+  "suggestions": [
+    "Friday is light (1h meetings) — schedule deep work blocks: morning for the board deck or QA pass",
+    "61% of meeting time is recurring — review Design Review and PM Sync for necessity or shortening",
+    "Monday is the heaviest day (2.5h) — back-to-back Sprint Planning + CEO 1:1 — protect Tuesday and Wednesday mornings"
+  ]
+}

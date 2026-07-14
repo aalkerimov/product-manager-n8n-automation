@@ -1,0 +1,17 @@
+{
+  "_comment": "config.example.json for 1:1 Prep Assistant",
+  "workflow_id": "93-1on1-prep-assistant",
+  "workflow_name": "1:1 Prep Assistant",
+  "collection": "10-team-founder-operations",
+  "status": "beta",
+  "configuration": {
+    "ONE_ON_ONE_EMAIL_TO": { "default": "", "description": "Manager's email (yourself)", "required": "Required" },
+    "AI_MODEL": { "default": "gpt-4o-mini", "description": "LLM model", "required": "Required" },
+    "OPENAI_BASE_URL": { "default": "https://api.openai.com", "description": "LLM base URL", "required": "Optional" },
+    "NOTIFICATION_EMAIL_FROM": { "default": "automation@acme-analytics.com", "description": "Sender address", "required": "Optional" }
+  },
+  "n8n_credentials_required": [
+    { "name": "YOUR_OPENAI_CREDENTIAL", "type": "httpHeaderAuth", "required": true, "purpose": "LLM 1:1 agenda and coaching question generation" },
+    { "name": "YOUR_SMTP_CREDENTIAL", "type": "smtp", "required": true, "purpose": "Manager prep delivery" }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "_comment": "config.example.json for Regulatory Change Monitor",
+  "workflow_id": "55-regulatory-change-monitor",
+  "workflow_name": "Regulatory Change Monitor",
+  "collection": "06-strategy-market-intelligence",
+  "status": "beta",
+  "configuration": {
+    "REGULATORY_JURISDICTIONS": { "default": "", "description": "Comma-separated jurisdiction codes to monitor (e.g. US,EU,UK). Leave empty to include all.", "required": "Optional", "example": "US,EU,UK,US-CA" },
+    "REGULATORY_PRODUCT_AREAS": { "default": "data-privacy,ai-model-outputs,billing,user-data", "description": "Comma-separated product areas for LLM mapping. Customize to match your product.", "required": "Required" },
+    "REGULATORY_EMAIL_TO": { "default": "", "description": "Recipient for alerts and digests", "required": "Required" },
+    "NOTIFICATION_EMAIL_FROM": { "default": "automation@acme-analytics.com", "description": "Sender address", "required": "Optional" },
+    "AI_MODEL": { "default": "gpt-4o-mini", "description": "LLM model for mapping", "required": "Required" },
+    "OPENAI_BASE_URL": { "default": "https://api.openai.com", "description": "LLM provider base URL", "required": "Optional" },
+    "REGULATORY_SCHEDULE": { "default": "0 9 * * 1,4", "description": "Cron for bi-weekly run (Mon + Thu at 09:00)", "required": "Optional" }
+  },
+  "n8n_credentials_required": [
+    { "name": "YOUR_OPENAI_CREDENTIAL", "type": "httpHeaderAuth", "required": true, "purpose": "LLM mapping of changes to product areas" },
+    { "name": "YOUR_SMTP_CREDENTIAL", "type": "smtp", "required": true, "purpose": "Send urgent alerts and routine digests" }
+  ],
+  "recommended_rss_sources": [
+    { "name": "EUR-Lex (EU)", "url": "https://eur-lex.europa.eu/RSSXSD/actNew.xml" },
+    { "name": "FTC Press Releases (US)", "url": "https://www.ftc.gov/news-events/rss.xml" },
+    { "name": "ICO News (UK)", "url": "https://ico.org.uk/news-events/" },
+    { "name": "NIST (US)", "url": "https://www.nist.gov/news-events/news/rss.xml" }
+  ]
+}

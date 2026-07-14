@@ -1,0 +1,17 @@
+{
+  "_comment": "config.example.json for Team Pulse Analyzer",
+  "workflow_id": "94-team-pulse-analyzer",
+  "workflow_name": "Team Pulse Analyzer",
+  "collection": "10-team-founder-operations",
+  "status": "beta",
+  "configuration": {
+    "PULSE_EMAIL_TO": { "default": "", "description": "Manager's email (yourself)", "required": "Required" },
+    "NOTIFICATION_EMAIL_FROM": { "default": "automation@acme-analytics.com", "description": "Sender address", "required": "Optional" }
+  },
+  "n8n_credentials_required": [
+    { "name": "YOUR_SMTP_CREDENTIAL", "type": "smtp", "required": true, "purpose": "Pulse report delivery to manager" }
+  ],
+  "ai_required": false,
+  "schedule": "Every Friday at 16:00",
+  "at_risk_threshold": { "mood_score_max": 2, "description": "Members with mood ≤2 or needs_help=true are flagged at-risk" }
+}

@@ -1,0 +1,17 @@
+{
+  "_comment": "config.example.json for Research Insight Broadcaster",
+  "workflow_id": "79-research-insight-broadcaster",
+  "workflow_name": "Research Insight Broadcaster",
+  "collection": "08-user-research-discovery",
+  "status": "beta",
+  "configuration": {
+    "BROADCAST_EMAIL_TO": { "default": "", "description": "Broadcast recipients. Use a combined DL or configure per-group routing.", "required": "Required" },
+    "BROADCAST_APPROVER_EMAIL": { "default": "", "description": "PM approver. Defaults to BROADCAST_EMAIL_TO.", "required": "Optional" },
+    "NOTIFICATION_EMAIL_FROM": { "default": "automation@acme-analytics.com", "description": "Sender address", "required": "Optional" }
+  },
+  "n8n_credentials_required": [
+    { "name": "YOUR_SMTP_CREDENTIAL", "type": "smtp", "required": true, "purpose": "Approval and broadcast" }
+  ],
+  "ai_required": false,
+  "notes": "No LLM required. Audience summaries are PM-authored in the input. For per-group routing, add SplitInBatches after the Approved? node."
+}

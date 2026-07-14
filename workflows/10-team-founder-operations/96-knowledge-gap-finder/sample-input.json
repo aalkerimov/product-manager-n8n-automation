@@ -1,0 +1,16 @@
+{
+  "team": [
+    { "name": "Alex Chen", "role": "Senior FE", "skills": ["React", "TypeScript", "CSS", "Performance optimisation", "Code review"] },
+    { "name": "Maria Santos", "role": "Backend Engineer", "skills": ["Node.js", "PostgreSQL", "REST API design", "Auth", "Redis"] },
+    { "name": "James Kim", "role": "Product Designer", "skills": ["Figma", "User research", "Prototyping", "Design systems", "Accessibility"] },
+    { "name": "Sofia Park", "role": "Junior FE", "skills": ["React basics", "HTML/CSS", "Git"] },
+    { "name": "David Osei", "role": "Backend Engineer", "skills": ["Node.js", "GraphQL", "PostgreSQL", "API design"] }
+  ],
+  "upcoming_work": [
+    { "title": "Mobile app (React Native) — Q3 launch", "priority": "high", "required_skills": ["React Native", "Mobile UX patterns", "App Store deployment"] },
+    { "title": "AI-powered task suggestions (OpenAI integration)", "priority": "high", "required_skills": ["LLM API integration", "Prompt engineering", "Cost monitoring"] },
+    { "title": "Enterprise SSO (SAML/OIDC)", "priority": "medium", "required_skills": ["SAML", "OIDC", "Security best practices"] },
+    { "title": "Real-time collaboration (WebSockets)", "priority": "medium", "required_skills": ["WebSockets", "Conflict resolution", "State synchronisation"] }
+  ],
+  "quarter": "Q3 2026"
+}

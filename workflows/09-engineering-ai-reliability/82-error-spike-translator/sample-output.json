@@ -1,0 +1,35 @@
+{
+  "_comment": "Illustrative LLM output.",
+  "result": {
+    "executive_summary": "Your enterprise customers (approximately 5–10% of active accounts) cannot load their main project dashboard as of 08:43 UTC today. The issue is a database timeout triggered by workspaces with more than 200 projects and began after the v2.4.1 deployment two days ago. Additionally, all CSV data exports are failing due to a code error introduced in the same release.",
+    "estimated_user_impact_pct": "~8% of active accounts (enterprise tier with 200+ projects for the dashboard issue; all accounts who export CSV data)",
+    "translated_errors": [
+      {
+        "technical_error": "TimeoutError: pg.query statement timeout",
+        "plain_english": "The database is taking too long to load project data for large workspaces — the request times out after 30 seconds and the page fails to load.",
+        "user_impact": "Enterprise customers with 200+ projects cannot see their main dashboard. The page shows a 504 error. All work tracking for these accounts is blocked until resolved.",
+        "affected_feature": "Main dashboard / project list",
+        "severity": "critical",
+        "is_regression": true
+      },
+      {
+        "technical_error": "TypeError: Cannot read properties of undefined (reading 'customFields')",
+        "plain_english": "The CSV export feature is crashing because it tries to read custom field data that it cannot find — the export fails silently or returns an incomplete file.",
+        "user_impact": "Any user trying to export their tasks to CSV receives an incomplete file without their custom field columns. Customers using CSV exports for reporting or data pipelines are blocked.",
+        "affected_feature": "CSV data export",
+        "severity": "high",
+        "is_regression": true
+      },
+      {
+        "technical_error": "AuthError: JWT token expired",
+        "plain_english": "A small number of users are being logged out unexpectedly when their session token expires. This is a normal low-level event — the count is only slightly above baseline.",
+        "user_impact": "A small number of users are asked to log in again unexpectedly. This is an inconvenience, not a blocker.",
+        "affected_feature": "Session management / authentication",
+        "severity": "low",
+        "is_regression": false
+      }
+    ],
+    "recommended_action": "Immediately escalate the dashboard timeout to engineering as a P0 — identify which database query change in v2.4.1 removed the pagination limit for the projects endpoint and hotfix or rollback. Simultaneously, send a heads-up to enterprise CSMs so they can proactively reach out to affected accounts. The CSV export issue is a P2 — investigate the custom fields resolver in the export service."
+  },
+  "meta": { "service": "ProjectFlow API", "alert_at": "2026-07-14T08:43:00Z", "spike_count": 3, "generated_at": "2026-07-14T09:00:00.000Z" }
+}

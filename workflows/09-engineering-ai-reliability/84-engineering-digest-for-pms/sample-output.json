@@ -1,0 +1,23 @@
+{
+  "_comment": "Illustrative LLM output.",
+  "digest": {
+    "digest_title": "Engineering Digest — Week of July 7–11, 2026",
+    "tldr": "We shipped two releases this week, including a minor outage that affected 12 enterprise customers for 47 minutes and is now fully resolved. The team is also making behind-the-scenes improvements to performance and security that directly support the recurring tasks redesign shipping next week.",
+    "what_shipped": [
+      { "item": "Custom fields v2 (v2.4.0) — customers can now create text, number, and date custom fields on tasks", "customer_impact": "Enterprise and mid-market customers can now add structured data to tasks — a top feature request from 12% of NPS respondents." },
+      { "item": "Project template library (v2.4.0) — customers can create and reuse project structures", "customer_impact": "Reduces new project setup time from ~15 minutes to under 2 minutes for teams with standard workflows." },
+      { "item": "Emergency patch v2.4.1 — dashboard restored for enterprise accounts with 200+ projects", "customer_impact": "The 12 enterprise accounts that could not load their dashboard for 47 minutes are back to full functionality." }
+    ],
+    "what_broke_and_is_fixed": [
+      { "incident": "INC-089: Enterprise dashboard outage (47 minutes, July 12, root cause: missing database query limit in v2.4.1)", "customer_impact": "12 enterprise accounts could not access their main dashboard. Fully resolved. Engineering added monitoring to detect this pattern before future deployments.", "status": "resolved" }
+    ],
+    "what_engineering_is_doing": [
+      { "work": "Migrating authentication to use non-blocking password checking (PR-1847)", "why_it_matters": "Reduces the risk of the login system slowing down all other features during periods of high sign-in traffic. Removes a known reliability risk." },
+      { "work": "Improving performance of the task list for large projects (PR-1851)", "why_it_matters": "Directly addresses the UI jank experienced by team leads with 200+ tasks. Unblocks the large-project market segment." },
+      { "work": "Building a task dependency graph API (PR-1855)", "why_it_matters": "Backend foundation for the Gantt view and critical path features on the Q4 roadmap." }
+    ],
+    "next_week_preview": "v2.5.0 ships this week — the recurring tasks button moves to the task header (the highest-priority user research finding from Q3). 3 engineers dedicated. Target: Wednesday.",
+    "action_required_from_pm": "Prepare CSM team for v2.5.0 launch — they need updated talking points on recurring tasks discoverability before the release. See #79 Research Insight Broadcaster for the approved talking points."
+  },
+  "meta": { "week": "Week of July 7–11, 2026", "generated_at": "2026-07-14T09:00:00.000Z" }
+}

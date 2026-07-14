@@ -1,0 +1,169 @@
+{
+  "name": "Data Quality Sentinel",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Data Quality Sentinel\n\n**Setup:**\n1. Create YOUR_SMTP_CREDENTIAL\n2. Set DATA_QUALITY_EMAIL_TO\n3. Feed data quality check results from your data pipeline\n4. Code nodes compute completeness, freshness, uniqueness scores — no LLM\n5. Approval gate before data quality alert is sent to data engineering",
+        "height": 240,
+        "width": 400,
+        "color": 7
+      },
+      "id": "sticky-setup",
+      "name": "Setup Instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, -240]
+    },
+    {
+      "parameters": { "rule": { "interval": [{ "field": "days", "triggerAtHour": 7 }] } },
+      "id": "cron-trigger",
+      "name": "Daily Schedule (7am)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 200]
+    },
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 380]
+    },
+    {
+      "parameters": {
+        "jsCode": "// In production: run these checks against your actual data warehouse (BigQuery, Snowflake, Postgres)\n// via HTTP Request to your data platform's query API\nconst checks = [\n  { table: 'events.page_views', check_type: 'freshness', description: 'Last row inserted more than 4 hours ago', threshold_hours: 4, actual_hours_since_last: 6.2, passed: false },\n  { table: 'events.page_views', check_type: 'volume', description: 'Row count dropped >30% vs 7-day average', threshold_pct_drop: 30, actual_pct_drop: 41, passed: false },\n  { table: 'users.accounts', check_type: 'completeness', description: 'NULL rate in email column above 2%', threshold_null_pct: 2, actual_null_pct: 0.3, passed: true },\n  { table: 'billing.transactions', check_type: 'uniqueness', description: 'Duplicate transaction_id rows', threshold_duplicate_pct: 0, actual_duplicate_pct: 0, passed: true },\n  { table: 'nps.responses', check_type: 'freshness', description: 'Last NPS import older than 25 hours', threshold_hours: 25, actual_hours_since_last: 18, passed: true },\n  { table: 'product.feature_flags', check_type: 'completeness', description: 'NULL rate in enabled column', threshold_null_pct: 0, actual_null_pct: 0, passed: true }\n];\nreturn [{ json: { checks, product: 'ProjectFlow Analytics', checked_at: new Date().toISOString() } }];"
+      },
+      "id": "load-checks",
+      "name": "Load Data Quality Checks",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 280]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { checks, product, checked_at } = $input.first().json;\nconst failed = checks.filter(c => !c.passed);\nconst passed = checks.filter(c => c.passed);\nconst pct_pass = parseFloat(((passed.length / checks.length) * 100).toFixed(1));\nconst by_table = {};\nchecks.forEach(c => {\n  if (!by_table[c.table]) by_table[c.table] = { failed: 0, passed: 0 };\n  c.passed ? by_table[c.table].passed++ : by_table[c.table].failed++;\n});\nreturn [{ json: { checks, failed, by_table, product, checked_at, meta: { total: checks.length, passed: passed.length, failed_count: failed.length, pass_rate_pct: pct_pass, has_failures: failed.length > 0 } } }];"
+      },
+      "id": "evaluate-checks",
+      "name": "Evaluate Quality Checks",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [740, 280]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "fa", "leftValue": "={{ $json.meta.has_failures }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "any-failures",
+      "name": "Any Failures?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [960, 280]
+    },
+    {
+      "parameters": { "assignments": { "assignments": [{ "id": "ok", "name": "status", "value": "all_checks_passed", "type": "string" }] }, "options": {} },
+      "id": "all-passed",
+      "name": "All Checks Passed",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1160, 180]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { failed, meta: m, product, checked_at } = $input.first().json;\nconst failLines = failed.map(f => [\n  `  [FAIL] ${f.table} — ${f.check_type.toUpperCase()}`,\n  `  Check: ${f.description}`,\n  f.check_type === 'freshness' ? `  Actual: ${f.actual_hours_since_last}h since last row (threshold: ${f.threshold_hours}h)` : '',\n  f.check_type === 'volume' ? `  Actual drop: ${f.actual_pct_drop}% (threshold: ${f.threshold_pct_drop}%)` : '',\n  f.check_type === 'completeness' ? `  Actual null rate: ${f.actual_null_pct}% (threshold: ${f.threshold_null_pct}%)` : '',\n  ''\n].filter(Boolean).join('\\n')).join('\\n');\nconst report = [\n  `DATA QUALITY SENTINEL: ${product}`,\n  `Checked: ${checked_at} | ${m.total} checks | ${m.passed} passed | ${m.failed_count} FAILED | Pass rate: ${m.pass_rate_pct}%`,\n  ``,\n  `FAILED CHECKS:`,\n  failLines,\n  `ACTION: Investigate the above tables. A >40% volume drop in events.page_views may indicate a tracking outage or ETL pipeline failure.`,\n].join('\\n');\nreturn [{ json: { ...($input.first().json), report_text: report } }];"
+      },
+      "id": "format-alert",
+      "name": "Format Quality Alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1160, 380]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.DATA_QUALITY_APPROVER_EMAIL || $env.DATA_QUALITY_EMAIL_TO }}",
+        "subject": "=APPROVAL REQUIRED: Data Quality Alert — {{ $json.meta.failed_count }} check{{ $json.meta.failed_count !== 1 ? 's' : '' }} failed ({{ $json.meta.pass_rate_pct }}% pass rate)",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $json.report_text }}</pre><p><a href=\"{{ $execution.resumeUrl }}?decision=approved\">Approve and send to data engineering</a> | <a href=\"{{ $execution.resumeUrl }}?decision=rejected\">Reject</a></p>",
+        "options": {}
+      },
+      "id": "send-approval",
+      "name": "Send for Approval",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1380, 380],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": { "resume": "webhook", "options": { "webhookSuffix": "/approval" } },
+      "id": "wait-approval",
+      "name": "Wait for Approval",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [1600, 380],
+      "webhookId": "data-quality-approval"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "cd", "leftValue": "={{ $json.query?.decision || $json.body?.decision }}", "rightValue": "approved", "operator": { "type": "string", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-decision",
+      "name": "Approved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1820, 380]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.DATA_QUALITY_EMAIL_TO || 'data@acme-analytics.com' }}",
+        "subject": "=Data Quality Alert: {{ $('Format Quality Alert').first().json.meta.failed_count }} checks failed — {{ $('Format Quality Alert').first().json.product }}",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $('Format Quality Alert').first().json.report_text }}</pre>",
+        "options": {}
+      },
+      "id": "send-alert",
+      "name": "Send Alert to Data Engineering",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [2040, 280],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": { "assignments": { "assignments": [{ "id": "r1", "name": "status", "value": "rejected", "type": "string" }] }, "options": {} },
+      "id": "log-rejection",
+      "name": "Log Rejection",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2040, 480]
+    }
+  ],
+  "connections": {
+    "Daily Schedule (7am)": { "main": [[{ "node": "Load Data Quality Checks", "type": "main", "index": 0 }]] },
+    "Manual Trigger": { "main": [[{ "node": "Load Data Quality Checks", "type": "main", "index": 0 }]] },
+    "Load Data Quality Checks": { "main": [[{ "node": "Evaluate Quality Checks", "type": "main", "index": 0 }]] },
+    "Evaluate Quality Checks": { "main": [[{ "node": "Any Failures?", "type": "main", "index": 0 }]] },
+    "Any Failures?": { "main": [[{ "node": "All Checks Passed", "type": "main", "index": 0 }], [{ "node": "Format Quality Alert", "type": "main", "index": 0 }]] },
+    "Format Quality Alert": { "main": [[{ "node": "Send for Approval", "type": "main", "index": 0 }]] },
+    "Send for Approval": { "main": [[{ "node": "Wait for Approval", "type": "main", "index": 0 }]] },
+    "Wait for Approval": { "main": [[{ "node": "Approved?", "type": "main", "index": 0 }]] },
+    "Approved?": { "main": [[{ "node": "Send Alert to Data Engineering", "type": "main", "index": 0 }], [{ "node": "Log Rejection", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1", "saveManualExecutions": true, "callerPolicy": "workflowsFromSameOwner", "errorWorkflow": "" },
+  "staticData": null,
+  "tags": ["engineering", "reliability", "data-quality", "beta"],
+  "triggerCount": 0,
+  "updatedAt": "2026-07-14T00:00:00.000Z",
+  "versionId": "90-data-quality-sentinel-v0.1.0"
+}

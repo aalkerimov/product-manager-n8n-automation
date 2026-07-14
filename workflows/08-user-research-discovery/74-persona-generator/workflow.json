@@ -1,0 +1,197 @@
+{
+  "name": "Persona Generator",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Persona Generator\n\n**Setup:**\n1. Create YOUR_OPENAI_CREDENTIAL and YOUR_SMTP_CREDENTIAL\n2. Set PERSONA_EMAIL_TO\n3. Feed research data (interview themes, survey segments, behavioural patterns)\n4. LLM generates structured, evidence-grounded personas\n5. Approval gate before sharing with product and design",
+        "height": 240,
+        "width": 400,
+        "color": 5
+      },
+      "id": "sticky-setup",
+      "name": "Setup Instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, -240]
+    },
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: {\n  product: 'ProjectFlow — project management SaaS',\n  research_inputs: [\n    { source: 'NPS survey (n=150)', findings: 'Two distinct groups: power users who use recurring tasks, dependencies, and bulk export daily; casual users who only create tasks and update status. The second group has high churn.' },\n    { source: 'Customer interviews (n=12)', findings: 'PM personas: solo founders managing product + team, project leads at 20-50 person companies, enterprise PMs managing 5+ concurrent projects. Founders care about speed and mobile. Enterprise PMs care about integrations and reporting. Mid-market PMs care about team adoption and collaboration.' },\n    { source: 'Segment analysis', findings: 'Segment A: 1-5 users, avg 8 tasks/week, 4-month LTV. Segment B: 6-20 users, avg 45 tasks/week, 14-month LTV. Segment C: 21-100 users, avg 200+ tasks/week, 24-month LTV.' },\n    { source: 'Feature usage analytics', findings: 'Recurring tasks used by 28% of accounts but those accounts have 2× the NPS and 3× the retention. Dependencies used by 12% of accounts but all are in Segment C.' }\n  ],\n  segments_to_personas: 3,\n  notes: 'Focus on actionable personas tied to retention and revenue. Avoid fictional detail — ground everything in research.'\n} }];"
+      },
+      "id": "load-sample",
+      "name": "Load Sample Research Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $input.first().json;\nconst inputText = d.research_inputs.map(r => `  Source: ${r.source}\\n  Findings: ${r.findings}`).join('\\n\\n');\nconst system = `You are a UX researcher building evidence-based product personas. You ground every persona attribute in the provided research data — no fictional demographics. You focus on goals, frustrations, behaviours, and product implications. Return ONLY valid JSON.`;\nconst user = `Build ${d.segments_to_personas} product personas for: ${d.product}\n\nResearcher note: ${d.notes}\n\nResearch inputs:\n${inputText}\n\nReturn JSON:\n{\n  \"personas\": [\n    {\n      \"name\": \"string — a memorable archetype name, not a fictional person\",\n      \"archetype\": \"string — 1-2 word descriptor\",\n      \"segment\": \"string — which user segment this persona represents\",\n      \"primary_goal\": \"string\",\n      \"secondary_goals\": [\"string\"],\n      \"key_frustrations\": [\"string\"],\n      \"behavioural_patterns\": [\"string — what they actually do in the product\"],\n      \"success_metric\": \"string — how they define success\",\n      \"retention_signal\": \"string — what predicts whether this persona stays or churns\",\n      \"product_implications\": [\"string — what product decisions this persona drives\"],\n      \"research_evidence\": [\"string — which research input supports this persona\"]\n    }\n  ],\n  \"persona_matrix\": \"string — 2-3 sentence description of how the personas relate to each other\"\n}`;\nreturn [{ json: { data: d, system_prompt: system, user_prompt: user } }];"
+      },
+      "id": "prepare-prompt",
+      "name": "Prepare Persona Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [740, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.OPENAI_BASE_URL || 'https://api.openai.com' }}/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParameters": {
+          "parameters": [
+            { "name": "model", "value": "={{ $env.AI_MODEL || 'gpt-4o-mini' }}" },
+            { "name": "messages", "value": "=[{\"role\":\"system\",\"content\":\"{{ $json.system_prompt }}\"},{\"role\":\"user\",\"content\":\"{{ $json.user_prompt }}\"}]" },
+            { "name": "temperature", "value": "=0.3" },
+            { "name": "response_format", "value": "={\"type\":\"json_object\"}" }
+          ]
+        },
+        "options": { "timeout": 60000 }
+      },
+      "id": "llm-call",
+      "name": "LLM: Generate Personas",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [960, 200],
+      "credentials": { "httpHeaderAuth": { "name": "YOUR_OPENAI_CREDENTIAL" } }
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst upstream = $('Prepare Persona Prompt').first().json;\nlet parsed;\ntry {\n  const c = response.choices?.[0]?.message?.content;\n  if (!c) throw new Error('No content');\n  parsed = JSON.parse(c);\n} catch(e) { return [{ json: { _error: true, reason: e.message } }]; }\nif (!parsed.personas || !Array.isArray(parsed.personas)) return [{ json: { _error: true, reason: 'Missing personas' } }];\nreturn [{ json: { _error: false, result: parsed, meta: { product: upstream.data.product, generated_at: new Date().toISOString() } } }];"
+      },
+      "id": "validate-llm",
+      "name": "Validate LLM Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1180, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "ce", "leftValue": "={{ $json._error }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "error-check",
+      "name": "LLM Error?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1400, 200]
+    },
+    {
+      "parameters": { "assignments": { "assignments": [{ "id": "e1", "name": "status", "value": "error", "type": "string" }] }, "options": {} },
+      "id": "error-handler",
+      "name": "LLM Error Handler",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1600, 100]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { result: r, meta: m } = $input.first().json;\nconst personaLines = (r.personas||[]).map(p => [\n  `PERSONA: ${p.name} (${p.archetype}) — ${p.segment}`,\n  `  Goal: ${p.primary_goal}`,\n  `  Secondary: ${(p.secondary_goals||[]).join(', ')}`,\n  `  Frustrations: ${(p.key_frustrations||[]).join(' | ')}`,\n  `  Behaviours: ${(p.behavioural_patterns||[]).join(' | ')}`,\n  `  Success metric: ${p.success_metric}`,\n  `  Retention signal: ${p.retention_signal}`,\n  `  Product implications: ${(p.product_implications||[]).join(' | ')}`,\n  `  Evidence: ${(p.research_evidence||[]).join(', ')}`,\n  ''\n].join('\\n')).join('\\n');\nconst report = [\n  `PRODUCT PERSONAS: ${m.product}`,\n  `Generated: ${m.generated_at}`,\n  ``,\n  personaLines,\n  `PERSONA MATRIX: ${r.persona_matrix}`,\n].join('\\n');\nreturn [{ json: { ...($input.first().json), report_text: report } }];"
+      },
+      "id": "format-personas",
+      "name": "Format Personas",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1600, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.PERSONA_APPROVER_EMAIL || $env.PERSONA_EMAIL_TO }}",
+        "subject": "=APPROVAL REQUIRED: Product Personas — {{ $json.meta.product }}",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $json.report_text }}</pre><p><a href=\"{{ $execution.resumeUrl }}?decision=approved\">Approve and share</a> | <a href=\"{{ $execution.resumeUrl }}?decision=rejected\">Reject</a></p>",
+        "options": {}
+      },
+      "id": "send-approval",
+      "name": "Send for Approval",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1820, 300],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": { "resume": "webhook", "options": { "webhookSuffix": "/approval" } },
+      "id": "wait-approval",
+      "name": "Wait for Approval",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [2040, 300],
+      "webhookId": "persona-approval"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "cd", "leftValue": "={{ $json.query?.decision || $json.body?.decision }}", "rightValue": "approved", "operator": { "type": "string", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-decision",
+      "name": "Approved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2260, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.PERSONA_EMAIL_TO || 'product@acme-analytics.com' }}",
+        "subject": "=Product Personas: {{ $('Format Personas').first().json.meta.product }}",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $('Format Personas').first().json.report_text }}</pre>",
+        "options": {}
+      },
+      "id": "send-personas",
+      "name": "Share with Product and Design",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [2480, 200],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": { "assignments": { "assignments": [{ "id": "r1", "name": "status", "value": "rejected", "type": "string" }] }, "options": {} },
+      "id": "log-rejection",
+      "name": "Log Rejection",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2480, 400]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": { "main": [[{ "node": "Load Sample Research Data", "type": "main", "index": 0 }]] },
+    "Load Sample Research Data": { "main": [[{ "node": "Prepare Persona Prompt", "type": "main", "index": 0 }]] },
+    "Prepare Persona Prompt": { "main": [[{ "node": "LLM: Generate Personas", "type": "main", "index": 0 }]] },
+    "LLM: Generate Personas": { "main": [[{ "node": "Validate LLM Output", "type": "main", "index": 0 }]] },
+    "Validate LLM Output": { "main": [[{ "node": "LLM Error?", "type": "main", "index": 0 }]] },
+    "LLM Error?": { "main": [[{ "node": "LLM Error Handler", "type": "main", "index": 0 }], [{ "node": "Format Personas", "type": "main", "index": 0 }]] },
+    "Format Personas": { "main": [[{ "node": "Send for Approval", "type": "main", "index": 0 }]] },
+    "Send for Approval": { "main": [[{ "node": "Wait for Approval", "type": "main", "index": 0 }]] },
+    "Wait for Approval": { "main": [[{ "node": "Approved?", "type": "main", "index": 0 }]] },
+    "Approved?": { "main": [[{ "node": "Share with Product and Design", "type": "main", "index": 0 }], [{ "node": "Log Rejection", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1", "saveManualExecutions": true, "callerPolicy": "workflowsFromSameOwner", "errorWorkflow": "" },
+  "staticData": null,
+  "tags": ["research", "discovery", "persona", "beta"],
+  "triggerCount": 0,
+  "updatedAt": "2026-07-14T00:00:00.000Z",
+  "versionId": "74-persona-generator-v0.1.0"
+}

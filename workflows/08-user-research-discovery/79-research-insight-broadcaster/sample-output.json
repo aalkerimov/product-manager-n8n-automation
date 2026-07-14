@@ -1,0 +1,30 @@
+{
+  "_comment": "Deterministic output — formatting is exact given the input.",
+  "formatted_messages": [
+    {
+      "group": "engineering",
+      "urgency": "high",
+      "subject": "Research Insight [ACTION REQUIRED]: Recurring tasks: the hidden retention driver",
+      "body": "Source: Q3 2026 Research Synthesis | Confidence: HIGH | ACTION REQUIRED\n\nCORE INSIGHT: Recurring tasks is used by only 28% of accounts but drives 2x NPS and 3x retention for those accounts. Critically, usability testing shows 60% of new users fail to find the feature during their first session because it is buried in the date picker with no visual affordance.\n\nIMPLICATION: Making recurring tasks more discoverable in onboarding could be the single highest-ROI product change this quarter.\n\nFOR ENGINEERING:\nACTION: Move recurring task button to task header — not inside date picker. Estimated effort: 2 sprints. Directly tied to 3x retention signal."
+    },
+    {
+      "group": "design",
+      "urgency": "high",
+      "subject": "Research Insight [ACTION REQUIRED]: Recurring tasks: the hidden retention driver",
+      "body": "Source: Q3 2026 Research Synthesis | Confidence: HIGH | ACTION REQUIRED\n\nCORE INSIGHT: Recurring tasks is used by only 28% of accounts but drives 2x NPS and 3x retention for those accounts. Critically, usability testing shows 60% of new users fail to find the feature during their first session because it is buried in the date picker with no visual affordance.\n\nIMPLICATION: Making recurring tasks more discoverable in onboarding could be the single highest-ROI product change this quarter.\n\nFOR DESIGN:\nACTION: Redesign recurring task entry point. Current: buried in date picker. Proposed: prominent labelled button in task header with clock icon. See usability test report for participant failure clips."
+    },
+    {
+      "group": "company-all-hands",
+      "urgency": "normal",
+      "subject": "Research Insight [FYI]: Recurring tasks: the hidden retention driver",
+      "body": "Source: Q3 2026 Research Synthesis | Confidence: HIGH | ACTION REQUIRED\n\nCORE INSIGHT: Recurring tasks is used by only 28% of accounts but drives 2x NPS and 3x retention for those accounts. Critically, usability testing shows 60% of new users fail to find the feature during their first session because it is buried in the date picker with no visual affordance.\n\nIMPLICATION: Making recurring tasks more discoverable in onboarding could be the single highest-ROI product change this quarter.\n\nFOR COMPANY-ALL-HANDS:\nINSIGHT: We have a feature that drives 3x customer retention but only 28% of customers use it — because they can't find it. Our top priority this quarter is making it discoverable. That's it. That's the insight."
+    },
+    {
+      "group": "sales",
+      "urgency": "normal",
+      "subject": "Research Insight [FYI]: Recurring tasks: the hidden retention driver",
+      "body": "Source: Q3 2026 Research Synthesis | Confidence: HIGH | ACTION REQUIRED\n\nCORE INSIGHT: Recurring tasks is used by only 28% of accounts but drives 2x NPS and 3x retention for those accounts. Critically, usability testing shows 60% of new users fail to find the feature during their first session because it is buried in the date picker with no visual affordance.\n\nIMPLICATION: Making recurring tasks more discoverable in onboarding could be the single highest-ROI product change this quarter.\n\nFOR SALES:\nSALES TALKING POINT: Recurring tasks (one of our core features) saves customers 2+ hours per week. In Q3, we are making it more visible in the product so you can demo the value on first contact. Talking point: 'ProjectFlow's recurring tasks saves your team 2 hours per week on average — and it takes 30 seconds to set up.'"
+    }
+  ],
+  "meta": { "broadcast_count": 4, "generated_at": "2026-07-14T09:00:00.000Z" }
+}

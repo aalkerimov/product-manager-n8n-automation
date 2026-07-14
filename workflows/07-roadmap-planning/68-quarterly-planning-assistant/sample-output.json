@@ -1,0 +1,84 @@
+{
+  "_comment": "Illustrative gpt-4o output. Actual recommendations will vary.",
+  "brief": {
+    "planning_brief_title": "Q3 2026 Product Planning Brief — Consolidate Enterprise Security, Accelerate Mobile, Selective Integrations",
+    "recommended_bets": [
+      {
+        "theme": "Enterprise security",
+        "recommended_initiatives": ["RBAC (carry-over)", "Audit log"],
+        "rationale": "Non-negotiable before SOC 2 audit (September 1). RBAC carry-over is the #1 priority. Data retention policy can follow in Q4 if capacity is tight.",
+        "estimated_capacity_pct": 40,
+        "confidence": "high"
+      },
+      {
+        "theme": "Mobile GA",
+        "recommended_initiatives": ["iOS GA from beta", "Android v1"],
+        "rationale": "45% daily active rate in beta is a rare retention signal. iOS GA is low-effort (beta is proven). Android v1 unlocks the other 50% of the mobile market. Offline mode deferred to Q4.",
+        "estimated_capacity_pct": 35,
+        "confidence": "high"
+      },
+      {
+        "theme": "Integrations",
+        "recommended_initiatives": ["Microsoft Teams"],
+        "rationale": "Enterprise customers are heavily Microsoft. Teams integration unblocks deals. Salesforce and Zapier deferred — lower signal, higher effort.",
+        "estimated_capacity_pct": 15,
+        "confidence": "medium"
+      },
+      {
+        "theme": "Tech debt and quality",
+        "recommended_initiatives": ["Address recurring tasks deletion behavior (from Q2 deferral)", "20% capacity reserved for bugs and incidents"],
+        "estimated_capacity_pct": 10,
+        "confidence": "high",
+        "rationale": "Deferred technical debt compounds. Reserve 10% for unplanned work and resolve the recurring tasks open question in week 1."
+      }
+    ],
+    "tradeoffs": [
+      "Gantt chart view deferred again — 167 votes but insufficient capacity given SOC 2 deadline. Communicate timeline to users.",
+      "Salesforce integration deferred — requires dedicated 4-week engineering effort. Revisit Q4.",
+      "Offline mode for mobile deferred — iOS GA is sufficient to capture mobile retention upside this quarter.",
+      "Data retention policy deferred to Q4 — RBAC and audit log are the SOC 2 blockers. Retention policy is nice-to-have."
+    ],
+    "must_do_this_quarter": [
+      "RBAC — required for SOC 2 audit by September 1",
+      "Audit log — required for SOC 2 audit by September 1",
+      "iOS GA from beta — low-effort, high-confidence delivery"
+    ],
+    "suggested_deferral": [
+      "Gantt chart view — Q4 2026",
+      "Salesforce integration — Q4 2026",
+      "Offline mode (mobile) — Q4 2026",
+      "Data retention policy — Q4 2026",
+      "Zapier connector — Q1 2027"
+    ],
+    "capacity_allocation": {
+      "description": "8 engineers over 13 weeks. 40% enterprise security (SOC 2), 35% mobile, 15% integrations, 10% quality/debt.",
+      "breakdown": [
+        { "area": "Enterprise security (RBAC + audit log)", "pct": 40 },
+        { "area": "Mobile GA (iOS GA + Android v1)", "pct": 35 },
+        { "area": "Integrations (Teams)", "pct": 15 },
+        { "area": "Quality/tech debt/unplanned", "pct": 10 }
+      ]
+    },
+    "key_risks": [
+      { "risk": "RBAC slips again — 6-week estimate based on Q2 complexity. Any ambiguity in scope re-opens the slip risk.", "mitigation": "Freeze RBAC scope in week 1. EM does daily check-in from week 4.", "severity": "high" },
+      { "risk": "Android v1 discovery — no prior Android codebase exists. Estimate may be optimistic.", "mitigation": "Run a 1-week technical spike in week 1 to validate Android estimate before committing.", "severity": "medium" },
+      { "risk": "SOC 2 scope expands — auditor may require additional controls not in current scope.", "mitigation": "Complete SOC 2 readiness review in week 2. Identify and escalate any gaps immediately.", "severity": "medium" },
+      { "risk": "CompetitorX launches in mid-market — 6-12 month window may be shorter than expected.", "mitigation": "Track CompetitorX release cadence weekly (workflow #47). Accelerate integrations if they launch.", "severity": "low" }
+    ],
+    "recommended_okrs": [
+      {
+        "objective": "Unblock enterprise sales with a complete security foundation",
+        "key_results": ["RBAC shipped and in production by August 15", "Audit log shipped by August 29 (1 week SOC 2 buffer)", "0 P0 security incidents in Q3", "3 new enterprise logos closed citing security features"]
+      },
+      {
+        "objective": "Establish mobile as a core product surface",
+        "key_results": ["iOS app reaches GA (stable, out of beta) by July 31", "Android v1 shipped to 10 beta customers by September 15", "Mobile daily active rate maintained at ≥ 40% (from 45% in Q2 beta)"]
+      },
+      {
+        "objective": "Grow net new ARR by $220k in Q3",
+        "key_results": ["$220k net new ARR (vs $180k in Q2)", "Churn maintained at ≤ 2.1%", "NPS ≥ 44 (vs 42 in Q2)"]
+      }
+    ]
+  },
+  "meta": { "quarter": "Q3 2026", "generated_at": "2026-07-14T09:00:00.000Z" }
+}

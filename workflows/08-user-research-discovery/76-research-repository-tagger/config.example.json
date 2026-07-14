@@ -1,0 +1,21 @@
+{
+  "_comment": "config.example.json for Research Repository Tagger",
+  "workflow_id": "76-research-repository-tagger",
+  "workflow_name": "Research Repository Tagger",
+  "collection": "08-user-research-discovery",
+  "status": "beta",
+  "configuration": {
+    "REPO_EMAIL_TO": { "default": "", "description": "Research team recipients", "required": "Required" },
+    "REPO_APPROVER_EMAIL": { "default": "", "description": "PM approver. Defaults to REPO_EMAIL_TO.", "required": "Optional" },
+    "AI_MODEL": { "default": "gpt-4o-mini", "description": "LLM model (low temperature 0.1 for consistent tagging)", "required": "Required" },
+    "OPENAI_BASE_URL": { "default": "https://api.openai.com", "description": "LLM base URL", "required": "Optional" },
+    "NOTIFICATION_EMAIL_FROM": { "default": "automation@acme-analytics.com", "description": "Sender address", "required": "Optional" }
+  },
+  "n8n_credentials_required": [
+    { "name": "YOUR_OPENAI_CREDENTIAL", "type": "httpHeaderAuth", "required": true, "purpose": "LLM tag assignment" },
+    { "name": "YOUR_SMTP_CREDENTIAL", "type": "smtp", "required": true, "purpose": "Approval and team notification" }
+  ],
+  "webhook_path": "/webhook/tag-research",
+  "webhook_method": "POST",
+  "notes": "Use participant codes, not names. Update taxonomy in 'Load Sample Notes' Code node to match your actual themes and personas."
+}

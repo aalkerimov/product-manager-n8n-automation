@@ -1,0 +1,27 @@
+{
+  "_comment": "Illustrative LLM output. Actual phrasing will vary.",
+  "notes": {
+    "release_title": "v2.14.0 — SSO, recurring tasks, and a faster experience",
+    "release_summary": "This release delivers two highly-requested features — SAML SSO and recurring tasks — along with significant speed improvements across search and the dashboard. Three bug fixes address issues with duplicate notifications and data filtering.",
+    "whats_new": [
+      { "title": "Export your projects to CSV", "description": "You can now export any project view to CSV with a single click. Useful for reporting, stakeholder updates, or migrating data.", "ticket_id": "ENG-451" },
+      { "title": "Sign in with SSO (SAML 2.0)", "description": "Enterprise teams can now use their existing identity provider (Okta, Azure AD, Google Workspace, and others) to log in. Contact your admin to configure.", "ticket_id": "ENG-412" },
+      { "title": "Recurring tasks", "description": "Set any task to repeat weekly or monthly. Never forget to schedule standup notes, monthly reviews, or regular check-ins again.", "ticket_id": "ENG-438" }
+    ],
+    "improvements": [
+      { "title": "Load more projects at once", "description": "Project lists now show up to 500 items before paginating. Less scrolling for large workspaces.", "ticket_id": "ENG-467" },
+      { "title": "Search is 5× faster", "description": "Search results now appear in under 1 second on average, down from 4 seconds previously.", "ticket_id": "ENG-471" },
+      { "title": "Dashboard loads faster", "description": "Your dashboard now loads widgets as you scroll, resulting in a noticeably faster initial page load.", "ticket_id": "ENG-455" }
+    ],
+    "bug_fixes": [
+      { "title": "Fixed: Duplicate task entries", "description": "A rare issue could cause duplicate task entries when multiple users updated the same task simultaneously. This is now resolved.", "ticket_id": "ENG-479" },
+      { "title": "Fixed: Double email notifications", "description": "Tasks assigned to multiple users were triggering duplicate email notifications. Fixed — you'll receive one notification per event.", "ticket_id": "ENG-461" },
+      { "title": "Fixed: Date filter error in certain timezones", "description": "Users in timezones west of UTC (e.g., Americas) could see a filter error when using date ranges. This is resolved.", "ticket_id": "ENG-483" }
+    ],
+    "security": [
+      { "title": "Security update", "description": "We updated an internal library to address a security vulnerability. No action required from users. Your data was not affected.", "ticket_id": "ENG-475" }
+    ],
+    "full_text_markdown": "## v2.14.0 — SSO, recurring tasks, and a faster experience\n\nThis release delivers two highly-requested features — SAML SSO and recurring tasks — along with significant speed improvements across search and the dashboard. Three bug fixes address issues with duplicate notifications and data filtering.\n\n### ✨ What's New\n\n- **Export your projects to CSV** — Export any project view with one click. Useful for reporting or stakeholder updates.\n- **Sign in with SSO (SAML 2.0)** — Enterprise teams can now use Okta, Azure AD, Google Workspace, and other SAML providers.\n- **Recurring tasks** — Set tasks to repeat weekly or monthly automatically.\n\n### 🚀 Improvements\n\n- Project lists now support up to 500 items per page (previously 50)\n- Search is now 5× faster — results in under 1 second\n- Dashboard loads faster with lazy-loaded widgets\n\n### 🐛 Bug Fixes\n\n- Fixed duplicate task entries on concurrent edits\n- Fixed double email notifications for tasks with multiple assignees\n- Fixed date filter 500 error for users in UTC-offset timezones\n\n### 🔒 Security\n\n- Updated an internal library to address a security vulnerability. No user action required.\n"
+  },
+  "meta": { "version": "2.14.0", "release_date": "2026-07-14", "ticket_count": 10, "generated_at": "2026-07-14T09:00:00.000Z" }
+}

@@ -1,0 +1,31 @@
+{
+  "_comment": "Illustrative LLM output. Actual synthesis will vary.",
+  "report": {
+    "executive_summary": "Across four studies, a single pattern dominates: recurring tasks is simultaneously the most-loved feature (2x NPS, 3x retention) and the least discoverable (40% usability test completion, buried in the date picker). The onboarding experience is the primary churn risk — usability testing confirms new users cannot find core features, and interviews reveal team adoption stalls within the first week when value is not immediately visible. Fixing discoverability of recurring tasks and redesigning the new user flow represent the highest-confidence, highest-impact interventions available to the product team.",
+    "cross_study_patterns": [
+      { "pattern": "Recurring tasks is the #1 retention driver but remains critically undiscoverable in the current UI", "confidence": "high", "supporting_studies": ["Usability Test", "NPS Survey", "Customer Interviews", "Feature Usage Analytics"], "strategic_implication": "Any roadmap that does not prioritise recurring tasks discoverability in the next sprint is leaving measurable retention gains on the table." },
+      { "pattern": "The first week of onboarding is the primary churn window for small accounts", "confidence": "high", "supporting_studies": ["NPS Survey", "Customer Interviews", "Feature Usage Analytics"], "strategic_implication": "Segment A (1-5 users) has a 4-month median LTV with the key churn window at months 2-4. A guided onboarding flow that gets users to recurring tasks within the first session could extend LTV by 30%+." },
+      { "pattern": "Non-PM team members fail to adopt, creating a partial-adoption ceiling", "confidence": "medium", "supporting_studies": ["NPS Survey", "Customer Interviews"], "strategic_implication": "Team adoption is a growth ceiling for Segment B. Investing in team onboarding (not just individual onboarding) unlocks the next LTV tier." }
+    ],
+    "reconciled_findings": [
+      { "topic": "Recurring tasks: loved vs hidden", "what_different_studies_say": "NPS survey: recurring tasks drives promoters. Usability test: 60% fail rate for recurring tasks task. Analytics: only 28% of accounts use it despite it driving 3x retention.", "synthesis": "The feature is not flawed — it is hidden. The usability failure explains the low adoption rate. Fixing discoverability is the highest-ROI single intervention." },
+      { "topic": "Onboarding quality perception", "what_different_studies_say": "Usability test shows critical task failures. Interviews mention a learning cliff. NPS detractors cite confusion. But NPS promoters describe the product as intuitive 'once you get it'.", "synthesis": "The product has a bimodal onboarding experience: users who get through the first week successfully rate the product highly; users who don't, churn. The intervention is the first week, not the overall product design." }
+    ],
+    "prioritised_recommendations": [
+      { "recommendation": "Move recurring task option to a prominent, labelled button in the task header — not inside the date picker", "priority": "high", "effort": "low", "evidence_strength": "strong", "rationale": "4 studies converge on this. Fixing discoverability of the highest-retention feature is the highest-confidence, lowest-effort improvement available." },
+      { "recommendation": "Build a guided new project setup wizard that surfaces recurring tasks in the first 3 steps", "priority": "high", "effort": "medium", "evidence_strength": "strong", "rationale": "The first-week churn pattern appears across 3 studies. A guided flow that guarantees users encounter recurring tasks in session 1 directly attacks the primary churn window." },
+      { "recommendation": "Add a team onboarding flow distinct from individual onboarding", "priority": "medium", "effort": "high", "evidence_strength": "moderate", "rationale": "Team adoption failure appears in NPS and interviews but is not yet confirmed by a dedicated usability test. High potential impact for Segment B, but requires its own study before full investment." },
+      { "recommendation": "Fix search for historical task recall (date-based indexing)", "priority": "high", "effort": "medium", "evidence_strength": "moderate", "rationale": "Search failure is a detractor driver in NPS and a known usability issue. Analytics data on search query patterns would confirm scope before investment." }
+    ],
+    "open_questions": [
+      "What % of search queries target tasks older than 90 days? — needed to size the search fix.",
+      "At what point in the onboarding flow do Segment A accounts churn — which screen? — needed for targeted intervention.",
+      "Do non-PM team members have a different mental model of the product that a separate onboarding flow should address?"
+    ],
+    "next_studies_suggested": [
+      { "study": "Onboarding funnel analysis — identify the exact screen/step where Segment A users drop off", "why": "Analytics can identify this without additional user research. Required to target the onboarding fix." },
+      { "study": "Team onboarding usability test — observe a non-PM team member completing their first project update", "why": "Interviews suggest team members struggle, but we have no direct observation. Required before investing in a team onboarding flow." }
+    ]
+  },
+  "meta": { "title": "Q3 2026 Onboarding & Adoption Research Synthesis", "period": "Q3 2026", "study_count": 4, "generated_at": "2026-07-14T09:00:00.000Z" }
+}

@@ -1,0 +1,46 @@
+{
+  "_comment": "Illustrative LLM output. NPS stats are deterministic. Theme analysis will vary.",
+  "nps_stats": { "nps": 40, "promoters": 5, "passives": 5, "detractors": 5, "total": 15 },
+  "analysis": {
+    "themes": [
+      { "theme": "Onboarding and learning curve", "sentiment": "negative", "frequency": 3, "representative_quotes": ["I spent two days trying to understand how to set up projects correctly and gave up twice", "The learning curve is too steep for non-technical folks"], "response_ids": ["R002", "R006", "R013"], "actionable": true },
+      { "theme": "Recurring tasks value", "sentiment": "positive", "frequency": 2, "representative_quotes": ["The recurring tasks feature saved us probably 2 hours per week", "The recurring tasks alone paid for the subscription"], "response_ids": ["R005", "R009"], "actionable": false },
+      { "theme": "Missing integrations (Teams)", "sentiment": "negative", "frequency": 1, "representative_quotes": ["Please add Microsoft Teams integration. Our company is all-in on Teams and Slack is not an option"], "response_ids": ["R007"], "actionable": true },
+      { "theme": "Search quality", "sentiment": "negative", "frequency": 1, "representative_quotes": ["The search function is terrible. I cannot find tasks from 3 months ago without scrolling through everything"], "response_ids": ["R012"], "actionable": true },
+      { "theme": "Team adoption friction", "sentiment": "negative", "frequency": 2, "representative_quotes": ["About half the people still use a spreadsheet"], "response_ids": ["R003", "R006"], "actionable": true },
+      { "theme": "Notification overload", "sentiment": "negative", "frequency": 1, "representative_quotes": ["Too many notifications and no way to silence specific projects"], "response_ids": ["R003"], "actionable": true },
+      { "theme": "Feature requests (Gantt, bulk edit)", "sentiment": "mixed", "frequency": 2, "representative_quotes": ["The only thing I miss is a Gantt view", "Would love bulk editing of tasks"], "response_ids": ["R001", "R011"], "actionable": true },
+      { "theme": "Performance / load time", "sentiment": "negative", "frequency": 1, "representative_quotes": ["The dashboard takes about 4 seconds to load when I have many projects"], "response_ids": ["R008"], "actionable": true }
+    ],
+    "top_3_insights": [
+      "Onboarding is the #1 detractor driver — multiple users describe multi-day confusion before achieving first value. Improving the first-run experience could directly rescue low-NPS users.",
+      "Recurring tasks is the standout retention and value driver — two independent promoters attribute subscription justification to this single feature. Protect and promote it.",
+      "Team adoption is stalling for mid-size teams (10-15 people) — non-technical teammates are falling back to spreadsheets. This is a growth ceiling issue, not a power-user issue."
+    ],
+    "critical_issues": [
+      "Onboarding confusion causing churn-risk: 2 users describe giving up during setup (R002, R006) — address with guided setup flow or contextual in-app help",
+      "Search is unusable for historical tasks (R012) — basic recall failure for a productivity tool",
+      "No Microsoft Teams integration blocking enterprise deals (R007) — already on roadmap"
+    ],
+    "delight_signals": [
+      "Recurring tasks feature has clear, quantified value ('saved 2 hours per week') — use in marketing copy",
+      "Task dependencies feature prevents missed handoffs — underrated, should be more discoverable",
+      "Support team rated very positively — fast resolution builds trust"
+    ],
+    "feature_requests": [
+      { "request": "Microsoft Teams integration", "frequency": 1, "response_ids": ["R007"] },
+      { "request": "Gantt chart view", "frequency": 1, "response_ids": ["R001"] },
+      { "request": "Bulk task editing", "frequency": 1, "response_ids": ["R011"] },
+      { "request": "Notification controls per project", "frequency": 1, "response_ids": ["R003"] },
+      { "request": "Complete CSV export (all fields)", "frequency": 1, "response_ids": ["R010"] },
+      { "request": "Lower pricing tier for small teams", "frequency": 1, "response_ids": ["R014"] }
+    ],
+    "recommended_actions": [
+      { "action": "Redesign onboarding flow with a guided project setup wizard", "priority": "high", "rationale": "Directly addresses the #1 detractor driver. Multiple users describe multi-day confusion. Even a 20% improvement in time-to-first-value would materially lift NPS." },
+      { "action": "Fix search — prioritise historical task recall by date/project", "priority": "high", "rationale": "R012 is a detractor specifically because of search. A productivity tool with broken recall erodes trust." },
+      { "action": "Add per-project notification muting", "priority": "medium", "rationale": "Teams with 10+ members are overwhelmed by notifications. This is a natural growth pain that will worsen as team size increases." },
+      { "action": "Promote recurring tasks more prominently in onboarding", "priority": "medium", "rationale": "Two promoters explicitly attribute product value to this feature. New users likely don't discover it. Surface it in the setup wizard." }
+    ]
+  },
+  "meta": { "survey_title": "Product NPS Survey — Q2 2026", "total": 15, "generated_at": "2026-07-14T09:00:00.000Z" }
+}

@@ -1,0 +1,24 @@
+{
+  "_comment": "Sample input for manual testing. This data is also embedded in the 'Load Sample Data' Code node for zero-account testing.",
+  "product_category": "B2B project management software",
+  "target_segments": ["SMB (10-200 employees)", "Mid-market (201-1000 employees)"],
+  "geography": "North America",
+  "pricing_model": "SaaS subscription",
+  "avg_contract_value_usd": 2400,
+  "revenue_proxies": [
+    { "name": "US SMB count (SBA 2024)", "value": 5800000 },
+    { "name": "Software adoption rate in SMB (Gartner est.)", "value": 0.38 },
+    { "name": "US mid-market company count", "value": 200000 },
+    { "name": "Competitor A annual revenue (public filing)", "value": 180000000 },
+    { "name": "Competitor B annual revenue (estimated)", "value": 85000000 },
+    { "name": "Average project management tools per company (Productiv 2023)", "value": 2.3 }
+  ],
+  "competitors": ["Asana", "Monday.com", "ClickUp"],
+  "assumptions_to_flag": [
+    "Software adoption rate is from a 2021 survey — may be understated",
+    "ACV is a blended average across both segments",
+    "Competitor B revenue is analyst estimate, not audited"
+  ],
+  "requested_by": "strategy-team@acme-analytics.com",
+  "run_id": "manual_test_001"
+}

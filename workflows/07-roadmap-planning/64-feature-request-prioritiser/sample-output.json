@@ -1,0 +1,34 @@
+{
+  "_comment": "Illustrative LLM output. Actual ranking and phrasing will vary.",
+  "prioritisation": {
+    "clusters": [
+      { "cluster_name": "Enterprise security & access", "request_ids": ["FR006", "FR007", "FR016", "FR020"], "theme": "Compliance, RBAC, SSO, and audit capabilities for enterprise deals", "total_votes": 532, "primary_segment": "enterprise" },
+      { "cluster_name": "Views and visualisation", "request_ids": ["FR008", "FR017", "FR018"], "theme": "Different task views (calendar, kanban, Gantt) for different working styles", "total_votes": 766, "primary_segment": "smb" },
+      { "cluster_name": "Integrations", "request_ids": ["FR002", "FR004", "FR013"], "theme": "Connecting to CRM, Slack, and Teams for enterprise workflows", "total_votes": 299, "primary_segment": "enterprise" },
+      { "cluster_name": "Core task management", "request_ids": ["FR001", "FR005", "FR011", "FR012"], "theme": "Bulk export, templates, time tracking, recurring tasks — power-user table stakes", "total_votes": 716, "primary_segment": "smb" },
+      { "cluster_name": "Collaboration & access", "request_ids": ["FR009", "FR014", "FR015", "FR019"], "theme": "Offline, guest access, digest emails, AI helpers", "total_votes": 325, "primary_segment": "smb" }
+    ],
+    "top_10_ranked": [
+      { "rank": 1, "id": "FR006", "title": "Role-based access control", "rationale": "Enterprise must-have from sales team. Blocks enterprise deals. 210 votes, all from high-value segment.", "estimated_impact": "high", "strategic_fit": "core" },
+      { "rank": 2, "id": "FR007", "title": "SSO (SAML / Google Workspace)", "rationale": "Pairs with RBAC for enterprise security story. Common security checklist item. 178 votes from sales.", "estimated_impact": "high", "strategic_fit": "core" },
+      { "rank": 3, "id": "FR017", "title": "Kanban board view", "rationale": "Highest single-request vote count (344). Broad SMB appeal. High visibility — missing this is a dealbreaker for some users.", "estimated_impact": "high", "strategic_fit": "core" },
+      { "rank": 4, "id": "FR012", "title": "Recurring task support", "rationale": "287 votes. Fundamental productivity feature. High reach, relatively low effort.", "estimated_impact": "high", "strategic_fit": "core" },
+      { "rank": 5, "id": "FR008", "title": "Calendar view for tasks", "rationale": "255 votes. Complements kanban view. Expected by most project management tool users.", "estimated_impact": "medium", "strategic_fit": "core" },
+      { "rank": 6, "id": "FR001", "title": "Bulk export to CSV", "rationale": "142 votes from enterprise. Data portability is increasingly a procurement requirement. Lower effort.", "estimated_impact": "medium", "strategic_fit": "core" },
+      { "rank": 7, "id": "FR018", "title": "Gantt chart view", "rationale": "167 votes, strong mid-market signal. Signals PM and project lead use cases.", "estimated_impact": "medium", "strategic_fit": "adjacent" },
+      { "rank": 8, "id": "FR013", "title": "Microsoft Teams integration", "rationale": "134 votes from sales. Enterprise customers heavily in Microsoft ecosystem. Unlock blocked deals.", "estimated_impact": "medium", "strategic_fit": "adjacent" },
+      { "rank": 9, "id": "FR020", "title": "Data retention and audit log for compliance", "rationale": "88 votes from legal team — a compliance unlock for regulated industries. Multiplier for enterprise deals.", "estimated_impact": "medium", "strategic_fit": "adjacent" },
+      { "rank": 10, "id": "FR011", "title": "Time tracking built-in", "rationale": "198 votes. High SMB desire but watch for scope: full time tracking is medium-large effort.", "estimated_impact": "medium", "strategic_fit": "adjacent" }
+    ],
+    "quick_wins": [
+      "FR001: Bulk CSV export — 142 votes, likely low engineering effort, immediate enterprise value",
+      "FR015: Email digest of overdue items — 93 votes, simple notification logic, high engagement improvement"
+    ],
+    "defer": [
+      "FR003: Dark mode — 321 votes but pure UI polish, no enterprise value, high CSS effort",
+      "FR019: AI task description generator — 44 votes, experimental, low confidence in demand"
+    ],
+    "confidence": "medium"
+  },
+  "meta": { "total": 20, "generated_at": "2026-07-14T09:00:00.000Z" }
+}

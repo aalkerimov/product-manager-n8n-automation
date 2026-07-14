@@ -1,0 +1,16 @@
+{
+  "_comment": "Deterministic output. Pricing: gpt-4o-mini $0.15/$0.60 per 1M tokens; gpt-4o $5/$15 per 1M tokens.",
+  "per_workflow": [
+    { "workflow": "78-synthesis-report-builder", "model": "gpt-4o", "input_tokens": 38000, "output_tokens": 22000, "calls": 8, "cost_usd": 0.52, "over_budget": false },
+    { "workflow": "74-persona-generator", "model": "gpt-4o", "input_tokens": 22000, "output_tokens": 14000, "calls": 6, "cost_usd": 0.32, "over_budget": false },
+    { "workflow": "72-survey-response-analyser", "model": "gpt-4o-mini", "input_tokens": 45200, "output_tokens": 12800, "calls": 34, "cost_usd": 0.0145, "over_budget": false },
+    { "workflow": "81-bug-triage-assistant", "model": "gpt-4o-mini", "input_tokens": 18600, "output_tokens": 5400, "calls": 42, "cost_usd": 0.006, "over_budget": false }
+  ],
+  "model_totals": { "gpt-4o": 0.84, "gpt-4o-mini": 0.0205 },
+  "total_cost": 0.8605,
+  "budget_pct": 3.4,
+  "alert": false,
+  "period": { "start": "2026-07-07", "end": "2026-07-13" },
+  "generated_at": "2026-07-14T09:00:00.000Z",
+  "note": "All well within budget. The two gpt-4o workflows (synthesis + persona) account for 97% of total cost — consider whether gpt-4o-mini is sufficient for those use cases at this scale."
+}

@@ -1,0 +1,36 @@
+{
+  "competitor_name": "CompetitorX",
+  "competitor_category": "B2B project management",
+  "our_product_name": "Acme Analytics Platform",
+  "our_strengths": [
+    "Superior API and integrations — 200+ native connectors",
+    "Best-in-class reporting and custom dashboards",
+    "Faster onboarding: average 3 days vs industry 14 days",
+    "Transparent pricing — no seat upsells or hidden fees",
+    "SOC 2 Type II certified (CompetitorX is not)"
+  ],
+  "our_weaknesses": [
+    "No native mobile app (roadmap Q3 2026)",
+    "SSO only on Business and Enterprise plans",
+    "Smaller marketplace than CompetitorX (150 vs 400 integrations)"
+  ],
+  "competitor_claims": [
+    "\"Cheapest enterprise PM tool on the market\"",
+    "\"AI-powered project predictions reduce delays by 40%\"",
+    "\"Enterprise-grade security by default on all plans\""
+  ],
+  "known_objections": [
+    "Their price is lower than yours",
+    "They have AI features we do not see in your product",
+    "They have more integrations in their marketplace",
+    "We have been using them for two years — switching cost is high"
+  ],
+  "recent_changes": [
+    "Raised Series C ($80M) — likely increasing outbound sales motion and hiring",
+    "Released AI assistant feature (currently in beta, limited to Enterprise plan)",
+    "Cut pricing by 20% for annual plans in Q2 2026",
+    "Acquired a small analytics startup — may signal roadmap direction"
+  ],
+  "target_segment": "Mid-market and enterprise (200-2000 employees)",
+  "run_id": "manual_test_001"
+}

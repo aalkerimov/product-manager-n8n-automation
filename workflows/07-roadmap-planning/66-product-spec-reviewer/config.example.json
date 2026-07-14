@@ -1,0 +1,20 @@
+{
+  "_comment": "config.example.json for Product Spec Reviewer",
+  "workflow_id": "66-product-spec-reviewer",
+  "workflow_name": "Product Spec Reviewer",
+  "collection": "07-roadmap-planning",
+  "status": "beta",
+  "configuration": {
+    "SPEC_EMAIL_TO": { "default": "", "description": "PM approver email", "required": "Required" },
+    "SPEC_AUTHOR_EMAIL": { "default": "", "description": "Spec author email for feedback. Defaults to SPEC_EMAIL_TO if not set.", "required": "Optional" },
+    "AI_MODEL": { "default": "gpt-4o-mini", "description": "LLM model", "required": "Required" },
+    "OPENAI_BASE_URL": { "default": "https://api.openai.com", "description": "LLM base URL", "required": "Optional" },
+    "NOTIFICATION_EMAIL_FROM": { "default": "automation@acme-analytics.com", "description": "Sender address", "required": "Optional" }
+  },
+  "n8n_credentials_required": [
+    { "name": "YOUR_OPENAI_CREDENTIAL", "type": "httpHeaderAuth", "required": true, "purpose": "LLM spec review" },
+    { "name": "YOUR_SMTP_CREDENTIAL", "type": "smtp", "required": true, "purpose": "Approval and author feedback" }
+  ],
+  "webhook_path": "/webhook/review-spec",
+  "webhook_method": "POST"
+}

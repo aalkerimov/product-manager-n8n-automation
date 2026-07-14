@@ -1,0 +1,25 @@
+{
+  "_comment": "Illustrative LLM output. Actual themes and phrasing will vary.",
+  "analysis": {
+    "went_well_themes": [
+      { "theme": "Process improvements are landing", "items_count": 3, "key_insight": "Earlier design reviews, shorter standups, and pair programming all landed this sprint — the team is adopting structured work habits successfully." },
+      { "theme": "Delivery confidence", "items_count": 1, "key_insight": "On-time, on-budget delivery of the onboarding flow is a strong signal that scoping discipline is improving." },
+      { "theme": "Team communication", "items_count": 1, "key_insight": "Positive Slack communication trend. Maintain async-first culture." }
+    ],
+    "improvement_themes": [
+      { "theme": "Estimation accuracy", "items_count": 2, "root_cause": "Estimates don't account for unknowns, rework from unclear requirements, and production interruptions. All three occurred this sprint.", "recurring": true },
+      { "theme": "Focus time erosion", "items_count": 1, "root_cause": "No protected engineering time policy. Meetings are scheduled without regard to deep work blocks.", "recurring": false },
+      { "theme": "QA bottleneck at sprint end", "items_count": 1, "root_cause": "QA starts too late. Testing is treated as a final step rather than a parallel activity.", "recurring": true }
+    ],
+    "prioritised_actions": [
+      { "action": "PM to write acceptance criteria before sprint planning for all tickets", "owner": "PM", "by_when": "next sprint", "addresses_theme": "Estimation accuracy" },
+      { "action": "QA to start testing from day 5 of 10-day sprint — adjust sprint ceremonies accordingly", "owner": "EM + QA", "by_when": "next sprint", "addresses_theme": "QA bottleneck at sprint end" },
+      { "action": "Block 2-hour daily focus time for engineers — no meetings 10:00-12:00", "owner": "EM", "by_when": "this week", "addresses_theme": "Focus time erosion" },
+      { "action": "Add 10% buffer to all estimates and review buffer usage in next retro", "owner": "team", "by_when": "next sprint", "addresses_theme": "Estimation accuracy" }
+    ],
+    "team_health_signal": "improving",
+    "team_health_rationale": "The ratio of went-well items to improvement items is balanced, delivered on-time, and the actions are concrete and owned. Recurring issues exist but are identified — that's a healthy team signal.",
+    "patterns_to_watch": ["Estimation accuracy has appeared in 2+ consecutive sprints — if it persists after buffer addition, investigate requirements quality upstream", "QA bottleneck recurring — consider whether sprint length is appropriate", "Focus time erosion will worsen as team grows unless policy is formalised"]
+  },
+  "meta": { "sprint": "Sprint 23", "team": "Product Engineering", "total": 14, "generated_at": "2026-07-14T09:00:00.000Z" }
+}

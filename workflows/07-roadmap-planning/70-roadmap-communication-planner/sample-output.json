@@ -1,0 +1,114 @@
+{
+  "_comment": "Illustrative LLM output. Actual message copy will vary.",
+  "plan": {
+    "communication_plan": [
+      {
+        "stakeholder_group": "sales team",
+        "channel": "Slack + weekly sync",
+        "messages": [
+          {
+            "roadmap_item_ids": ["RM001", "RM004", "RM005"],
+            "message_type": "update",
+            "suggested_timing": "Immediate — start of Q3",
+            "key_points": [
+              "RBAC ships August 15 — leads blocked on permissions checklist can be targeted now",
+              "Microsoft Teams integration ships August 30 — start adding to enterprise proposals",
+              "Audit log ships August 29 — pairs with RBAC for full enterprise security story",
+              "ETAs are confirmed, not tentative — plan your pipeline accordingly"
+            ],
+            "tone": "Direct, deal-focused. Give sales the dates they need to make commitments.",
+            "do_not_share": ["RM006 (Gantt deferral — creates confusion about Q4 scope)"]
+          },
+          {
+            "roadmap_item_ids": ["RM006"],
+            "message_type": "defer-notice",
+            "suggested_timing": "Week 1 — before reps have committed Gantt to prospects",
+            "key_points": [
+              "Gantt chart view pushed to Q4 — do not commit to enterprise prospects this quarter",
+              "If a deal is blocked on Gantt: escalate to PM for a specific commitment conversation"
+            ],
+            "tone": "Clear and non-apologetic. Give alternatives.",
+            "do_not_share": []
+          }
+        ]
+      },
+      {
+        "stakeholder_group": "enterprise customers",
+        "channel": "customer success manager → email",
+        "messages": [
+          {
+            "roadmap_item_ids": ["RM002", "RM004"],
+            "message_type": "announcement",
+            "suggested_timing": "On iOS GA (July 31) and Teams launch (August 30)",
+            "key_points": [
+              "iOS app is now generally available — invite your team to download from the App Store",
+              "Microsoft Teams integration launches August 30 — sync updates directly in Teams"
+            ],
+            "tone": "Benefit-first, friendly. Link to documentation.",
+            "do_not_share": ["RM001 (RBAC — share when GA, not before)", "RM003 (Android beta — not GA)"]
+          }
+        ]
+      },
+      {
+        "stakeholder_group": "all-hands",
+        "channel": "company meeting",
+        "messages": [
+          {
+            "roadmap_item_ids": ["RM001", "RM002", "RM004"],
+            "message_type": "update",
+            "suggested_timing": "Monthly all-hands — July and August",
+            "key_points": [
+              "iOS GA ships July 31 — our first mobile milestone",
+              "Enterprise security (RBAC + audit log) ships August — unblocks a segment of the pipeline",
+              "Teams integration ships August 30 — broader integration story"
+            ],
+            "tone": "Celebratory but grounded. Connect to company metrics.",
+            "do_not_share": ["RM006 (Gantt deferral — discuss in product team, not all-hands)"]
+          }
+        ]
+      },
+      {
+        "stakeholder_group": "public (website/changelog)",
+        "channel": "changelog + email newsletter",
+        "messages": [
+          {
+            "roadmap_item_ids": ["RM002"],
+            "message_type": "announcement",
+            "suggested_timing": "July 31 (iOS GA day)",
+            "key_points": ["iOS app is now available for all users — download from the App Store today"],
+            "tone": "Exciting, user-benefit focused.",
+            "do_not_share": ["RM001 (internal)", "RM003 (Android not GA)", "RM005 (internal)"]
+          },
+          {
+            "roadmap_item_ids": ["RM004"],
+            "message_type": "announcement",
+            "suggested_timing": "August 30",
+            "key_points": ["Microsoft Teams integration now available — manage projects without leaving Teams"],
+            "tone": "Benefit-forward, link to setup guide.",
+            "do_not_share": []
+          }
+        ]
+      }
+    ],
+    "sensitive_items": [
+      { "item_id": "RM001", "reason": "RBAC affects user permissions model — premature announcement may confuse admins or create support burden", "recommended_handling": "Announce only on GA date. Notify enterprise CSMs 1 week before GA for proactive customer communication." },
+      { "item_id": "RM003", "reason": "Android v1 is beta — not GA. Premature announcement creates public expectation before product is stable.", "recommended_handling": "Internal communication only until Q4 GA. Sales may reference as 'Android coming Q4'." }
+    ],
+    "deferral_notices": [
+      {
+        "item": "Gantt chart view (RM006)",
+        "affected_groups": ["sales team", "enterprise customers with active Gantt requests"],
+        "suggested_message": "Gantt chart view is now scheduled for Q4 2026. We've prioritised enterprise security (RBAC, audit log) and mobile GA this quarter to address higher-urgency customer needs. We appreciate your patience and will reach out when Gantt is available."
+      }
+    ],
+    "communication_calendar": [
+      { "date_or_trigger": "Week 1 Q3 (immediate)", "action": "Brief sales on Q3 ETAs (RBAC, Teams, audit log) and Gantt deferral", "groups": ["sales team"] },
+      { "date_or_trigger": "July 31", "action": "iOS GA announcement — changelog, newsletter, all-hands update", "groups": ["public", "all-hands", "enterprise customers"] },
+      { "date_or_trigger": "August 15", "action": "RBAC GA — CSM email to enterprise customers + sales update", "groups": ["enterprise customers", "sales team"] },
+      { "date_or_trigger": "August 29", "action": "Audit log GA — enterprise CSM notification", "groups": ["enterprise customers"] },
+      { "date_or_trigger": "August 30", "action": "Teams integration GA — changelog + enterprise email", "groups": ["public", "enterprise customers"] },
+      { "date_or_trigger": "Q3 board meeting", "action": "Board update: iOS GA, enterprise security shipped, ARR pipeline impact", "groups": ["board"] }
+    ]
+  },
+  "meta": { "quarter": "Q3 2026", "generated_at": "2026-07-14T09:00:00.000Z" }
+}

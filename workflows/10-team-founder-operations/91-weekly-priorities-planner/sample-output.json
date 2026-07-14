@@ -1,0 +1,29 @@
+{
+  "_comment": "Illustrative LLM output.",
+  "plan": {
+    "weekly_theme": "Ship recurring tasks, protect the board deadline",
+    "top_3_priorities": [
+      { "rank": 1, "item": "P-412: Recurring tasks QA pass and smoke test", "why_this_week": "GA release is July 31 — this is the last engineering gate before release. Missing it pushes GA by a week minimum.", "linked_okr": "OKR3", "estimated_hours": 6, "suggested_day": "Tuesday" },
+      { "rank": 2, "item": "P-415: Board deck draft to CEO", "why_this_week": "Committed deliverable with CEO by Friday. Non-negotiable. Block Thursday afternoon immediately.", "linked_okr": null, "estimated_hours": 2, "suggested_day": "Thursday" },
+      { "rank": 3, "item": "P-421: Onboarding Figma review with design", "why_this_week": "Design is blocked on your feedback. Each day of delay delays engineering start. OKR1 is the biggest lagging KR.", "linked_okr": "OKR1", "estimated_hours": 2, "suggested_day": "Wednesday" }
+    ],
+    "defer_list": [
+      { "item": "P-389: Bulk task actions spec (v1)", "reason": "Carries over again — only medium urgency, no committed deadline this week. Defer to next sprint planning." }
+    ],
+    "delegate_list": [
+      { "item": "P-401: User research synthesis review", "to": "Product designer or associate PM", "reason": "Research synthesis read-through does not require the Head of Product's time — delegate with a brief on key questions to answer." }
+    ],
+    "risks_this_week": [
+      "QA on recurring tasks may surface blocking bugs — have a contingency conversation with engineering Monday on what constitutes a hard blocker vs. acceptable MVP risk",
+      "Board deck and recurring tasks QA are both highest-urgency — avoid scheduling QA and deck writing on the same day"
+    ],
+    "focus_time_allocation": { "okr_work_hours": 13, "meetings_hours": 4, "admin_hours": 3 },
+    "end_of_week_success_criteria": [
+      "Recurring tasks: QA sign-off completed and engineering given go/no-go decision",
+      "Board deck draft delivered to CEO by 5pm Friday",
+      "Onboarding Figma review done and feedback documented for design",
+      "Bulk actions spec explicitly deferred in Linear with a target date"
+    ]
+  },
+  "meta": { "week": "July 14–18, 2026", "generated_at": "2026-07-14T07:00:00.000Z" }
+}

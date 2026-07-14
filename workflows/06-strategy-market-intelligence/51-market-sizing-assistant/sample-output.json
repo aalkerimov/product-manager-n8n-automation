@@ -1,0 +1,96 @@
+{
+  "_comment": "This is an illustrative output, not the result of a live LLM run. Actual LLM output will differ. Numbers are plausible but not verified against real market data.",
+  "meta": {
+    "product_category": "B2B project management software",
+    "geography": "North America",
+    "run_id": "manual_test_001",
+    "requested_by": "strategy-team@acme-analytics.com",
+    "validated_at": "2026-07-14T09:00:00.000Z"
+  },
+  "sizing": {
+    "tam": {
+      "definition": "All North American businesses with 10+ employees that spend on digital project management or work management software, addressable at the stated ACV.",
+      "base_usd": 14400000000,
+      "bull_usd": 21600000000,
+      "bear_usd": 8600000000,
+      "methodology": "bottom-up",
+      "key_assumptions": [
+        {
+          "id": "A1",
+          "statement": "6 million US businesses with 10-1000 employees (SBA 2024)",
+          "confidence": "high",
+          "source": "US SBA Office of Advocacy, 2024 small business data"
+        },
+        {
+          "id": "A2",
+          "statement": "38% of SMBs use a dedicated project management tool (Gartner)",
+          "confidence": "medium",
+          "source": "Gartner SMB Software Survey 2021 — flagged as potentially understated"
+        },
+        {
+          "id": "A3",
+          "statement": "Average of 2.3 project management tools per company means some wallet share is split",
+          "confidence": "medium",
+          "source": "Productiv SaaS Trends Report 2023"
+        },
+        {
+          "id": "A4",
+          "statement": "ACV of $2,400/year used as blended average across SMB and mid-market",
+          "confidence": "medium",
+          "source": "Provided by requestor — flagged as blended average"
+        }
+      ]
+    },
+    "sam": {
+      "definition": "North American SMB and mid-market companies (10-1000 employees) that are actively evaluating or currently using a project management SaaS, reachable via digital sales channels.",
+      "base_usd": 2160000000,
+      "bull_usd": 3600000000,
+      "bear_usd": 1200000000,
+      "segmentation_rationale": "Applied a 15% serviceable fraction to TAM based on product positioning (English-language, API-first, integration-heavy) which limits reach to the tech-forward segment of the broader market."
+    },
+    "som": {
+      "definition": "Realistic revenue target for Acme Analytics within 3-5 years given current team size and go-to-market motion.",
+      "base_usd": 64800000,
+      "bull_usd": 108000000,
+      "bear_usd": 36000000,
+      "market_share_assumption_pct": 3,
+      "rationale": "3% SOM/SAM is consistent with what early-stage players (under $10M ARR) targeting 5-year outcomes have achieved in adjacent SaaS categories. Bull case assumes faster PLG adoption; bear case assumes a major competitor moves downmarket."
+    },
+    "sensitivity_drivers": [
+      {
+        "driver": "SMB software adoption rate",
+        "impact": "high",
+        "direction": "upside"
+      },
+      {
+        "driver": "Major competitor pricing reduction",
+        "impact": "high",
+        "direction": "downside"
+      },
+      {
+        "driver": "Remote-work tailwind for team coordination tools",
+        "impact": "medium",
+        "direction": "upside"
+      },
+      {
+        "driver": "Enterprise-only pivot by Asana or Monday.com",
+        "impact": "medium",
+        "direction": "upside"
+      },
+      {
+        "driver": "AI-native entrant commoditising basic PM features",
+        "impact": "high",
+        "direction": "downside"
+      }
+    ],
+    "data_gaps": [
+      "No primary data on current churn rates in the SMB PM software market",
+      "ACV benchmark not validated against competitor public pricing",
+      "Canadian market not separately sized (included in North America estimate)",
+      "No data on multi-year contract prevalence which could increase effective ACV"
+    ],
+    "confidence_overall": "medium",
+    "confidence_rationale": "Bottom-up methodology is sound, but two key inputs (adoption rate, ACV) are flagged by the requestor as uncertain. The range between bear and bull is 2.5x, which reflects that uncertainty honestly."
+  },
+  "report_text": "MARKET SIZING REPORT\nProduct category: B2B project management software\nGeography: North America\nRun ID: manual_test_001\nGenerated: 2026-07-14T09:05:00.000Z\nOverall confidence: MEDIUM — Bottom-up methodology is sound, but two key inputs are flagged as uncertain.\n\n--- TAM ---\nDefinition: All North American businesses with 10+ employees that spend on digital project management software.\nMethodology: bottom-up\nBase: $14.4B | Bull: $21.6B | Bear: $8.6B\n\n--- SAM ---\nDefinition: North American SMB and mid-market companies actively evaluating or using a project management SaaS.\nSegmentation: Applied 15% serviceable fraction to TAM.\nBase: $2.2B | Bull: $3.6B | Bear: $1.2B\n\n--- SOM ---\nDefinition: Realistic 3-5 year revenue target for Acme Analytics.\nMarket share assumption: 3%\nRationale: 3% SOM/SAM consistent with early-stage SaaS benchmarks.\nBase: $65M | Bull: $108M | Bear: $36M\n\n--- KEY ASSUMPTIONS ---\n  [A1] 6M US businesses with 10-1000 employees (confidence: high, source: SBA 2024)\n  [A2] 38% SMB adoption rate (confidence: medium, source: Gartner 2021 — flagged)\n  [A3] 2.3 tools per company on average (confidence: medium, source: Productiv 2023)\n  [A4] ACV $2,400 blended average (confidence: medium, source: requestor — flagged)\n\n--- SENSITIVITY DRIVERS ---\n  - SMB software adoption rate: high impact, upside\n  - Major competitor pricing reduction: high impact, downside\n  - AI-native entrant commoditising basic PM features: high impact, downside\n\n--- DATA GAPS ---\n  - No primary data on SMB PM software churn rates\n  - ACV benchmark not validated against competitor pricing\n  - Canadian market not separately sized"
+}

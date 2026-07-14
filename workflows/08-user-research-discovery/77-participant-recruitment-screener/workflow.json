@@ -1,0 +1,175 @@
+{
+  "name": "Participant Recruitment Screener",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Participant Recruitment Screener\n\n**Setup:**\n1. Create YOUR_SMTP_CREDENTIAL\n2. Set SCREENER_EMAIL_TO and SCREENER_WEBHOOK_PATH\n3. Post applicant responses via webhook (or use sample)\n4. Code nodes score applicants against criteria — no LLM required\n5. Approved applicants sent to researcher for outreach",
+        "height": 240,
+        "width": 400,
+        "color": 5
+      },
+      "id": "sticky-setup",
+      "name": "Setup Instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, -240]
+    },
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 200]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "screen-participant",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook: Screener Form",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 380],
+      "webhookId": "screener-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "const applicants = [\n  { id: 'A001', name: 'Applicant A', company_size: 45, role: 'Project Manager', tool_used: 'Asana', months_using_our_product: 4, weekly_tasks: 38, team_size: 12, willing_to_interview: true, timezone: 'UTC+2', email: 'a@example.com' },\n  { id: 'A002', name: 'Applicant B', company_size: 12, role: 'Founder', tool_used: 'Spreadsheet', months_using_our_product: 1, weekly_tasks: 9, team_size: 3, willing_to_interview: true, timezone: 'UTC-5', email: 'b@example.com' },\n  { id: 'A003', name: 'Applicant C', company_size: 250, role: 'Head of PMO', tool_used: 'Monday.com', months_using_our_product: 7, weekly_tasks: 190, team_size: 45, willing_to_interview: true, timezone: 'UTC+0', email: 'c@example.com' },\n  { id: 'A004', name: 'Applicant D', company_size: 5, role: 'Designer', tool_used: 'Notion', months_using_our_product: 2, weekly_tasks: 6, team_size: 2, willing_to_interview: false, timezone: 'UTC+3', email: 'd@example.com' },\n  { id: 'A005', name: 'Applicant E', company_size: 80, role: 'Product Manager', tool_used: 'Jira', months_using_our_product: 5, weekly_tasks: 55, team_size: 20, willing_to_interview: true, timezone: 'UTC-8', email: 'e@example.com' }\n];\nconst criteria = {\n  min_company_size: 20,\n  max_company_size: 500,\n  required_roles: ['Project Manager', 'Product Manager', 'Head of PMO', 'Engineering Manager'],\n  min_months_using: 3,\n  min_weekly_tasks: 20,\n  willing_to_interview: true,\n  target_count: 8\n};\nreturn [{ json: { applicants, criteria, study_name: 'Mid-Market PM Adoption Study — Q3 2026' } }];"
+      },
+      "id": "load-sample",
+      "name": "Load Sample Applicants",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Score applicants deterministically — no LLM needed\nconst { applicants, criteria, study_name } = $input.first().json;\nconst scored = applicants.map(a => {\n  const checks = {\n    company_size: a.company_size >= criteria.min_company_size && a.company_size <= criteria.max_company_size,\n    role: criteria.required_roles.includes(a.role),\n    months_using: a.months_using_our_product >= criteria.min_months_using,\n    weekly_tasks: a.weekly_tasks >= criteria.min_weekly_tasks,\n    willing: a.willing_to_interview === criteria.willing_to_interview\n  };\n  const passed_count = Object.values(checks).filter(Boolean).length;\n  const total = Object.keys(checks).length;\n  const qualifies = Object.values(checks).every(Boolean);\n  return { ...a, screening: { checks, passed_count, total, qualifies, score_pct: Math.round((passed_count/total)*100) } };\n});\nconst qualified = scored.filter(a => a.screening.qualifies);\nconst rejected = scored.filter(a => !a.screening.qualifies);\nreturn [{ json: { scored, qualified, rejected, study_name, criteria, meta: { total: applicants.length, qualified_count: qualified.length, rejected_count: rejected.length, checked_at: new Date().toISOString() } } }];"
+      },
+      "id": "score-applicants",
+      "name": "Score Applicants",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [740, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "cq", "leftValue": "={{ $json.meta.qualified_count }}", "rightValue": 0, "operator": { "type": "number", "operation": "gt" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "any-qualified",
+      "name": "Any Qualified?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [960, 200]
+    },
+    {
+      "parameters": { "assignments": { "assignments": [{ "id": "nq", "name": "status", "value": "no_qualified_applicants", "type": "string" }] }, "options": {} },
+      "id": "no-qualified",
+      "name": "Log No Qualified",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1180, 100]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { qualified, rejected, study_name, meta, criteria } = $input.first().json;\nconst qualLines = qualified.map(a => `  [QUALIFIED] ${a.id} | ${a.role} | ${a.company_size} employees | ${a.months_using_our_product}mo using | ${a.weekly_tasks} tasks/wk | ${a.timezone}`).join('\\n');\nconst rejLines = rejected.map(a => {\n  const fails = Object.entries(a.screening.checks).filter(([k,v])=>!v).map(([k])=>k);\n  return `  [REJECTED] ${a.id} | ${a.role} | Failed: ${fails.join(', ')}`;\n}).join('\\n');\nconst report = [\n  `PARTICIPANT SCREENING RESULTS: ${study_name}`,\n  `Screened: ${meta.total} | Qualified: ${meta.qualified_count} | Rejected: ${meta.rejected_count}`,\n  `Generated: ${meta.checked_at}`,\n  ``,\n  `CRITERIA:`,\n  `  Company size: ${criteria.min_company_size}–${criteria.max_company_size} employees`,\n  `  Roles: ${criteria.required_roles.join(', ')}`,\n  `  Min usage: ${criteria.min_months_using} months | Min weekly tasks: ${criteria.min_weekly_tasks}`,\n  ``,\n  `QUALIFIED APPLICANTS (${meta.qualified_count}):`,\n  qualLines || '  (none)',\n  ``,\n  `REJECTED APPLICANTS (${meta.rejected_count}):`,\n  rejLines || '  (none)',\n].join('\\n');\nreturn [{ json: { ...($input.first().json), report_text: report } }];"
+      },
+      "id": "format-results",
+      "name": "Format Screening Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1180, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.SCREENER_APPROVER_EMAIL || $env.SCREENER_EMAIL_TO }}",
+        "subject": "=APPROVAL REQUIRED: Participant Screening — {{ $json.study_name }} ({{ $json.meta.qualified_count }} qualified)",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $json.report_text }}</pre><p><a href=\"{{ $execution.resumeUrl }}?decision=approved\">Approve and send outreach list</a> | <a href=\"{{ $execution.resumeUrl }}?decision=rejected\">Reject</a></p>",
+        "options": {}
+      },
+      "id": "send-approval",
+      "name": "Send for Approval",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1400, 300],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": { "resume": "webhook", "options": { "webhookSuffix": "/approval" } },
+      "id": "wait-approval",
+      "name": "Wait for Approval",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [1620, 300],
+      "webhookId": "screener-approval"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "cd", "leftValue": "={{ $json.query?.decision || $json.body?.decision }}", "rightValue": "approved", "operator": { "type": "string", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-decision",
+      "name": "Approved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1840, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.SCREENER_EMAIL_TO || 'research@acme-analytics.com' }}",
+        "subject": "=Participant Outreach List: {{ $('Format Screening Results').first().json.study_name }}",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $('Format Screening Results').first().json.report_text }}</pre>",
+        "options": {}
+      },
+      "id": "send-outreach",
+      "name": "Send Outreach List to Researcher",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [2060, 200],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": { "assignments": { "assignments": [{ "id": "r1", "name": "status", "value": "rejected", "type": "string" }] }, "options": {} },
+      "id": "log-rejection",
+      "name": "Log Rejection",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2060, 400]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": { "main": [[{ "node": "Load Sample Applicants", "type": "main", "index": 0 }]] },
+    "Webhook: Screener Form": { "main": [[{ "node": "Score Applicants", "type": "main", "index": 0 }]] },
+    "Load Sample Applicants": { "main": [[{ "node": "Score Applicants", "type": "main", "index": 0 }]] },
+    "Score Applicants": { "main": [[{ "node": "Any Qualified?", "type": "main", "index": 0 }]] },
+    "Any Qualified?": { "main": [[{ "node": "Log No Qualified", "type": "main", "index": 0 }], [{ "node": "Format Screening Results", "type": "main", "index": 0 }]] },
+    "Format Screening Results": { "main": [[{ "node": "Send for Approval", "type": "main", "index": 0 }]] },
+    "Send for Approval": { "main": [[{ "node": "Wait for Approval", "type": "main", "index": 0 }]] },
+    "Wait for Approval": { "main": [[{ "node": "Approved?", "type": "main", "index": 0 }]] },
+    "Approved?": { "main": [[{ "node": "Send Outreach List to Researcher", "type": "main", "index": 0 }], [{ "node": "Log Rejection", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1", "saveManualExecutions": true, "callerPolicy": "workflowsFromSameOwner", "errorWorkflow": "" },
+  "staticData": null,
+  "tags": ["research", "discovery", "recruitment", "screening", "beta"],
+  "triggerCount": 0,
+  "updatedAt": "2026-07-14T00:00:00.000Z",
+  "versionId": "77-participant-recruitment-screener-v0.1.0"
+}

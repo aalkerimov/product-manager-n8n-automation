@@ -1,0 +1,14 @@
+{
+  "_comment": "Illustrative LLM output for Founder Weekly Review.",
+  "reflection": {
+    "week_headline": "Strong shipping week, but PM is the bottleneck again",
+    "key_pattern": "For the second consecutive week, you were the last person to unblock the team — not the first. Alex and David were blocked by PM deliverables (design spec, API contract) and you caught it at end-of-week. This isn't a scheduling failure; it's a role clarity failure. The team needs PM input at the start of the sprint, not as a blocker mid-sprint.",
+    "leverage_point": "Before next sprint planning ends, walk through every active work stream and ask: 'What do you need from me in the next 3 days?' Make this a standing check-in item, not a reactive catch.",
+    "metric_commentary": "MRR +3.2% week-over-week on a compounding trajectory is healthy. Support tickets dropping 26% (31→23) while signups grew is the most interesting signal — it suggests the recent product changes are reducing friction, not creating it. Watch this ratio for 3 more weeks before drawing conclusions.",
+    "decision_quality_note": "The pricing update deferral shows good prioritisation discipline — you identified it would have created too much rework mid-quarter. The James Kim hire is high-confidence and irreversible — make sure the onboarding plan is written before Aug 1, not scrambled on the day.",
+    "energy_note": "Medium energy on a week with 3 wins and a board deck ahead of schedule signals you're running on reserves, not surplus. The 3 hours spent on Slack/email is worth addressing — batching async communication is not a productivity hack, it's a leadership behaviour that teaches the team what 'urgent' means.",
+    "next_week_intention": "Be the unblocking force before the team hits a wall, not after.",
+    "question_to_sit_with": "If I removed myself from every meeting that didn't require a decision from me this week, what would I get done?"
+  },
+  "meta": { "week": "July 7–11, 2026", "generated_at": "2026-07-11T17:00:00.000Z" }
+}

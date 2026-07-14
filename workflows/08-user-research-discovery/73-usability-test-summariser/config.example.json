@@ -1,0 +1,19 @@
+{
+  "_comment": "config.example.json for Usability Test Summariser",
+  "workflow_id": "73-usability-test-summariser",
+  "workflow_name": "Usability Test Summariser",
+  "collection": "08-user-research-discovery",
+  "status": "beta",
+  "configuration": {
+    "USABILITY_EMAIL_TO": { "default": "", "description": "Design and product team recipients", "required": "Required" },
+    "USABILITY_APPROVER_EMAIL": { "default": "", "description": "PM approver. Defaults to USABILITY_EMAIL_TO.", "required": "Optional" },
+    "AI_MODEL": { "default": "gpt-4o-mini", "description": "LLM model", "required": "Required" },
+    "OPENAI_BASE_URL": { "default": "https://api.openai.com", "description": "LLM base URL", "required": "Optional" },
+    "NOTIFICATION_EMAIL_FROM": { "default": "automation@acme-analytics.com", "description": "Sender address", "required": "Optional" }
+  },
+  "n8n_credentials_required": [
+    { "name": "YOUR_OPENAI_CREDENTIAL", "type": "httpHeaderAuth", "required": true, "purpose": "LLM usability summary" },
+    { "name": "YOUR_SMTP_CREDENTIAL", "type": "smtp", "required": true, "purpose": "Approval and team delivery" }
+  ],
+  "notes": "Use participant codes (P1, P2), not real names. Pre-calculate success_rate_pct and avg_time_seconds before feeding to the workflow."
+}

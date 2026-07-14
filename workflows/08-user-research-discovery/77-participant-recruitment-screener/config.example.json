@@ -1,0 +1,19 @@
+{
+  "_comment": "config.example.json for Participant Recruitment Screener",
+  "workflow_id": "77-participant-recruitment-screener",
+  "workflow_name": "Participant Recruitment Screener",
+  "collection": "08-user-research-discovery",
+  "status": "beta",
+  "configuration": {
+    "SCREENER_EMAIL_TO": { "default": "", "description": "Researcher recipients for qualified outreach list", "required": "Required" },
+    "SCREENER_APPROVER_EMAIL": { "default": "", "description": "PM approver. Defaults to SCREENER_EMAIL_TO.", "required": "Optional" },
+    "NOTIFICATION_EMAIL_FROM": { "default": "automation@acme-analytics.com", "description": "Sender address", "required": "Optional" }
+  },
+  "n8n_credentials_required": [
+    { "name": "YOUR_SMTP_CREDENTIAL", "type": "smtp", "required": true, "purpose": "Approval and researcher outreach list delivery" }
+  ],
+  "webhook_path": "/webhook/screen-participant",
+  "webhook_method": "POST",
+  "ai_required": false,
+  "notes": "No LLM needed — all scoring is deterministic code. Review n8n data retention to avoid storing applicant PII."
+}

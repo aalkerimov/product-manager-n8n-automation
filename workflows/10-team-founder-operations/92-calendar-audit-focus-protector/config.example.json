@@ -1,0 +1,17 @@
+{
+  "_comment": "config.example.json for Calendar Audit & Focus Protector",
+  "workflow_id": "92-calendar-audit-focus-protector",
+  "workflow_name": "Calendar Audit & Focus Protector",
+  "collection": "10-team-founder-operations",
+  "status": "beta",
+  "configuration": {
+    "CALENDAR_AUDIT_EMAIL_TO": { "default": "", "description": "Your email (personal audit)", "required": "Required" },
+    "NOTIFICATION_EMAIL_FROM": { "default": "automation@acme-analytics.com", "description": "Sender address", "required": "Optional" }
+  },
+  "n8n_credentials_required": [
+    { "name": "YOUR_SMTP_CREDENTIAL", "type": "smtp", "required": true, "purpose": "Personal calendar audit delivery" }
+  ],
+  "ai_required": false,
+  "schedule": "Every Monday at 06:00",
+  "defaults": { "focus_threshold_pct": 40, "work_day_hours": 8, "work_days": 5 }
+}

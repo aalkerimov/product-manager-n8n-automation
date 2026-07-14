@@ -1,0 +1,45 @@
+{
+  "_comment": "Illustrative LLM output. Actual triage will vary.",
+  "triage": {
+    "triage_summary": "BUG-2041 is the critical issue — a production timeout affecting 12 enterprise accounts that is almost certainly a missing database query limit introduced in v2.4.1. It must be escalated immediately as P0. BUG-2042 and BUG-2043 are both regressions but P2 — scoped to specific environments with workarounds available.",
+    "triaged_bugs": [
+      {
+        "id": "BUG-2041",
+        "severity": "P0",
+        "severity_rationale": "Production outage for 12 paying enterprise accounts — dashboard unusable. Risk of churn. Started post-deployment, indicating a regression introduced in v2.4.1.",
+        "engineering_area": "backend/api",
+        "likely_cause": "A database query on the dashboard endpoint lacks a pagination limit or index for workspaces with >200 projects, causing a full table scan that exceeds the gateway timeout (typically 30s).",
+        "reproduction_steps": ["Create or access a test workspace with 200+ projects", "Authenticate as that workspace user", "Navigate to the main dashboard", "Observe 504 Gateway Timeout"],
+        "reproduction_difficulty": "medium",
+        "suggested_owner": "backend engineer — likely the author of the v2.4.1 dashboard query change",
+        "workaround": "Archive or move projects to reduce the count below 200. Not viable long-term.",
+        "regression": true
+      },
+      {
+        "id": "BUG-2042",
+        "severity": "P2",
+        "severity_rationale": "Feature broken but only on a specific browser/OS combination (Safari iOS 17.4). Workaround exists (Chrome mobile). Affected user count unknown but likely a subset of mobile users.",
+        "engineering_area": "mobile/ios",
+        "likely_cause": "Safari iOS scroll event handling differs from Chrome — likely a focus-management or z-index issue causing the dropdown to lose its selected state when scroll repaints the component.",
+        "reproduction_steps": ["Open ProjectFlow on iOS 17.4 with Safari", "Navigate to any task card", "Tap the assignee dropdown", "Select any team member", "Immediately scroll the page down", "Observe assignee field has reset to empty"],
+        "reproduction_difficulty": "easy",
+        "suggested_owner": "mobile engineer",
+        "workaround": "Use Chrome on iOS instead of Safari.",
+        "regression": false
+      },
+      {
+        "id": "BUG-2043",
+        "severity": "P2",
+        "severity_rationale": "Data export feature broken for custom fields — a regression from v2.4.0. No data loss, but customers relying on CSV export for analytics workflows are blocked. Standard fields still export correctly.",
+        "engineering_area": "data/exports",
+        "likely_cause": "The v2.4.0 CSV export refactor likely uses a hardcoded column mapping that only references standard fields, omitting the dynamic custom field resolution from the previous implementation.",
+        "reproduction_steps": ["Create a project with at least one custom field (text, number, or date)", "Add 2-3 tasks with values in the custom field", "Navigate to project settings → Export → CSV", "Open the exported CSV", "Verify that the custom field column is missing"],
+        "reproduction_difficulty": "easy",
+        "suggested_owner": "data/exports engineer",
+        "workaround": "Manually add custom field columns to the exported CSV from the task detail view. Not scalable for large projects.",
+        "regression": true
+      }
+    ]
+  },
+  "meta": { "product": "ProjectFlow", "bug_count": 3, "p0_count": 1, "generated_at": "2026-07-14T09:00:00.000Z" }
+}

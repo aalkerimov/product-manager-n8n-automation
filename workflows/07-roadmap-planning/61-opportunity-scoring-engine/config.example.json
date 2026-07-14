@@ -1,0 +1,19 @@
+{
+  "_comment": "config.example.json for Opportunity Scoring Engine",
+  "workflow_id": "61-opportunity-scoring-engine",
+  "workflow_name": "Opportunity Scoring Engine",
+  "collection": "07-roadmap-planning",
+  "status": "beta",
+  "configuration": {
+    "OPP_SHEET_ID": { "default": "", "description": "Google Sheet ID containing the opportunity list", "required": "Required for scheduled runs" },
+    "OPP_EMAIL_TO": { "default": "", "description": "Monthly report recipient", "required": "Required" },
+    "OPP_SCHEDULE": { "default": "0 9 1 * *", "description": "Monthly cron (1st of month 09:00)", "required": "Optional" },
+    "NOTIFICATION_EMAIL_FROM": { "default": "automation@acme-analytics.com", "description": "Sender address", "required": "Optional" }
+  },
+  "n8n_credentials_required": [
+    { "name": "YOUR_GOOGLE_SHEETS_CREDENTIAL", "type": "googleSheetsOAuth2Api", "required": true, "purpose": "Read opportunity list" },
+    { "name": "YOUR_SMTP_CREDENTIAL", "type": "smtp", "required": true, "purpose": "Send monthly report" }
+  ],
+  "scoring_formula": "RICE = (reach × impact × confidence/10) / effort | All dimensions: 0-10 integer scale",
+  "notes": "No LLM required. If effort = 0, RICE score is set to 0."
+}

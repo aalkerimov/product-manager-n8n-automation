@@ -1,0 +1,17 @@
+{
+  "_comment": "config.example.json for Discovery Session Scheduler",
+  "workflow_id": "80-discovery-session-scheduler",
+  "workflow_name": "Discovery Session Scheduler",
+  "collection": "08-user-research-discovery",
+  "status": "beta",
+  "configuration": {
+    "SCHEDULER_RESEARCHER_EMAIL": { "default": "", "description": "Researcher who sends actual calendar invitations", "required": "Required" },
+    "SCHEDULER_APPROVER_EMAIL": { "default": "", "description": "PM approver. Defaults to SCHEDULER_RESEARCHER_EMAIL.", "required": "Optional" },
+    "NOTIFICATION_EMAIL_FROM": { "default": "automation@acme-analytics.com", "description": "Sender address", "required": "Optional" }
+  },
+  "n8n_credentials_required": [
+    { "name": "YOUR_SMTP_CREDENTIAL", "type": "smtp", "required": true, "purpose": "Approval and researcher schedule delivery" }
+  ],
+  "ai_required": false,
+  "notes": "No LLM required. Scheduling is deterministic. Actual calendar invitations must be sent manually by the researcher after approval, unless Calendly/Google Calendar API is integrated."
+}

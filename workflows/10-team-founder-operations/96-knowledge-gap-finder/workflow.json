@@ -1,0 +1,197 @@
+{
+  "name": "Knowledge Gap Finder",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Knowledge Gap Finder\n\n**Setup:**\n1. Create YOUR_OPENAI_CREDENTIAL and YOUR_SMTP_CREDENTIAL\n2. Set KNOWLEDGE_GAP_EMAIL_TO\n3. Provide team skills inventory and required competencies for upcoming work\n4. LLM identifies gaps, prioritises them by impact on roadmap, and suggests learning paths\n5. Approval gate before sharing with team",
+        "height": 220,
+        "width": 400,
+        "color": 4
+      },
+      "id": "sticky-setup",
+      "name": "Setup Instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, -240]
+    },
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 280]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: {\n  team: [\n    { name: 'Alex Chen', role: 'Senior FE', skills: ['React', 'TypeScript', 'CSS', 'Performance optimisation', 'Code review'] },\n    { name: 'Maria Santos', role: 'Backend Engineer', skills: ['Node.js', 'PostgreSQL', 'REST API design', 'Auth', 'Redis'] },\n    { name: 'James Kim', role: 'Product Designer', skills: ['Figma', 'User research', 'Prototyping', 'Design systems', 'Accessibility'] },\n    { name: 'Sofia Park', role: 'Junior FE', skills: ['React basics', 'HTML/CSS', 'Git'] },\n    { name: 'David Osei', role: 'Backend Engineer', skills: ['Node.js', 'GraphQL', 'PostgreSQL', 'API design'] }\n  ],\n  upcoming_work: [\n    { title: 'Mobile app (React Native) — Q3 launch', priority: 'high', required_skills: ['React Native', 'Mobile UX patterns', 'App Store deployment'] },\n    { title: 'AI-powered task suggestions (OpenAI integration)', priority: 'high', required_skills: ['LLM API integration', 'Prompt engineering', 'Cost monitoring'] },\n    { title: 'Enterprise SSO (SAML/OIDC)', priority: 'medium', required_skills: ['SAML', 'OIDC', 'Security best practices'] },\n    { title: 'Real-time collaboration (WebSockets)', priority: 'medium', required_skills: ['WebSockets', 'Conflict resolution', 'State synchronisation'] }\n  ],\n  quarter: 'Q3 2026'\n} }];"
+      },
+      "id": "load-skills",
+      "name": "Load Skills Inventory",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 280]
+    },
+    {
+      "parameters": {
+        "jsCode": "const ctx = $input.first().json;\nconst teamText = ctx.team.map(m => `  ${m.name} (${m.role}): ${m.skills.join(', ')}`).join('\\n');\nconst workText = ctx.upcoming_work.map(w => `  [${w.priority.toUpperCase()}] ${w.title}: needs ${w.required_skills.join(', ')}`).join('\\n');\nconst system = `You are a technical talent development advisor. You analyse a team's current skills against upcoming work to identify the most impactful knowledge gaps. You prioritise by business impact, and you give specific, actionable learning path recommendations — not generic advice. Return ONLY valid JSON.`;\nconst user = `Identify knowledge gaps for the team going into ${ctx.quarter}.\\n\\nTeam skills inventory:\\n${teamText}\\n\\nUpcoming high-priority work:\\n${workText}\\n\\nReturn JSON:\\n{\\n  \"gaps\": [\\n    {\\n      \"skill\": \"string\",\\n      \"missing_from\": [\"team member names\"],\\n      \"required_for\": [\"project title\"],\\n      \"priority\": \"critical|high|medium\",\\n      \"impact_if_unaddressed\": \"string\",\\n      \"learning_path\": {\\n        \"recommended_resource\": \"string\",\\n        \"estimated_days\": 5,\\n        \"who_should_lead\": \"string\"\\n      }\\n    }\\n  ],\\n  \"strengths_to_leverage\": [\"string — where the team is strong and should lead this work\"],\\n  \"hiring_recommendation\": \"string|null — only if there is a gap no internal learning can bridge in time\",\\n  \"quarter_readiness_assessment\": \"string — overall team readiness for Q3 work\"\\n}`;\nreturn [{ json: { ctx, system_prompt: system, user_prompt: user } }];"
+      },
+      "id": "prepare-prompt",
+      "name": "Prepare Gap Analysis Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [740, 280]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.OPENAI_BASE_URL || 'https://api.openai.com' }}/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParameters": {
+          "parameters": [
+            { "name": "model", "value": "={{ $env.AI_MODEL || 'gpt-4o-mini' }}" },
+            { "name": "messages", "value": "=[{\"role\":\"system\",\"content\":\"{{ $json.system_prompt }}\"},{\"role\":\"user\",\"content\":\"{{ $json.user_prompt }}\"}]" },
+            { "name": "temperature", "value": "=0.3" },
+            { "name": "response_format", "value": "={\"type\":\"json_object\"}" }
+          ]
+        },
+        "options": { "timeout": 60000 }
+      },
+      "id": "llm-call",
+      "name": "LLM: Find Knowledge Gaps",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [960, 280],
+      "credentials": { "httpHeaderAuth": { "name": "YOUR_OPENAI_CREDENTIAL" } }
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst upstream = $('Prepare Gap Analysis Prompt').first().json;\nlet parsed;\ntry {\n  const c = response.choices?.[0]?.message?.content;\n  if (!c) throw new Error('No content');\n  parsed = JSON.parse(c);\n} catch(e) { return [{ json: { _error: true, reason: e.message } }]; }\nif (!parsed.gaps || !Array.isArray(parsed.gaps)) return [{ json: { _error: true, reason: 'Missing gaps array' } }];\nconst critical = parsed.gaps.filter(g => g.priority === 'critical').length;\nreturn [{ json: { _error: false, analysis: parsed, ctx: upstream.ctx, meta: { quarter: upstream.ctx.quarter, gap_count: parsed.gaps.length, critical_count: critical, generated_at: new Date().toISOString() } } }];"
+      },
+      "id": "validate-llm",
+      "name": "Validate LLM Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1180, 280]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "ce", "leftValue": "={{ $json._error }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "error-check",
+      "name": "LLM Error?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1400, 280]
+    },
+    {
+      "parameters": { "assignments": { "assignments": [{ "id": "e1", "name": "status", "value": "error", "type": "string" }] }, "options": {} },
+      "id": "error-handler",
+      "name": "LLM Error Handler",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1600, 180]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { analysis: a, ctx, meta: m } = $input.first().json;\nconst gapLines = a.gaps.map(g => [\n  `  [${g.priority.toUpperCase()}] ${g.skill}`,\n  `  Required for: ${g.required_for.join(', ')}`,\n  `  Missing from: ${g.missing_from.join(', ')}`,\n  `  Impact if unaddressed: ${g.impact_if_unaddressed}`,\n  `  Learning path: ${g.learning_path.recommended_resource} (~${g.learning_path.estimated_days}d) — lead: ${g.learning_path.who_should_lead}`,\n  ''\n].join('\\n')).join('\\n');\nconst report = [\n  `KNOWLEDGE GAP ANALYSIS: ${ctx.quarter}`,\n  `Generated: ${m.generated_at} | Gaps: ${m.gap_count} | Critical: ${m.critical_count}`,\n  ``,\n  `READINESS ASSESSMENT: ${a.quarter_readiness_assessment}`,\n  ``,\n  `GAPS (by priority):`,\n  gapLines,\n  `TEAM STRENGTHS TO LEVERAGE:`,\n  ...(a.strengths_to_leverage||[]).map(s => `  ✓ ${s}`),\n  ``,\n  a.hiring_recommendation ? `HIRING RECOMMENDATION: ${a.hiring_recommendation}` : '',\n].filter(Boolean).join('\\n');\nreturn [{ json: { ...($input.first().json), report_text: report } }];"
+      },
+      "id": "format-analysis",
+      "name": "Format Gap Analysis",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1600, 380]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.KNOWLEDGE_GAP_APPROVER_EMAIL || $env.KNOWLEDGE_GAP_EMAIL_TO }}",
+        "subject": "=APPROVAL REQUIRED: Knowledge Gap Analysis — {{ $json.meta.gap_count }} gaps, {{ $json.meta.critical_count }} critical — {{ $json.meta.quarter }}",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $json.report_text }}</pre><p><a href=\"{{ $execution.resumeUrl }}?decision=approved\">Approve and share with team</a> | <a href=\"{{ $execution.resumeUrl }}?decision=rejected\">Reject</a></p>",
+        "options": {}
+      },
+      "id": "send-approval",
+      "name": "Send for Approval",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1820, 380],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": { "resume": "webhook", "options": { "webhookSuffix": "/approval" } },
+      "id": "wait-approval",
+      "name": "Wait for Approval",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [2040, 380],
+      "webhookId": "knowledge-gap-approval"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "cd", "leftValue": "={{ $json.query?.decision || $json.body?.decision }}", "rightValue": "approved", "operator": { "type": "string", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-decision",
+      "name": "Approved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2260, 380]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.KNOWLEDGE_GAP_EMAIL_TO || 'team@acme-analytics.com' }}",
+        "subject": "=Q3 Knowledge Gap Analysis — {{ $('Format Gap Analysis').first().json.meta.gap_count }} gaps identified",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $('Format Gap Analysis').first().json.report_text }}</pre>",
+        "options": {}
+      },
+      "id": "send-analysis",
+      "name": "Share with Team",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [2480, 280],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": { "assignments": { "assignments": [{ "id": "r1", "name": "status", "value": "rejected", "type": "string" }] }, "options": {} },
+      "id": "log-rejection",
+      "name": "Log Rejection",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2480, 480]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": { "main": [[{ "node": "Load Skills Inventory", "type": "main", "index": 0 }]] },
+    "Load Skills Inventory": { "main": [[{ "node": "Prepare Gap Analysis Prompt", "type": "main", "index": 0 }]] },
+    "Prepare Gap Analysis Prompt": { "main": [[{ "node": "LLM: Find Knowledge Gaps", "type": "main", "index": 0 }]] },
+    "LLM: Find Knowledge Gaps": { "main": [[{ "node": "Validate LLM Output", "type": "main", "index": 0 }]] },
+    "Validate LLM Output": { "main": [[{ "node": "LLM Error?", "type": "main", "index": 0 }]] },
+    "LLM Error?": { "main": [[{ "node": "LLM Error Handler", "type": "main", "index": 0 }], [{ "node": "Format Gap Analysis", "type": "main", "index": 0 }]] },
+    "Format Gap Analysis": { "main": [[{ "node": "Send for Approval", "type": "main", "index": 0 }]] },
+    "Send for Approval": { "main": [[{ "node": "Wait for Approval", "type": "main", "index": 0 }]] },
+    "Wait for Approval": { "main": [[{ "node": "Approved?", "type": "main", "index": 0 }]] },
+    "Approved?": { "main": [[{ "node": "Share with Team", "type": "main", "index": 0 }], [{ "node": "Log Rejection", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1", "saveManualExecutions": true, "callerPolicy": "workflowsFromSameOwner", "errorWorkflow": "" },
+  "staticData": null,
+  "tags": ["team", "founder", "skills", "learning", "beta"],
+  "triggerCount": 0,
+  "updatedAt": "2026-07-14T00:00:00.000Z",
+  "versionId": "96-knowledge-gap-finder-v0.1.0"
+}

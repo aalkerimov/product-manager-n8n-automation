@@ -1,0 +1,11 @@
+{
+  "alert_source": "Datadog",
+  "alert_triggered_at": "2026-07-14T08:43:00Z",
+  "service": "ProjectFlow API",
+  "spikes": [
+    { "error_type": "TimeoutError", "error_message": "pg.query: statement timeout after 30000ms", "count_last_5min": 847, "count_baseline": 12, "endpoints": ["/api/v2/dashboard", "/api/v2/workspaces/:id/projects"], "severity": "critical" },
+    { "error_type": "TypeError", "error_message": "Cannot read properties of undefined (reading 'customFields')", "count_last_5min": 203, "count_baseline": 0, "endpoints": ["/api/v2/projects/:id/export/csv"], "severity": "high" },
+    { "error_type": "AuthError", "error_message": "JWT: token expired", "count_last_5min": 34, "count_baseline": 28, "endpoints": ["/api/v2/auth/refresh"], "severity": "low" }
+  ],
+  "deployment_context": "v2.4.1 deployed 2026-07-12T14:00Z. No deployments since."
+}

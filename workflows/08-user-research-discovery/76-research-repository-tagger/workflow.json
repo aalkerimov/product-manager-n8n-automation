@@ -1,0 +1,212 @@
+{
+  "name": "Research Repository Tagger",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Research Repository Tagger\n\n**Setup:**\n1. Create YOUR_OPENAI_CREDENTIAL and YOUR_SMTP_CREDENTIAL\n2. Set REPO_EMAIL_TO\n3. Post research notes or findings via webhook or use sample\n4. LLM tags the content with themes, personas, confidence, and evidence type\n5. Tags are approved before being written back to your research repo",
+        "height": 240,
+        "width": 400,
+        "color": 5
+      },
+      "id": "sticky-setup",
+      "name": "Setup Instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, -240]
+    },
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 200]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "tag-research",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook: Research Note",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 380],
+      "webhookId": "repo-tagger-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "const notes = [\n  { id: 'N001', title: 'P2 — onboarding flow — July 10', content: 'User could not find the Add Task button. Spent 90 seconds looking in the sidebar. Eventually found it via the keyboard shortcut tooltip. Said: \"Why is this not more obvious?\"', source: 'Usability test', participant_code: 'P2' },\n  { id: 'N002', title: 'NPS R012 — search critique', content: 'The search function is terrible. I cannot find tasks from 3 months ago without scrolling through everything.', source: 'NPS survey', participant_code: 'R012' },\n  { id: 'N003', title: 'Interview T3 — switching motivation', content: 'We switched from Asana because the recurring tasks feature was the only thing we actually needed. Asana had it buried 4 clicks deep.', source: 'Customer interview', participant_code: 'T3' },\n  { id: 'N004', title: 'NPS R005 — recurring tasks delight', content: 'Best project tool I have used in 10 years. The recurring tasks feature saved us probably 2 hours per week.', source: 'NPS survey', participant_code: 'R005' },\n  { id: 'N005', title: 'Interview T7 — collaboration friction', content: 'About half my team still uses a spreadsheet. They resist the tool because the onboarding is too long and they don\\'t see the value quickly enough.', source: 'Customer interview', participant_code: 'T7' }\n];\nreturn [{ json: { notes, taxonomy: { themes: ['onboarding', 'discoverability', 'recurring-tasks', 'team-adoption', 'search', 'mobile', 'integrations'], personas: ['casual-activator', 'team-lead', 'enterprise-pm'], evidence_types: ['usability-test', 'survey', 'interview', 'analytics'] } } }];"
+      },
+      "id": "load-sample",
+      "name": "Load Sample Notes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { notes, taxonomy } = $input.first().json;\nconst system = `You are a UX research librarian. You tag research notes with structured metadata from a taxonomy. You assign themes, personas, sentiment, confidence level, and actionability. Return ONLY valid JSON.`;\nconst taxText = `Themes: ${taxonomy.themes.join(', ')}\\nPersonas: ${taxonomy.personas.join(', ')}\\nEvidence types: ${taxonomy.evidence_types.join(', ')}`;\nconst notesText = notes.map(n => `  [${n.id}] Source: ${n.source}\\n  Title: ${n.title}\\n  Content: ${n.content}`).join('\\n\\n');\nconst user = `Tag these research notes using this taxonomy:\\n${taxText}\\n\\nNotes:\\n${notesText}\\n\\nReturn JSON:\\n{\\n  \"tagged_notes\": [\\n    {\\n      \"id\": \"string\",\\n      \"themes\": [\"string — from taxonomy\"],\\n      \"personas\": [\"string — from taxonomy, or 'unknown'\"],\\n      \"sentiment\": \"positive|negative|neutral|mixed\",\\n      \"evidence_type\": \"string — from taxonomy\",\\n      \"confidence\": \"high|medium|low\",\\n      \"actionable\": true,\\n      \"insight_statement\": \"string — one-sentence insight derived from this note\",\\n      \"suggested_follow_up\": \"string — what additional research would validate this\"|null\\n    }\\n  ]\\n}`;\nreturn [{ json: { notes, taxonomy, system_prompt: system, user_prompt: user } }];"
+      },
+      "id": "prepare-prompt",
+      "name": "Prepare Tagging Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [740, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.OPENAI_BASE_URL || 'https://api.openai.com' }}/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParameters": {
+          "parameters": [
+            { "name": "model", "value": "={{ $env.AI_MODEL || 'gpt-4o-mini' }}" },
+            { "name": "messages", "value": "=[{\"role\":\"system\",\"content\":\"{{ $json.system_prompt }}\"},{\"role\":\"user\",\"content\":\"{{ $json.user_prompt }}\"}]" },
+            { "name": "temperature", "value": "=0.1" },
+            { "name": "response_format", "value": "={\"type\":\"json_object\"}" }
+          ]
+        },
+        "options": { "timeout": 60000 }
+      },
+      "id": "llm-call",
+      "name": "LLM: Tag Notes",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [960, 200],
+      "credentials": { "httpHeaderAuth": { "name": "YOUR_OPENAI_CREDENTIAL" } }
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nlet parsed;\ntry {\n  const c = response.choices?.[0]?.message?.content;\n  if (!c) throw new Error('No content');\n  parsed = JSON.parse(c);\n} catch(e) { return [{ json: { _error: true, reason: e.message } }]; }\nif (!parsed.tagged_notes || !Array.isArray(parsed.tagged_notes)) return [{ json: { _error: true, reason: 'Missing tagged_notes' } }];\nreturn [{ json: { _error: false, result: parsed, meta: { note_count: parsed.tagged_notes.length, generated_at: new Date().toISOString() } } }];"
+      },
+      "id": "validate-llm",
+      "name": "Validate LLM Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1180, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "ce", "leftValue": "={{ $json._error }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "error-check",
+      "name": "LLM Error?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1400, 200]
+    },
+    {
+      "parameters": { "assignments": { "assignments": [{ "id": "e1", "name": "status", "value": "error", "type": "string" }] }, "options": {} },
+      "id": "error-handler",
+      "name": "LLM Error Handler",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1600, 100]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { result: r, meta: m } = $input.first().json;\nconst lines = (r.tagged_notes||[]).map(n =>\n  `[${n.id}] ${n.sentiment?.toUpperCase()} | Evidence: ${n.evidence_type} | Confidence: ${n.confidence}${n.actionable?' [ACTIONABLE]':''}\\n  Themes: ${(n.themes||[]).join(', ')}\\n  Personas: ${(n.personas||[]).join(', ')}\\n  Insight: ${n.insight_statement}${n.suggested_follow_up ? '\\n  Follow-up: '+n.suggested_follow_up : ''}`\n).join('\\n\\n');\nconst report = [\n  `RESEARCH REPOSITORY TAGS`,\n  `Tagged ${m.note_count} notes | Generated: ${m.generated_at}`,\n  ``,\n  lines,\n].join('\\n');\nreturn [{ json: { ...($input.first().json), report_text: report } }];"
+      },
+      "id": "format-tags",
+      "name": "Format Tag Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1600, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.REPO_APPROVER_EMAIL || $env.REPO_EMAIL_TO }}",
+        "subject": "=APPROVAL REQUIRED: Research Tags — {{ $json.meta.note_count }} notes",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $json.report_text }}</pre><p><a href=\"{{ $execution.resumeUrl }}?decision=approved\">Approve and write to repo</a> | <a href=\"{{ $execution.resumeUrl }}?decision=rejected\">Reject</a></p>",
+        "options": {}
+      },
+      "id": "send-approval",
+      "name": "Send for Approval",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1820, 300],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": { "resume": "webhook", "options": { "webhookSuffix": "/approval" } },
+      "id": "wait-approval",
+      "name": "Wait for Approval",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [2040, 300],
+      "webhookId": "repo-tagger-approval"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "cd", "leftValue": "={{ $json.query?.decision || $json.body?.decision }}", "rightValue": "approved", "operator": { "type": "string", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-decision",
+      "name": "Approved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2260, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.REPO_EMAIL_TO || 'research@acme-analytics.com' }}",
+        "subject": "=Research Tags Applied: {{ $('Format Tag Results').first().json.meta.note_count }} notes tagged",
+        "emailType": "html",
+        "message": "=<p>Tags approved and ready to be written to your research repository.</p><pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $('Format Tag Results').first().json.report_text }}</pre>",
+        "options": {}
+      },
+      "id": "send-tags",
+      "name": "Send Tags to Research Team",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [2480, 200],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": { "assignments": { "assignments": [{ "id": "r1", "name": "status", "value": "rejected", "type": "string" }] }, "options": {} },
+      "id": "log-rejection",
+      "name": "Log Rejection",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2480, 400]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": { "main": [[{ "node": "Load Sample Notes", "type": "main", "index": 0 }]] },
+    "Webhook: Research Note": { "main": [[{ "node": "Prepare Tagging Prompt", "type": "main", "index": 0 }]] },
+    "Load Sample Notes": { "main": [[{ "node": "Prepare Tagging Prompt", "type": "main", "index": 0 }]] },
+    "Prepare Tagging Prompt": { "main": [[{ "node": "LLM: Tag Notes", "type": "main", "index": 0 }]] },
+    "LLM: Tag Notes": { "main": [[{ "node": "Validate LLM Output", "type": "main", "index": 0 }]] },
+    "Validate LLM Output": { "main": [[{ "node": "LLM Error?", "type": "main", "index": 0 }]] },
+    "LLM Error?": { "main": [[{ "node": "LLM Error Handler", "type": "main", "index": 0 }], [{ "node": "Format Tag Results", "type": "main", "index": 0 }]] },
+    "Format Tag Results": { "main": [[{ "node": "Send for Approval", "type": "main", "index": 0 }]] },
+    "Send for Approval": { "main": [[{ "node": "Wait for Approval", "type": "main", "index": 0 }]] },
+    "Wait for Approval": { "main": [[{ "node": "Approved?", "type": "main", "index": 0 }]] },
+    "Approved?": { "main": [[{ "node": "Send Tags to Research Team", "type": "main", "index": 0 }], [{ "node": "Log Rejection", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1", "saveManualExecutions": true, "callerPolicy": "workflowsFromSameOwner", "errorWorkflow": "" },
+  "staticData": null,
+  "tags": ["research", "discovery", "tagging", "repo", "beta"],
+  "triggerCount": 0,
+  "updatedAt": "2026-07-14T00:00:00.000Z",
+  "versionId": "76-research-repository-tagger-v0.1.0"
+}

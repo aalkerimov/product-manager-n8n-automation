@@ -1,0 +1,203 @@
+{
+  "name": "Regulatory Change Monitor",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Regulatory Change Monitor\n\n**Setup:**\n1. Configure REGULATORY_JURISDICTIONS (comma-separated, e.g. 'US,EU,UK')\n2. Configure REGULATORY_PRODUCT_AREAS (e.g. 'data-privacy,payments,ai-model-outputs')\n3. Create YOUR_OPENAI_CREDENTIAL and YOUR_SMTP_CREDENTIAL\n4. Add RSS feed URLs in the 'Configure RSS Sources' node\n5. Set REGULATORY_EMAIL_TO\n\n**Flow:** Reads regulatory RSS/news feeds → LLM maps changes to your product areas → approval gate → alert sent",
+        "height": 300,
+        "width": 460,
+        "color": 6
+      },
+      "id": "sticky-setup",
+      "name": "Setup Instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, -280]
+    },
+    {
+      "parameters": {
+        "rule": { "interval": [{ "field": "cronExpression", "expression": "={{ $env.REGULATORY_SCHEDULE || '0 9 * * 1,4' }}" }] }
+      },
+      "id": "schedule-trigger",
+      "name": "Schedule: Mon + Thu 09:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 100]
+    },
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 280]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Sample regulatory changes for testing.\n// In production: replace with HTTP Request nodes reading RSS feeds from\n// EUR-Lex, FTC, ICO, GDPR.eu, FinCEN, FCA, etc.\nconst sampleChanges = [\n  { id: 'reg_001', title: 'EU AI Act — High-risk system classification guidelines published', source: 'EUR-Lex', jurisdiction: 'EU', url: 'https://example.com/eu-ai-act-guidelines', published_at: '2026-07-12', summary: 'European Commission published final guidelines on what constitutes a high-risk AI system under Article 6. Systems used in employment and credit decisions are explicitly included.' },\n  { id: 'reg_002', title: 'FTC finalises rule on AI-generated endorsements and testimonials', source: 'FTC.gov', jurisdiction: 'US', url: 'https://example.com/ftc-ai-endorsements', published_at: '2026-07-10', summary: 'FTC final rule requires disclosure when AI generates reviews or testimonials. Enforcement begins 90 days after publication. Penalties up to $50,000 per violation.' },\n  { id: 'reg_003', title: 'UK ICO updates guidance on automated decision-making under UK GDPR', source: 'ICO.org.uk', jurisdiction: 'UK', url: 'https://example.com/ico-adm-guidance', published_at: '2026-07-09', summary: 'Updated guidance clarifies when organisations must provide human review for automated decisions. Applies to any decision producing legal or similarly significant effects.' },\n  { id: 'reg_004', title: 'California AB-2013: Training data transparency for AI products (effective Jan 2027)', source: 'California Legislature', jurisdiction: 'US-CA', url: 'https://example.com/ca-ab2013', published_at: '2026-07-08', summary: 'Signed into law. Requires AI developers to publish summary of training data used. Applies to products used by California consumers.' },\n  { id: 'reg_005', title: 'NIST AI RMF v2.0 released — new guidance on AI audit trails', source: 'NIST.gov', jurisdiction: 'US', url: 'https://example.com/nist-ai-rmf-v2', published_at: '2026-07-07', summary: 'Non-binding but widely referenced. New section on documenting AI model decisions for audit purposes. Expected to influence enterprise procurement requirements.' },\n  { id: 'reg_006', title: 'Minor update to GDPR cookie consent template — no material change', source: 'EDPB', jurisdiction: 'EU', url: 'https://example.com/edpb-cookie-update', published_at: '2026-07-06', summary: 'Template wording update. No change to consent requirements. Low relevance.' }\n];\nreturn [{ json: { changes: sampleChanges, total: sampleChanges.length, fetched_at: new Date().toISOString() } }];"
+      },
+      "id": "load-sample",
+      "name": "Load Sample Changes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 280]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { changes, total, fetched_at } = $input.first().json;\nif (!changes || !Array.isArray(changes) || changes.length === 0) {\n  return [{ json: { _skip: true, reason: 'No regulatory changes found in this run' } }];\n}\n// Filter to configured jurisdictions if env var is set\nconst configured = ($env.REGULATORY_JURISDICTIONS || '').split(',').map(j => j.trim().toUpperCase()).filter(Boolean);\nconst filtered = configured.length > 0\n  ? changes.filter(c => configured.some(j => c.jurisdiction.toUpperCase().startsWith(j)))\n  : changes;\nreturn [{ json: { changes: filtered, total_raw: total, total_filtered: filtered.length, fetched_at } }];"
+      },
+      "id": "filter-changes",
+      "name": "Filter by Jurisdiction",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [740, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { changes, fetched_at } = $input.first().json;\nconst productAreas = $env.REGULATORY_PRODUCT_AREAS || 'data-privacy,ai-model-outputs,billing,user-data';\nconst changesText = changes.map((c, i) =>\n  `[${i+1}] ID: ${c.id}\\nTitle: ${c.title}\\nJurisdiction: ${c.jurisdiction}\\nPublished: ${c.published_at}\\nSummary: ${c.summary}`\n).join('\\n\\n');\nconst system = `You are a regulatory compliance analyst. You read regulatory updates and assess which product areas they affect. You are precise — you only flag items with genuine relevance. Return ONLY valid JSON.`;\nconst user = `Review these ${changes.length} regulatory updates and map each to the product areas that are affected.\n\nOur product areas: ${productAreas}\n\nRegulatory updates:\n${changesText}\n\nReturn JSON:\n{\n  \"assessed_changes\": [\n    {\n      \"id\": \"string\",\n      \"title\": \"string\",\n      \"jurisdiction\": \"string\",\n      \"relevance\": \"high|medium|low|none\",\n      \"affected_product_areas\": [\"string\"],\n      \"required_action\": \"string — what the team needs to do, or 'Monitor only'\",\n      \"deadline\": \"string or null\",\n      \"confidence\": \"low|medium|high\"\n    }\n  ],\n  \"high_priority_count\": number,\n  \"summary\": \"string — one paragraph overview of the most important changes\"\n}`;\nreturn [{ json: { ...($input.first().json), system_prompt: system, user_prompt: user } }];"
+      },
+      "id": "prepare-prompt",
+      "name": "Prepare Mapping Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [960, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.OPENAI_BASE_URL || 'https://api.openai.com' }}/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParameters": {
+          "parameters": [
+            { "name": "model", "value": "={{ $env.AI_MODEL || 'gpt-4o-mini' }}" },
+            { "name": "messages", "value": "=[{\"role\":\"system\",\"content\":\"{{ $json.system_prompt }}\"},{\"role\":\"user\",\"content\":\"{{ $json.user_prompt }}\"}]" },
+            { "name": "temperature", "value": "=0.1" },
+            { "name": "response_format", "value": "={\"type\":\"json_object\"}" }
+          ]
+        },
+        "options": { "timeout": 60000 }
+      },
+      "id": "llm-call",
+      "name": "LLM: Map to Product Areas",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1180, 200],
+      "credentials": { "httpHeaderAuth": { "name": "YOUR_OPENAI_CREDENTIAL" } }
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst upstream = $('Prepare Mapping Prompt').first().json;\nlet parsed;\ntry {\n  const content = response.choices?.[0]?.message?.content;\n  if (!content) throw new Error('No LLM content');\n  parsed = JSON.parse(content);\n} catch(e) { return [{ json: { _error: true, reason: e.message } }]; }\nif (!parsed.assessed_changes || !Array.isArray(parsed.assessed_changes)) {\n  return [{ json: { _error: true, reason: 'Missing assessed_changes array' } }];\n}\nreturn [{ json: { _error: false, assessment: parsed, meta: { fetched_at: upstream.fetched_at, total_filtered: upstream.total_filtered } } }];"
+      },
+      "id": "validate-llm",
+      "name": "Validate LLM Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1400, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "ce", "leftValue": "={{ $json._error }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "error-check",
+      "name": "LLM Error?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1620, 200]
+    },
+    {
+      "parameters": {
+        "assignments": { "assignments": [{ "id": "e1", "name": "status", "value": "error", "type": "string" }, { "id": "e2", "name": "message", "value": "={{ $json.reason }}", "type": "string" }] },
+        "options": {}
+      },
+      "id": "error-handler",
+      "name": "LLM Error Handler",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1840, 100]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { assessment: a, meta: m } = $input.first().json;\nconst high = a.assessed_changes.filter(c => c.relevance === 'high');\nconst medium = a.assessed_changes.filter(c => c.relevance === 'medium');\nconst changeLines = a.assessed_changes\n  .filter(c => c.relevance !== 'none')\n  .map(c => `[${c.relevance.toUpperCase()}] ${c.title} (${c.jurisdiction})\\n  Areas: ${c.affected_product_areas.join(', ') || 'none'}\\n  Action: ${c.required_action}\\n  Deadline: ${c.deadline || 'none specified'}\\n  Confidence: ${c.confidence}`)\n  .join('\\n\\n');\nconst report = [\n  `REGULATORY CHANGE MONITOR`,\n  `Fetched: ${m.fetched_at} | Updates reviewed: ${m.total_filtered}`,\n  `High priority: ${high.length} | Medium priority: ${medium.length}`,\n  ``,\n  `SUMMARY: ${a.summary}`,\n  ``,\n  `RELEVANT CHANGES:`,\n  changeLines || '  (none with relevance above none)',\n].join('\\n');\nreturn [{ json: { ...($input.first().json), report_text: report } }];"
+      },
+      "id": "format-report",
+      "name": "Format Alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1840, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "hp", "leftValue": "={{ $json.assessment.high_priority_count }}", "rightValue": 0, "operator": { "type": "number", "operation": "gt" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-priority",
+      "name": "Any High Priority?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2060, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.REGULATORY_EMAIL_TO || 'legal@acme-analytics.com' }}",
+        "subject": "=URGENT: Regulatory Alert — {{ $json.assessment.high_priority_count }} high-priority update(s)",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $json.report_text }}</pre>",
+        "options": {}
+      },
+      "id": "send-urgent",
+      "name": "Send Urgent Alert",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [2280, 200],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.REGULATORY_EMAIL_TO || 'legal@acme-analytics.com' }}",
+        "subject": "Regulatory Update Digest",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $json.report_text }}</pre>",
+        "options": {}
+      },
+      "id": "send-digest",
+      "name": "Send Routine Digest",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [2280, 400],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    }
+  ],
+  "connections": {
+    "Schedule: Mon + Thu 09:00": { "main": [[{ "node": "Filter by Jurisdiction", "type": "main", "index": 0 }]] },
+    "Manual Trigger": { "main": [[{ "node": "Load Sample Changes", "type": "main", "index": 0 }]] },
+    "Load Sample Changes": { "main": [[{ "node": "Filter by Jurisdiction", "type": "main", "index": 0 }]] },
+    "Filter by Jurisdiction": { "main": [[{ "node": "Prepare Mapping Prompt", "type": "main", "index": 0 }]] },
+    "Prepare Mapping Prompt": { "main": [[{ "node": "LLM: Map to Product Areas", "type": "main", "index": 0 }]] },
+    "LLM: Map to Product Areas": { "main": [[{ "node": "Validate LLM Output", "type": "main", "index": 0 }]] },
+    "Validate LLM Output": { "main": [[{ "node": "LLM Error?", "type": "main", "index": 0 }]] },
+    "LLM Error?": { "main": [[{ "node": "LLM Error Handler", "type": "main", "index": 0 }], [{ "node": "Format Alert", "type": "main", "index": 0 }]] },
+    "Format Alert": { "main": [[{ "node": "Any High Priority?", "type": "main", "index": 0 }]] },
+    "Any High Priority?": { "main": [[{ "node": "Send Urgent Alert", "type": "main", "index": 0 }], [{ "node": "Send Routine Digest", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1", "saveManualExecutions": true, "callerPolicy": "workflowsFromSameOwner", "errorWorkflow": "" },
+  "staticData": null,
+  "tags": ["strategy", "regulatory", "compliance", "beta"],
+  "triggerCount": 0,
+  "updatedAt": "2026-07-14T00:00:00.000Z",
+  "versionId": "55-regulatory-change-monitor-v0.1.0"
+}

@@ -1,0 +1,100 @@
+{
+  "name": "Roadmap Dependency Mapper",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Roadmap Dependency Mapper\n\n**Setup:**\n1. Create YOUR_SMTP_CREDENTIAL\n2. Set DEPENDENCY_EMAIL_TO\n3. Load dependency data from Sheets or use embedded sample\n4. No LLM — graph traversal logic in Code nodes\n\n**Output:** Critical path, blocking items, dependency chains, and circular dependency detection.",
+        "height": 260,
+        "width": 420,
+        "color": 5
+      },
+      "id": "sticky-setup",
+      "name": "Setup Instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, -260]
+    },
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 200]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "dependency-map",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook: Trigger Mapping",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 380],
+      "webhookId": "dependency-map-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Sample roadmap items with dependency declarations.\n// Each item can declare: blocks (items it blocks) and depends_on (items it requires first)\nconst items = [\n  { id: 'I001', title: 'Data model v2 refactor', team: 'backend', estimated_weeks: 6, status: 'in-progress', depends_on: [], blocks: ['I002', 'I003', 'I005'] },\n  { id: 'I002', title: 'API v2 endpoints', team: 'backend', estimated_weeks: 4, status: 'planned', depends_on: ['I001'], blocks: ['I004', 'I006'] },\n  { id: 'I003', title: 'Real-time sync engine', team: 'backend', estimated_weeks: 5, status: 'planned', depends_on: ['I001'], blocks: ['I007'] },\n  { id: 'I004', title: 'Mobile app (iOS)', team: 'mobile', estimated_weeks: 8, status: 'planned', depends_on: ['I002'], blocks: ['I008'] },\n  { id: 'I005', title: 'Reporting data pipeline', team: 'data', estimated_weeks: 3, status: 'planned', depends_on: ['I001'], blocks: ['I009'] },\n  { id: 'I006', title: 'SSO integration', team: 'backend', estimated_weeks: 3, status: 'planned', depends_on: ['I002'], blocks: [] },\n  { id: 'I007', title: 'Offline mode support', team: 'mobile', estimated_weeks: 4, status: 'planned', depends_on: ['I003'], blocks: [] },\n  { id: 'I008', title: 'Mobile app (Android)', team: 'mobile', estimated_weeks: 6, status: 'planned', depends_on: ['I004'], blocks: [] },\n  { id: 'I009', title: 'Executive dashboard', team: 'frontend', estimated_weeks: 4, status: 'planned', depends_on: ['I005'], blocks: [] },\n  { id: 'I010', title: 'Self-serve onboarding flow', team: 'frontend', estimated_weeks: 3, status: 'planned', depends_on: [], blocks: [] }\n];\nreturn [{ json: { items, total: items.length } }];"
+      },
+      "id": "load-sample",
+      "name": "Load Sample Items",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { items } = $input.first().json;\n// Build adjacency map\nconst itemMap = {};\nfor (const item of items) itemMap[item.id] = item;\n\n// Detect circular dependencies using DFS\nconst detectCycles = () => {\n  const visited = {}, stack = {}, cycles = [];\n  const dfs = (id, path) => {\n    if (stack[id]) { cycles.push([...path, id]); return; }\n    if (visited[id]) return;\n    visited[id] = true; stack[id] = true;\n    for (const dep of (itemMap[id]?.depends_on || [])) dfs(dep, [...path, id]);\n    stack[id] = false;\n  };\n  for (const id of Object.keys(itemMap)) dfs(id, []);\n  return cycles;\n};\n\n// Find items with no dependencies (roots)\nconst roots = items.filter(i => i.depends_on.length === 0).map(i => i.id);\n\n// Compute longest path (critical path) from each root using topological sort\nconst computeLongestPath = () => {\n  const dist = {};\n  for (const item of items) dist[item.id] = item.estimated_weeks || 0;\n  // Simple relaxation — iterate N times\n  for (let pass = 0; pass < items.length; pass++) {\n    for (const item of items) {\n      for (const dep of (item.depends_on || [])) {\n        if (itemMap[dep]) {\n          dist[item.id] = Math.max(dist[item.id], dist[dep] + (item.estimated_weeks || 0));\n        }\n      }\n    }\n  }\n  return dist;\n};\n\nconst cycles = detectCycles();\nconst longestPath = computeLongestPath();\nconst criticalPath = Object.entries(longestPath).sort((a,b) => b[1]-a[1]).slice(0,5).map(([id, weeks]) => ({ id, title: itemMap[id]?.title, cumulative_weeks: weeks }));\nconst blockers = items.filter(i => i.blocks && i.blocks.length > 0).sort((a,b) => b.blocks.length - a.blocks.length).map(i => ({ id: i.id, title: i.title, blocks_count: i.blocks.length, blocks: i.blocks }));\n\nreturn [{ json: {\n  items,\n  cycles: cycles.length > 0 ? cycles : null,\n  has_cycles: cycles.length > 0,\n  critical_path: criticalPath,\n  blockers,\n  roots,\n  total: items.length\n} }];"
+      },
+      "id": "analyse-dependencies",
+      "name": "Analyse Dependencies",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [740, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { cycles, has_cycles, critical_path, blockers, roots, total } = $input.first().json;\nconst cycleLines = has_cycles ? cycles.map(c => `  CYCLE: ${c.join(' → ')}`).join('\\n') : '  None detected';\nconst criticalLines = (critical_path || []).map(c => `  ${c.id}: ${c.title} (${c.cumulative_weeks} weeks cumulative)`).join('\\n');\nconst blockerLines = (blockers || []).slice(0, 5).map(b => `  ${b.id}: ${b.title} — blocks ${b.blocks_count} item(s): ${b.blocks.join(', ')}`).join('\\n');\nconst report = [\n  `ROADMAP DEPENDENCY MAP`,\n  `Items analysed: ${total} | Roots (no dependencies): ${roots.join(', ')}`,\n  ``,\n  `CIRCULAR DEPENDENCY CHECK:`,\n  cycleLines,\n  ``,\n  `CRITICAL PATH (longest cumulative duration):`,\n  criticalLines,\n  ``,\n  `TOP BLOCKERS (items blocking the most downstream work):`,\n  blockerLines,\n].join('\\n');\nreturn [{ json: { ...($input.first().json), report_text: report } }];"
+      },
+      "id": "format-report",
+      "name": "Format Dependency Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [960, 200]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.DEPENDENCY_EMAIL_TO || 'product@acme-analytics.com' }}",
+        "subject": "Roadmap Dependency Map",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $json.report_text }}</pre>",
+        "options": {}
+      },
+      "id": "send-report",
+      "name": "Send Dependency Report",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1180, 200],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    }
+  ],
+  "connections": {
+    "Manual Trigger": { "main": [[{ "node": "Load Sample Items", "type": "main", "index": 0 }]] },
+    "Webhook: Trigger Mapping": { "main": [[{ "node": "Analyse Dependencies", "type": "main", "index": 0 }]] },
+    "Load Sample Items": { "main": [[{ "node": "Analyse Dependencies", "type": "main", "index": 0 }]] },
+    "Analyse Dependencies": { "main": [[{ "node": "Format Dependency Report", "type": "main", "index": 0 }]] },
+    "Format Dependency Report": { "main": [[{ "node": "Send Dependency Report", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1", "saveManualExecutions": true, "callerPolicy": "workflowsFromSameOwner", "errorWorkflow": "" },
+  "staticData": null,
+  "tags": ["roadmap", "planning", "dependencies", "beta"],
+  "triggerCount": 0,
+  "updatedAt": "2026-07-14T00:00:00.000Z",
+  "versionId": "62-roadmap-dependency-mapper-v0.1.0"
+}

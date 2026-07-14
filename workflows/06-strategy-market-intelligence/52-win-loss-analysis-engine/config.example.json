@@ -1,0 +1,21 @@
+{
+  "_comment": "Copy relevant values into your .env file.",
+  "workflow_id": "52-win-loss-analysis-engine",
+  "workflow_name": "Win/Loss Analysis Engine",
+  "collection": "06-strategy-market-intelligence",
+  "status": "beta",
+  "configuration": {
+    "WINLOSS_SHEET_ID": { "default": "", "description": "Google Sheet ID containing closed deal data", "required": "Required", "example": "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms" },
+    "WINLOSS_SCHEDULE": { "default": "0 8 1 * *", "description": "Cron for monthly run. Default: 1st of month at 08:00", "required": "Optional" },
+    "WINLOSS_EMAIL_TO": { "default": "", "description": "Recipient for approval request and final report", "required": "Required" },
+    "NOTIFICATION_EMAIL_FROM": { "default": "automation@acme-analytics.com", "description": "Sender address", "required": "Optional" },
+    "AI_MODEL": { "default": "gpt-4o-mini", "description": "LLM model. Must support JSON mode.", "required": "Required" },
+    "OPENAI_BASE_URL": { "default": "https://api.openai.com", "description": "LLM provider base URL", "required": "Optional" }
+  },
+  "n8n_credentials_required": [
+    { "name": "YOUR_GOOGLE_SHEETS_CREDENTIAL", "type": "googleSheetsOAuth2Api", "required": true, "purpose": "Read deal data from Google Sheets" },
+    { "name": "YOUR_OPENAI_CREDENTIAL", "type": "httpHeaderAuth", "required": true, "purpose": "LLM pattern analysis" },
+    { "name": "YOUR_SMTP_CREDENTIAL", "type": "smtp", "required": true, "purpose": "Approval and report emails" }
+  ],
+  "google_sheet_required_columns": ["deal_id", "company", "segment", "outcome", "acv", "close_reason", "primary_competitor", "deal_notes"]
+}

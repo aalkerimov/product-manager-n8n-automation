@@ -1,0 +1,26 @@
+{
+  "week": "July 7–11, 2026",
+  "wins": [
+    "Recurring tasks frontend completed and in QA — on track for July 31 GA",
+    "Customer discovery call: confirmed NPS hypothesis — onboarding drop-off at step 3",
+    "Board deck draft done 2 days early"
+  ],
+  "struggles": [
+    "Two team members blocked by missing PM deliverables (design spec, API contract) — I should have unblocked these Tuesday, not Friday",
+    "Spent 3h on email/Slack that could have been batched into 1h",
+    "Did not write spec for bulk actions — carries over for the 2nd consecutive week"
+  ],
+  "big_decisions": [
+    { "decision": "Decided not to pursue enterprise tier pricing update this quarter — too many moving parts", "confidence": "medium", "reversible": true },
+    { "decision": "Hired James Kim as design lead — will start Aug 1", "confidence": "high", "reversible": false }
+  ],
+  "key_metrics_vs_last_week": [
+    { "metric": "MRR", "current": 38400, "previous": 37200, "unit": "USD" },
+    { "metric": "Signups", "current": 142, "previous": 129, "unit": "accounts" },
+    { "metric": "NPS", "current": 41, "previous": 38, "unit": "score" },
+    { "metric": "Support tickets", "current": 23, "previous": 31, "unit": "tickets" }
+  ],
+  "energy_level": "medium",
+  "focus_rating": 3,
+  "what_i_would_do_differently": "Unblock team members daily — not at end-of-week standup"
+}

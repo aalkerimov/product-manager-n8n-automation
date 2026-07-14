@@ -1,0 +1,19 @@
+{
+  "_comment": "config.example.json for Competitive Pricing Monitor",
+  "workflow_id": "60-competitive-pricing-monitor",
+  "workflow_name": "Competitive Pricing Monitor",
+  "collection": "06-strategy-market-intelligence",
+  "status": "beta",
+  "configuration": {
+    "PRICING_EMAIL_TO": { "default": "", "description": "Alert recipient email", "required": "Required" },
+    "PRICING_SCHEDULE": { "default": "0 9 * * 3", "description": "Weekly cron (default: Wednesday 09:00)", "required": "Optional" },
+    "AI_MODEL": { "default": "gpt-4o-mini", "description": "LLM model — only called when changes are detected", "required": "Required" },
+    "OPENAI_BASE_URL": { "default": "https://api.openai.com", "description": "LLM base URL", "required": "Optional" },
+    "NOTIFICATION_EMAIL_FROM": { "default": "automation@acme-analytics.com", "description": "Sender address", "required": "Optional" }
+  },
+  "n8n_credentials_required": [
+    { "name": "YOUR_OPENAI_CREDENTIAL", "type": "httpHeaderAuth", "required": true, "purpose": "LLM implications analysis (only called when changes detected)" },
+    { "name": "YOUR_SMTP_CREDENTIAL", "type": "smtp", "required": true, "purpose": "Approval and alert delivery" }
+  ],
+  "notes": "LLM is only invoked when pricing changes are detected. No-change weeks have zero AI cost."
+}

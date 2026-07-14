@@ -1,0 +1,35 @@
+{
+  "spec": {
+    "title": "Recurring Tasks Feature Spec",
+    "author": "Jane Smith",
+    "version": "0.3",
+    "sections": {
+      "problem_statement": "Users need to schedule tasks that repeat on a regular basis. Currently, they must manually duplicate tasks every week or month, which is time-consuming and error-prone.",
+      "user_stories": [
+        "As a project manager, I want to create recurring weekly tasks so that standups and check-ins are scheduled automatically.",
+        "As a team member, I want recurring tasks to appear in my task list on the correct due date without manual intervention."
+      ],
+      "success_metrics": [
+        "Recurring task feature adoption rate > 30% of active users within 60 days",
+        "Reduction in manually duplicated tasks by 40% (measured via duplicate detection heuristic)",
+        "NPS score for task management sub-experience increases by 5 points"
+      ],
+      "scope_in": [
+        "Weekly recurrence (every N weeks, specific day of week)",
+        "Monthly recurrence (on a specific date or day of month)",
+        "Option to set an end date or max occurrence count"
+      ],
+      "scope_out": [
+        "Custom recurrence rules (e.g., every 3rd Tuesday)",
+        "Subtask recurrence",
+        "Recurrence for projects (only tasks in scope)"
+      ],
+      "open_questions": [
+        "What happens to a recurring task if the original is deleted?",
+        "How should subtasks of a recurring parent task be handled?"
+      ],
+      "technical_considerations": "Backend will need a scheduled job to create task instances. Estimated at 3 engineering weeks. Database schema change required.",
+      "launch_plan": "Beta with 5 volunteer customers in week 8. GA in week 10 with in-app tooltip announcement."
+    }
+  }
+}

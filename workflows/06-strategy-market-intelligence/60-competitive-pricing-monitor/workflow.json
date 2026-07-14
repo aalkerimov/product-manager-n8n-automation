@@ -1,0 +1,252 @@
+{
+  "name": "Competitive Pricing Monitor",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Competitive Pricing Monitor\n\n**Setup:**\n1. Create YOUR_OPENAI_CREDENTIAL and YOUR_SMTP_CREDENTIAL\n2. Add competitor pricing page URLs to the 'Configure Competitors' Code node\n3. Set PRICING_EMAIL_TO env var\n4. Run weekly or on demand\n5. Manual Trigger uses embedded sample pricing snapshots for testing\n\n**Flow:** Reads/compares pricing pages → LLM identifies changes and implications → approval gate → alert sent if changes found",
+        "height": 300,
+        "width": 460,
+        "color": 6
+      },
+      "id": "sticky-setup",
+      "name": "Setup Instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, -280]
+    },
+    {
+      "parameters": {
+        "rule": { "interval": [{ "field": "cronExpression", "expression": "={{ $env.PRICING_SCHEDULE || '0 9 * * 3' }}" }] }
+      },
+      "id": "schedule-trigger",
+      "name": "Weekly Wednesday Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 100]
+    },
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 280]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Sample pricing data — current vs previous snapshot.\n// In production: fetch competitor pricing pages via HTTP Request and diff against stored snapshot.\nconst snapshots = [\n  {\n    competitor: 'CompetitorX',\n    url: 'https://competitorx.com/pricing',\n    previous: {\n      captured_at: '2026-07-07',\n      plans: [\n        { name: 'Starter', price_monthly: 29, price_annual_monthly: 24, features: ['5 users', '10 projects', 'Basic reporting'] },\n        { name: 'Pro', price_monthly: 79, price_annual_monthly: 65, features: ['25 users', 'Unlimited projects', 'Advanced reporting', 'API access'] },\n        { name: 'Enterprise', price_monthly: null, price_annual_monthly: null, features: ['Unlimited users', 'SSO', 'SLA', 'Custom contract'], contact_sales: true }\n      ]\n    },\n    current: {\n      captured_at: '2026-07-14',\n      plans: [\n        { name: 'Starter', price_monthly: 29, price_annual_monthly: 24, features: ['5 users', '10 projects', 'Basic reporting'] },\n        { name: 'Pro', price_monthly: 63, price_annual_monthly: 52, features: ['25 users', 'Unlimited projects', 'Advanced reporting', 'API access', 'AI assistant (beta)'] },\n        { name: 'Enterprise', price_monthly: null, price_annual_monthly: null, features: ['Unlimited users', 'SSO', 'SLA', 'Custom contract'], contact_sales: true }\n      ]\n    }\n  },\n  {\n    competitor: 'CompetitorY',\n    url: 'https://competitory.com/pricing',\n    previous: {\n      captured_at: '2026-07-07',\n      plans: [\n        { name: 'Free', price_monthly: 0, price_annual_monthly: 0, features: ['3 users', '5 projects'] },\n        { name: 'Growth', price_monthly: 49, price_annual_monthly: 39, features: ['15 users', 'Unlimited projects'] },\n        { name: 'Business', price_monthly: 129, price_annual_monthly: 99, features: ['50 users', 'Analytics', 'Priority support'] }\n      ]\n    },\n    current: {\n      captured_at: '2026-07-14',\n      plans: [\n        { name: 'Free', price_monthly: 0, price_annual_monthly: 0, features: ['3 users', '5 projects'] },\n        { name: 'Growth', price_monthly: 49, price_annual_monthly: 39, features: ['15 users', 'Unlimited projects'] },\n        { name: 'Business', price_monthly: 129, price_annual_monthly: 99, features: ['50 users', 'Analytics', 'Priority support'] }\n      ]\n    }\n  }\n];\nreturn [{ json: { snapshots, run_at: new Date().toISOString() } }];"
+      },
+      "id": "load-sample",
+      "name": "Load Sample Snapshots",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 280]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Compute diff between previous and current snapshots.\nconst { snapshots, run_at } = $input.first().json;\nconst diffs = [];\nfor (const s of snapshots) {\n  const changes = [];\n  const prevPlans = {};\n  for (const p of (s.previous?.plans || [])) prevPlans[p.name] = p;\n  for (const curr of (s.current?.plans || [])) {\n    const prev = prevPlans[curr.name];\n    if (!prev) { changes.push({ type: 'new_plan', plan: curr.name, detail: `New plan added at $${curr.price_monthly || 0}/mo` }); continue; }\n    if (prev.price_monthly !== curr.price_monthly) {\n      const direction = curr.price_monthly < prev.price_monthly ? 'decrease' : 'increase';\n      changes.push({ type: 'price_change', plan: curr.name, direction, prev_price: prev.price_monthly, new_price: curr.price_monthly, pct_change: prev.price_monthly ? Math.round(((curr.price_monthly - prev.price_monthly)/prev.price_monthly)*100) : null });\n    }\n    const prevFeats = new Set(prev.features || []);\n    const currFeats = new Set(curr.features || []);\n    for (const f of currFeats) if (!prevFeats.has(f)) changes.push({ type: 'feature_added', plan: curr.name, feature: f });\n    for (const f of prevFeats) if (!currFeats.has(f)) changes.push({ type: 'feature_removed', plan: curr.name, feature: f });\n  }\n  diffs.push({ competitor: s.competitor, url: s.url, changes, has_changes: changes.length > 0, previous_date: s.previous?.captured_at, current_date: s.current?.captured_at });\n}\nconst total_changes = diffs.reduce((sum, d) => sum + d.changes.length, 0);\nreturn [{ json: { diffs, total_changes, run_at } }];"
+      },
+      "id": "compute-diff",
+      "name": "Compute Pricing Diff",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [740, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "hc", "leftValue": "={{ $json.total_changes }}", "rightValue": 0, "operator": { "type": "number", "operation": "gt" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-changes",
+      "name": "Any Changes?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [960, 200]
+    },
+    {
+      "parameters": {
+        "assignments": { "assignments": [{ "id": "nc1", "name": "status", "value": "no_changes", "type": "string" }, { "id": "nc2", "name": "message", "value": "No pricing changes detected this week", "type": "string" }] },
+        "options": {}
+      },
+      "id": "no-changes",
+      "name": "No Changes — Skip",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1180, 100]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { diffs, total_changes, run_at } = $input.first().json;\nconst diffText = diffs.filter(d => d.has_changes).map(d =>\n  `Competitor: ${d.competitor}\\nChanges (${d.changes.length}):` +\n  d.changes.map(c => {\n    if (c.type === 'price_change') return `  - ${c.plan}: price ${c.direction} from $${c.prev_price} to $${c.new_price}/mo (${c.pct_change > 0 ? '+' : ''}${c.pct_change}%)`;\n    if (c.type === 'feature_added') return `  - ${c.plan}: feature added: \"${c.feature}\"`;\n    if (c.type === 'feature_removed') return `  - ${c.plan}: feature removed: \"${c.feature}\"`;\n    if (c.type === 'new_plan') return `  - ${c.detail}`;\n    return `  - ${c.type}: ${JSON.stringify(c)}`;\n  }).join('\\n')\n).join('\\n\\n');\nconst system = `You are a pricing strategist. You analyse competitor pricing changes and explain their competitive implications concisely. Return ONLY valid JSON.`;\nconst user = `Analyse these competitor pricing changes detected this week and explain their implications.\n\n${diffText}\n\nReturn JSON:\n{\n  \"change_summaries\": [\n    { \"competitor\": \"string\", \"headline\": \"string — one sentence summary of what changed\", \"implication\": \"string — what this means for us\", \"recommended_response\": \"string\", \"urgency\": \"immediate|this-week|this-quarter|monitor\" }\n  ],\n  \"aggregate_assessment\": \"string — 2-3 sentences overall\",\n  \"confidence\": \"low|medium|high\"\n}`;\nreturn [{ json: { ...($input.first().json), system_prompt: system, user_prompt: user } }];"
+      },
+      "id": "prepare-prompt",
+      "name": "Prepare Implications Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1180, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.OPENAI_BASE_URL || 'https://api.openai.com' }}/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParameters": {
+          "parameters": [
+            { "name": "model", "value": "={{ $env.AI_MODEL || 'gpt-4o-mini' }}" },
+            { "name": "messages", "value": "=[{\"role\":\"system\",\"content\":\"{{ $json.system_prompt }}\"},{\"role\":\"user\",\"content\":\"{{ $json.user_prompt }}\"}]" },
+            { "name": "temperature", "value": "=0.2" },
+            { "name": "response_format", "value": "={\"type\":\"json_object\"}" }
+          ]
+        },
+        "options": { "timeout": 60000 }
+      },
+      "id": "llm-call",
+      "name": "LLM: Analyse Implications",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1400, 300],
+      "credentials": { "httpHeaderAuth": { "name": "YOUR_OPENAI_CREDENTIAL" } }
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst upstream = $('Prepare Implications Prompt').first().json;\nlet parsed;\ntry {\n  const content = response.choices?.[0]?.message?.content;\n  if (!content) throw new Error('No content');\n  parsed = JSON.parse(content);\n} catch(e) { return [{ json: { _error: true, reason: e.message } }]; }\nif (!parsed.change_summaries || !Array.isArray(parsed.change_summaries)) {\n  return [{ json: { _error: true, reason: 'Missing change_summaries' } }];\n}\nreturn [{ json: { _error: false, analysis: parsed, diffs: upstream.diffs, total_changes: upstream.total_changes, run_at: upstream.run_at } }];"
+      },
+      "id": "validate-llm",
+      "name": "Validate LLM Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1620, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "ce", "leftValue": "={{ $json._error }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "error-check",
+      "name": "LLM Error?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1840, 300]
+    },
+    {
+      "parameters": {
+        "assignments": { "assignments": [{ "id": "e1", "name": "status", "value": "error", "type": "string" }] },
+        "options": {}
+      },
+      "id": "error-handler",
+      "name": "LLM Error Handler",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2060, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { analysis: a, diffs, total_changes, run_at } = $input.first().json;\nconst changeLines = (a.change_summaries || []).map(c =>\n  `  ${c.competitor}: ${c.headline}\\n  Implication: ${c.implication}\\n  Response: ${c.recommended_response} [${c.urgency}]`\n).join('\\n\\n');\nconst rawLines = diffs.filter(d => d.has_changes).map(d =>\n  `${d.competitor} raw changes:\\n` + d.changes.map(c => `  - ${c.type}: ${JSON.stringify(c)}`).join('\\n')\n).join('\\n\\n');\nconst report = [\n  `COMPETITIVE PRICING MONITOR`,\n  `Run: ${run_at} | Total changes detected: ${total_changes}`,\n  ``,\n  `ASSESSMENT: ${a.aggregate_assessment}`,\n  `Confidence: ${a.confidence}`,\n  ``,\n  `CHANGE ANALYSIS:`,\n  changeLines || '  (none)',\n  ``,\n  `RAW CHANGES:`,\n  rawLines || '  (none)',\n].join('\\n');\nreturn [{ json: { ...($input.first().json), report_text: report } }];"
+      },
+      "id": "format-report",
+      "name": "Format Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2060, 400]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.PRICING_EMAIL_TO || 'strategy@acme-analytics.com' }}",
+        "subject": "=APPROVAL REQUIRED: Competitor Pricing Change Detected — {{ $json.total_changes }} change(s)",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $json.report_text }}</pre><p><a href=\"{{ $execution.resumeUrl }}?decision=approved\">Approve and send to team</a> | <a href=\"{{ $execution.resumeUrl }}?decision=rejected\">Reject</a></p>",
+        "options": {}
+      },
+      "id": "send-approval",
+      "name": "Send for Approval",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [2280, 400],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": { "resume": "webhook", "options": { "webhookSuffix": "/approval" } },
+      "id": "wait-approval",
+      "name": "Wait for Approval",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [2500, 400],
+      "webhookId": "pricing-monitor-approval"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "cd", "leftValue": "={{ $json.query?.decision || $json.body?.decision }}", "rightValue": "approved", "operator": { "type": "string", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-decision",
+      "name": "Approved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2720, 400]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.PRICING_EMAIL_TO || 'strategy@acme-analytics.com' }}",
+        "subject": "=Competitor Pricing Alert — {{ $('Format Report').first().json.total_changes }} change(s) detected",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $('Format Report').first().json.report_text }}</pre>",
+        "options": {}
+      },
+      "id": "send-alert",
+      "name": "Send Pricing Alert",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [2940, 300],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": {
+        "assignments": { "assignments": [{ "id": "r1", "name": "status", "value": "rejected", "type": "string" }] },
+        "options": {}
+      },
+      "id": "log-rejection",
+      "name": "Log Rejection",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2940, 500]
+    }
+  ],
+  "connections": {
+    "Weekly Wednesday Schedule": { "main": [[{ "node": "Compute Pricing Diff", "type": "main", "index": 0 }]] },
+    "Manual Trigger": { "main": [[{ "node": "Load Sample Snapshots", "type": "main", "index": 0 }]] },
+    "Load Sample Snapshots": { "main": [[{ "node": "Compute Pricing Diff", "type": "main", "index": 0 }]] },
+    "Compute Pricing Diff": { "main": [[{ "node": "Any Changes?", "type": "main", "index": 0 }]] },
+    "Any Changes?": { "main": [[{ "node": "Prepare Implications Prompt", "type": "main", "index": 0 }], [{ "node": "No Changes — Skip", "type": "main", "index": 0 }]] },
+    "Prepare Implications Prompt": { "main": [[{ "node": "LLM: Analyse Implications", "type": "main", "index": 0 }]] },
+    "LLM: Analyse Implications": { "main": [[{ "node": "Validate LLM Output", "type": "main", "index": 0 }]] },
+    "Validate LLM Output": { "main": [[{ "node": "LLM Error?", "type": "main", "index": 0 }]] },
+    "LLM Error?": { "main": [[{ "node": "LLM Error Handler", "type": "main", "index": 0 }], [{ "node": "Format Report", "type": "main", "index": 0 }]] },
+    "Format Report": { "main": [[{ "node": "Send for Approval", "type": "main", "index": 0 }]] },
+    "Send for Approval": { "main": [[{ "node": "Wait for Approval", "type": "main", "index": 0 }]] },
+    "Wait for Approval": { "main": [[{ "node": "Approved?", "type": "main", "index": 0 }]] },
+    "Approved?": { "main": [[{ "node": "Send Pricing Alert", "type": "main", "index": 0 }], [{ "node": "Log Rejection", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1", "saveManualExecutions": true, "callerPolicy": "workflowsFromSameOwner", "errorWorkflow": "" },
+  "staticData": null,
+  "tags": ["strategy", "competitive", "pricing", "beta"],
+  "triggerCount": 0,
+  "updatedAt": "2026-07-14T00:00:00.000Z",
+  "versionId": "60-competitive-pricing-monitor-v0.1.0"
+}

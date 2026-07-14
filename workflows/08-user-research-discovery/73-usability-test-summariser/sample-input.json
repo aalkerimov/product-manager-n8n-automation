@@ -1,0 +1,46 @@
+{
+  "test_title": "Onboarding Flow Usability Test — July 2026",
+  "test_date": "2026-07-10",
+  "prototype_version": "v2.3",
+  "tasks": [
+    {
+      "task_id": "T1",
+      "task": "Create a new project called 'Q3 Launch' with a start date of August 1 and add 3 tasks",
+      "success_rate_pct": 60,
+      "avg_time_seconds": 142,
+      "notes": [
+        { "participant": "P1", "outcome": "success", "note": "Struggled to find where to add a start date. Clicked into Settings first before finding the Date field." },
+        { "participant": "P2", "outcome": "success", "note": "Completed smoothly. No hesitation." },
+        { "participant": "P3", "outcome": "failure", "note": "Could not find the Add Task button. Kept looking in the sidebar." },
+        { "participant": "P4", "outcome": "failure", "note": "Created the project but could not figure out how to add tasks — expected a modal not inline editing." },
+        { "participant": "P5", "outcome": "success", "note": "Slow but completed. Said: 'This isn't where I expected it to be, but I found it.'" }
+      ]
+    },
+    {
+      "task_id": "T2",
+      "task": "Assign the first task to a team member and set a due date of August 15",
+      "success_rate_pct": 80,
+      "avg_time_seconds": 68,
+      "notes": [
+        { "participant": "P1", "outcome": "success", "note": "Easy. The assignee dropdown was clear." },
+        { "participant": "P2", "outcome": "success", "note": "No issues." },
+        { "participant": "P3", "outcome": "success", "note": "Found it quickly once in the task." },
+        { "participant": "P4", "outcome": "failure", "note": "Due date field was not visible because the task row was collapsed. Did not know to expand it." },
+        { "participant": "P5", "outcome": "success", "note": "Completed easily." }
+      ]
+    },
+    {
+      "task_id": "T3",
+      "task": "Set a task as recurring — repeat every Monday",
+      "success_rate_pct": 40,
+      "avg_time_seconds": 198,
+      "notes": [
+        { "participant": "P1", "outcome": "failure", "note": "Never found the recurrence option. Said: 'I assume this doesn't exist or it's buried somewhere.'" },
+        { "participant": "P2", "outcome": "success", "note": "Found it in the task detail panel eventually. Took about 2 minutes." },
+        { "participant": "P3", "outcome": "failure", "note": "Looked in the task context menu, in settings, and gave up after 3 minutes." },
+        { "participant": "P4", "outcome": "success", "note": "Found the recurrence option in the date picker — said it was not obvious." },
+        { "participant": "P5", "outcome": "failure", "note": "Did not complete. 'I would just Google this.'" }
+      ]
+    }
+  ]
+}

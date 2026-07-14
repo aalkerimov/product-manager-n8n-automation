@@ -1,0 +1,313 @@
+{
+  "name": "Win/Loss Analysis Engine",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Win/Loss Analysis Engine\n\n**Setup checklist:**\n1. Create credential `SMTP Email`\n2. Create credential `Google Sheets OAuth2` — point to your CRM deal export sheet\n3. Create credential `YOUR_OPENAI_CREDENTIAL` (HTTP Header Auth)\n4. Set WINLOSS_SHEET_ID, WINLOSS_EMAIL_TO, AI_MODEL env vars\n5. In 'Read Deal Data' node, update sheet ID and range\n6. Test with Manual Trigger (uses embedded sample data)\n\n**Flow:** Reads closed deals → enriches with close reason and notes → LLM finds recurring patterns by segment and competitor → approval gate → report sent.",
+        "height": 340,
+        "width": 480,
+        "color": 6
+      },
+      "id": "sticky-setup",
+      "name": "Setup Instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, -300]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "cronExpression", "expression": "={{ $env.WINLOSS_SCHEDULE || '0 8 1 * *' }}" }]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Monthly Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 100]
+    },
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": { "value": "={{ $env.WINLOSS_SHEET_ID || 'YOUR_WINLOSS_SHEET_ID' }}", "mode": "id" },
+        "sheetName": { "value": "deals", "mode": "name" },
+        "options": { "headerRow": 1 }
+      },
+      "id": "read-deal-data",
+      "name": "Read Deal Data from Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [500, 100],
+      "credentials": {
+        "googleSheetsOAuth2Api": { "name": "YOUR_GOOGLE_SHEETS_CREDENTIAL" }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Load sample deals for manual testing.\n// Replace with real CRM export or Sheets read in production.\nconst sampleDeals = [\n  { deal_id: 'D001', company: 'Globex Corp', segment: 'enterprise', outcome: 'won', acv: 24000, close_reason: 'Best integration with existing stack', primary_competitor: 'CompetitorA', deal_notes: 'Champion was CTO. Key decision: API flexibility. Trial lasted 3 weeks.' },\n  { deal_id: 'D002', company: 'Initech LLC', segment: 'smb', outcome: 'lost', acv: 3600, close_reason: 'Price too high vs CompetitorB', primary_competitor: 'CompetitorB', deal_notes: 'Budget was fixed at $250/mo. Could not match discount. No exec sponsor.' },\n  { deal_id: 'D003', company: 'Umbrella Ltd', segment: 'mid-market', outcome: 'won', acv: 12000, close_reason: 'Better onboarding and support SLA', primary_competitor: 'CompetitorA', deal_notes: 'Previous vendor had slow support. Onboarding team mentioned 3 times in notes.' },\n  { deal_id: 'D004', company: 'Hooli Inc', segment: 'enterprise', outcome: 'lost', acv: 60000, close_reason: 'Missing SSO and SOC 2 Type II at time of eval', primary_competitor: 'CompetitorC', deal_notes: 'Security review took 6 weeks. We failed 2 of 8 requirements. CompetitorC is SOC2 certified.' },\n  { deal_id: 'D005', company: 'Pied Piper', segment: 'startup', outcome: 'won', acv: 1200, close_reason: 'Free trial converted — no sales touch needed', primary_competitor: null, deal_notes: 'Self-serve signup. Upgraded after 14 days.' },\n  { deal_id: 'D006', company: 'Dunder Mifflin', segment: 'smb', outcome: 'lost', acv: 4800, close_reason: 'Went with incumbent tool they already knew', primary_competitor: 'CompetitorB', deal_notes: 'No compelling event. Status quo won. POC was not decision maker.' },\n  { deal_id: 'D007', company: 'Vandelay Ind', segment: 'mid-market', outcome: 'won', acv: 9600, close_reason: 'Reporting features superior to alternatives', primary_competitor: 'CompetitorA', deal_notes: 'Ran a bake-off. Our reporting module was decisive. Deal closed in 2 weeks.' },\n  { deal_id: 'D008', company: 'Sterling Cooper', segment: 'enterprise', outcome: 'lost', acv: 36000, close_reason: 'Price too high vs CompetitorC', primary_competitor: 'CompetitorC', deal_notes: 'CompetitorC offered 40% year-1 discount. We were $15k over budget.' },\n  { deal_id: 'D009', company: 'Wernham Hogg', segment: 'smb', outcome: 'won', acv: 2400, close_reason: 'Ease of use cited repeatedly', primary_competitor: 'CompetitorB', deal_notes: 'Non-technical buyer. Our UI simplicity was the key differentiator.' },\n  { deal_id: 'D010', company: '', segment: 'startup', outcome: 'lost', acv: null, close_reason: '', primary_competitor: null, deal_notes: 'incomplete record — edge case' }\n];\nreturn sampleDeals.map(d => ({ json: d }));"
+      },
+      "id": "load-sample-data",
+      "name": "Load Sample Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [
+            {
+              "id": "is-manual",
+              "leftValue": "={{ $('Manual Trigger').isExecuted }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "equals" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "route-trigger",
+      "name": "Which Trigger?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [240, 500]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Filter and normalise deal records. Skip incomplete edge-case records.\nconst items = $input.all().map(i => i.json);\nconst valid = [];\nconst skipped = [];\n\nfor (const d of items) {\n  if (!d.deal_id || !d.outcome || !d.segment) {\n    skipped.push({ id: d.deal_id || 'unknown', reason: 'missing required fields' });\n    continue;\n  }\n  if (!['won', 'lost'].includes(String(d.outcome).toLowerCase())) {\n    skipped.push({ id: d.deal_id, reason: `unknown outcome: ${d.outcome}` });\n    continue;\n  }\n  valid.push({\n    deal_id: String(d.deal_id).trim(),\n    company: String(d.company || 'Unknown').trim(),\n    segment: String(d.segment || 'unknown').toLowerCase().trim(),\n    outcome: String(d.outcome).toLowerCase().trim(),\n    acv: Number(d.acv) || 0,\n    close_reason: String(d.close_reason || '').trim(),\n    primary_competitor: d.primary_competitor ? String(d.primary_competitor).trim() : null,\n    deal_notes: String(d.deal_notes || '').substring(0, 500)\n  });\n}\n\nconsole.log(`Validated: ${valid.length} deals, skipped: ${skipped.length}`);\n// Return all valid deals as one aggregated item for the LLM\nreturn [{ json: { deals: valid, skipped_count: skipped.length, total: valid.length + skipped.length } }];"
+      },
+      "id": "validate-deals",
+      "name": "Validate and Normalise Deals",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [780, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { deals, skipped_count, total } = $input.first().json;\nconst won = deals.filter(d => d.outcome === 'won');\nconst lost = deals.filter(d => d.outcome === 'lost');\nconst dealsJson = JSON.stringify(deals, null, 2);\n\nconst system = `You are a sales analyst specializing in win/loss analysis. You identify patterns across deal records, not individual anecdotes. You group by segment and competitor. Return ONLY valid JSON.`;\n\nconst user = `Analyze these ${deals.length} closed deals (${won.length} won, ${lost.length} lost) and identify recurring patterns.\n\nDeal data:\n${dealsJson}\n\nReturn JSON with this exact structure:\n{\n  \"win_themes\": [\n    {\n      \"theme\": \"string — the pattern (e.g. 'Integration flexibility wins enterprise deals')\",\n      \"frequency\": number,\n      \"segments\": [\"string\"],\n      \"evidence_deal_ids\": [\"string\"],\n      \"confidence\": \"low|medium|high\"\n    }\n  ],\n  \"loss_themes\": [\n    {\n      \"theme\": \"string\",\n      \"frequency\": number,\n      \"segments\": [\"string\"],\n      \"evidence_deal_ids\": [\"string\"],\n      \"confidence\": \"low|medium|high\"\n    }\n  ],\n  \"competitor_analysis\": [\n    {\n      \"competitor\": \"string\",\n      \"win_rate_vs_them\": number,\n      \"deals_competed\": number,\n      \"why_we_win\": \"string\",\n      \"why_we_lose\": \"string\"\n    }\n  ],\n  \"segment_breakdown\": [\n    {\n      \"segment\": \"string\",\n      \"total_deals\": number,\n      \"won\": number,\n      \"lost\": number,\n      \"win_rate_pct\": number,\n      \"top_win_reason\": \"string\",\n      \"top_loss_reason\": \"string\"\n    }\n  ],\n  \"recommended_actions\": [\n    { \"action\": \"string\", \"priority\": \"high|medium|low\", \"rationale\": \"string\" }\n  ],\n  \"data_quality_notes\": [\"string\"]\n}`;\n\nreturn [{ json: { deals, skipped_count, total, system_prompt: system, user_prompt: user } }];"
+      },
+      "id": "prepare-prompt",
+      "name": "Prepare Analysis Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1000, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.OPENAI_BASE_URL || 'https://api.openai.com' }}/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParameters": {
+          "parameters": [
+            { "name": "model", "value": "={{ $env.AI_MODEL || 'gpt-4o-mini' }}" },
+            { "name": "messages", "value": "=[{\"role\":\"system\",\"content\":\"{{ $json.system_prompt }}\"},{\"role\":\"user\",\"content\":\"{{ $json.user_prompt }}\"}]" },
+            { "name": "temperature", "value": "=0.2" },
+            { "name": "response_format", "value": "={\"type\":\"json_object\"}" }
+          ]
+        },
+        "options": { "timeout": 90000 }
+      },
+      "id": "llm-call",
+      "name": "LLM: Identify Patterns",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1220, 400],
+      "credentials": {
+        "httpHeaderAuth": { "name": "YOUR_OPENAI_CREDENTIAL" }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst upstream = $('Prepare Analysis Prompt').first().json;\nlet parsed;\ntry {\n  const content = response.choices?.[0]?.message?.content;\n  if (!content) throw new Error('No content from LLM');\n  parsed = JSON.parse(content);\n} catch (e) {\n  return [{ json: { _error: true, reason: `Parse failed: ${e.message}` } }];\n}\nconst required = ['win_themes', 'loss_themes', 'competitor_analysis', 'segment_breakdown', 'recommended_actions'];\nconst missing = required.filter(k => !parsed[k] || !Array.isArray(parsed[k]));\nif (missing.length > 0) {\n  return [{ json: { _error: true, reason: `Missing arrays: ${missing.join(', ')}` } }];\n}\nreturn [{ json: { _error: false, analysis: parsed, meta: { total_deals: upstream.total, skipped: upstream.skipped_count, run_at: new Date().toISOString() } } }];"
+      },
+      "id": "validate-llm",
+      "name": "Validate LLM Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1440, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "check-err", "leftValue": "={{ $json._error }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "error-check",
+      "name": "LLM Error?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1660, 400]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "s1", "name": "status", "value": "error", "type": "string" },
+            { "id": "s2", "name": "message", "value": "={{ $json.reason }}", "type": "string" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "error-handler",
+      "name": "LLM Error Handler",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1880, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { analysis, meta } = $input.first().json;\nconst fmt = (arr, fn) => (arr || []).map(fn).join('\\n');\n\nconst winList = fmt(analysis.win_themes, t => `  [${t.confidence.toUpperCase()}] ${t.theme} (${t.frequency}x, segments: ${t.segments.join(', ')})`);\nconst lossList = fmt(analysis.loss_themes, t => `  [${t.confidence.toUpperCase()}] ${t.theme} (${t.frequency}x, segments: ${t.segments.join(', ')})`);\nconst compList = fmt(analysis.competitor_analysis, c => `  ${c.competitor}: win rate ${c.win_rate_vs_them}% in ${c.deals_competed} deals\\n    Win: ${c.why_we_win}\\n    Lose: ${c.why_we_lose}`);\nconst segList = fmt(analysis.segment_breakdown, s => `  ${s.segment}: ${s.won}W/${s.lost}L (${s.win_rate_pct}%) | Win: ${s.top_win_reason} | Loss: ${s.top_loss_reason}`);\nconst actionList = fmt(analysis.recommended_actions, a => `  [${a.priority.toUpperCase()}] ${a.action} — ${a.rationale}`);\n\nconst report = [\n  `WIN/LOSS ANALYSIS REPORT`,\n  `Deals analysed: ${meta.total_deals} (${meta.skipped} skipped due to incomplete data)`,\n  `Run: ${meta.run_at}`,\n  ``,\n  `WIN THEMES`,\n  winList || '  (none identified)',\n  ``,\n  `LOSS THEMES`,\n  lossList || '  (none identified)',\n  ``,\n  `COMPETITOR ANALYSIS`,\n  compList || '  (no competitor data)',\n  ``,\n  `SEGMENT BREAKDOWN`,\n  segList || '  (no segment data)',\n  ``,\n  `RECOMMENDED ACTIONS`,\n  actionList || '  (none)',\n].join('\\n');\n\nreturn [{ json: { ...($input.first().json), report_text: report } }];"
+      },
+      "id": "format-report",
+      "name": "Format Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1880, 500]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.WINLOSS_EMAIL_TO || 'sales@acme-analytics.com' }}",
+        "subject": "APPROVAL REQUIRED: Win/Loss Analysis Report",
+        "emailType": "html",
+        "message": "=<p>The monthly win/loss analysis is ready for your review.</p><p><strong>Deals analysed:</strong> {{ $json.meta.total_deals }}<br><strong>Run:</strong> {{ $json.meta.run_at }}</p><pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $json.report_text }}</pre><p><a href=\"{{ $execution.resumeUrl }}?decision=approved\">Approve and send</a> | <a href=\"{{ $execution.resumeUrl }}?decision=rejected\">Reject</a></p>",
+        "options": {}
+      },
+      "id": "send-approval",
+      "name": "Send Approval Request",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [2100, 500],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": {
+        "resume": "webhook",
+        "options": { "webhookSuffix": "/approval" }
+      },
+      "id": "wait-approval",
+      "name": "Wait for Approval",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [2320, 500],
+      "webhookId": "winloss-approval"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "check-dec", "leftValue": "={{ $json.query?.decision || $json.body?.decision }}", "rightValue": "approved", "operator": { "type": "string", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-decision",
+      "name": "Approved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2540, 500]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.WINLOSS_EMAIL_TO || 'sales@acme-analytics.com' }}",
+        "subject": "Win/Loss Analysis Report",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $('Format Report').first().json.report_text }}</pre>",
+        "options": {}
+      },
+      "id": "send-report",
+      "name": "Send Final Report",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [2760, 400],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "r1", "name": "status", "value": "rejected", "type": "string" },
+            { "id": "r2", "name": "rejected_at", "value": "={{ $now.toISO() }}", "type": "string" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "log-rejection",
+      "name": "Log Rejection",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2760, 600]
+    }
+  ],
+  "connections": {
+    "Monthly Schedule Trigger": {
+      "main": [[{ "node": "Read Deal Data from Sheets", "type": "main", "index": 0 }]]
+    },
+    "Manual Trigger": {
+      "main": [[{ "node": "Load Sample Data", "type": "main", "index": 0 }]]
+    },
+    "Read Deal Data from Sheets": {
+      "main": [[{ "node": "Validate and Normalise Deals", "type": "main", "index": 0 }]]
+    },
+    "Load Sample Data": {
+      "main": [[{ "node": "Validate and Normalise Deals", "type": "main", "index": 0 }]]
+    },
+    "Validate and Normalise Deals": {
+      "main": [[{ "node": "Prepare Analysis Prompt", "type": "main", "index": 0 }]]
+    },
+    "Prepare Analysis Prompt": {
+      "main": [[{ "node": "LLM: Identify Patterns", "type": "main", "index": 0 }]]
+    },
+    "LLM: Identify Patterns": {
+      "main": [[{ "node": "Validate LLM Output", "type": "main", "index": 0 }]]
+    },
+    "Validate LLM Output": {
+      "main": [[{ "node": "LLM Error?", "type": "main", "index": 0 }]]
+    },
+    "LLM Error?": {
+      "main": [
+        [{ "node": "LLM Error Handler", "type": "main", "index": 0 }],
+        [{ "node": "Format Report", "type": "main", "index": 0 }]
+      ]
+    },
+    "Format Report": {
+      "main": [[{ "node": "Send Approval Request", "type": "main", "index": 0 }]]
+    },
+    "Send Approval Request": {
+      "main": [[{ "node": "Wait for Approval", "type": "main", "index": 0 }]]
+    },
+    "Wait for Approval": {
+      "main": [[{ "node": "Approved?", "type": "main", "index": 0 }]]
+    },
+    "Approved?": {
+      "main": [
+        [{ "node": "Send Final Report", "type": "main", "index": 0 }],
+        [{ "node": "Log Rejection", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": { "executionOrder": "v1", "saveManualExecutions": true, "callerPolicy": "workflowsFromSameOwner", "errorWorkflow": "" },
+  "staticData": null,
+  "tags": ["strategy", "market-intelligence", "sales", "beta"],
+  "triggerCount": 0,
+  "updatedAt": "2026-07-14T00:00:00.000Z",
+  "versionId": "52-win-loss-analysis-engine-v0.1.0"
+}

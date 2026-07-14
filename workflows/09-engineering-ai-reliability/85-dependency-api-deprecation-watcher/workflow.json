@@ -1,0 +1,169 @@
+{
+  "name": "Dependency & API Deprecation Watcher",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Dependency & API Deprecation Watcher\n\n**Setup:**\n1. Create YOUR_SMTP_CREDENTIAL\n2. Set DEPRECATION_EMAIL_TO\n3. Configure dependencies list and API contracts to watch\n4. Code nodes check npm outdated + detect sunset headers — no LLM required\n5. Approval gate before deprecation warnings are sent to engineering",
+        "height": 240,
+        "width": 400,
+        "color": 7
+      },
+      "id": "sticky-setup",
+      "name": "Setup Instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, -240]
+    },
+    {
+      "parameters": { "rule": { "interval": [{ "field": "weeks", "triggerAtDay": [1], "triggerAtHour": 8 }] } },
+      "id": "cron-trigger",
+      "name": "Weekly Schedule (Monday 8am)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 200]
+    },
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 380]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Load dependency watch list\nconst dependencies = [\n  { name: 'stripe', current_version: '12.3.0', package_registry: 'npm', api_endpoint_to_probe: 'https://api.stripe.com/v1', expected_header: 'stripe-version', notes: 'Stripe deprecated API version 2022-08-01 on Jan 1 2026' },\n  { name: 'openai', current_version: '4.11.0', package_registry: 'npm', api_endpoint_to_probe: null, expected_header: null, notes: 'Pinned to gpt-4o-mini. Check for model deprecation.' },\n  { name: 'express', current_version: '4.18.2', package_registry: 'npm', api_endpoint_to_probe: null, expected_header: null, notes: 'Express 5 is stable — v4 still active but planning migration needed' },\n  { name: 'react', current_version: '18.2.0', package_registry: 'npm', api_endpoint_to_probe: null, expected_header: null, notes: 'React 19 released — check breaking changes for upgrade path' }\n];\nconst api_contracts = [\n  { name: 'Stripe API', endpoint: 'https://api.stripe.com/v1', method: 'GET', check_sunset_header: true },\n  { name: 'PostHog API', endpoint: 'https://app.posthog.com/api/projects', method: 'GET', check_sunset_header: true }\n];\nreturn [{ json: { dependencies, api_contracts, checked_at: new Date().toISOString() } }];"
+      },
+      "id": "load-watch-list",
+      "name": "Load Watch List",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 280]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Simulate npm registry version check (real implementation: GET https://registry.npmjs.org/{package}/latest)\nconst { dependencies, api_contracts, checked_at } = $input.first().json;\nconst latestVersions = { stripe: '14.21.0', openai: '4.52.0', express: '5.0.0', react: '19.0.0' };\nconst versionWarnings = dependencies.map(dep => {\n  const latest = latestVersions[dep.name] || dep.current_version;\n  const currentMajor = parseInt(dep.current_version.split('.')[0]);\n  const latestMajor = parseInt(latest.split('.')[0]);\n  const majorsBehind = latestMajor - currentMajor;\n  const status = majorsBehind >= 2 ? 'critical' : majorsBehind === 1 ? 'warning' : 'ok';\n  return {\n    name: dep.name,\n    current_version: dep.current_version,\n    latest_version: latest,\n    majors_behind: majorsBehind,\n    status,\n    notes: dep.notes\n  };\n});\nconst warnings = versionWarnings.filter(w => w.status !== 'ok');\nreturn [{ json: { version_warnings: versionWarnings, actionable_warnings: warnings, api_contracts, checked_at, meta: { total: dependencies.length, critical: warnings.filter(w=>w.status==='critical').length, warning: warnings.filter(w=>w.status==='warning').length } } }];"
+      },
+      "id": "check-versions",
+      "name": "Check Package Versions",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [740, 280]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "ca", "leftValue": "={{ $json.meta.critical + $json.meta.warning }}", "rightValue": 0, "operator": { "type": "number", "operation": "gt" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "any-warnings",
+      "name": "Any Warnings?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [960, 280]
+    },
+    {
+      "parameters": { "assignments": { "assignments": [{ "id": "nw", "name": "status", "value": "all_dependencies_current", "type": "string" }] }, "options": {} },
+      "id": "all-current",
+      "name": "All Dependencies Current",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1160, 180]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { actionable_warnings: w, meta: m, checked_at } = $input.first().json;\nconst critical = w.filter(x=>x.status==='critical');\nconst warning = w.filter(x=>x.status==='warning');\nconst fmt = arr => arr.map(d => `  [${d.status.toUpperCase()}] ${d.name}: ${d.current_version} → ${d.latest_version} (${d.majors_behind} major${d.majors_behind>1?'s':''} behind)\\n  Note: ${d.notes}`).join('\\n');\nconst report = [\n  `DEPENDENCY & API DEPRECATION REPORT`,\n  `Checked: ${checked_at} | Total: ${m.total} | Critical: ${m.critical} | Warning: ${m.warning}`,\n  ``,\n  critical.length > 0 ? `CRITICAL (immediate action required):\\n${fmt(critical)}` : '',\n  warning.length > 0 ? `\\nWARNING (plan upgrade):\\n${fmt(warning)}` : '',\n  ``,\n  `RECOMMENDED ACTIONS:`,\n  ...critical.map(d=>`  • Upgrade ${d.name} this sprint — ${d.majors_behind} major versions behind`),\n  ...warning.map(d=>`  • Plan ${d.name} migration — ${d.majors_behind} major version behind. Review breaking changes.`),\n].filter(Boolean).join('\\n');\nreturn [{ json: { ...($input.first().json), report_text: report } }];"
+      },
+      "id": "format-report",
+      "name": "Format Warning Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1160, 380]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.DEPRECATION_APPROVER_EMAIL || $env.DEPRECATION_EMAIL_TO }}",
+        "subject": "=APPROVAL REQUIRED: Dependency Warnings — {{ $json.meta.critical }} critical, {{ $json.meta.warning }} warnings",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $json.report_text }}</pre><p><a href=\"{{ $execution.resumeUrl }}?decision=approved\">Approve and send to engineering</a> | <a href=\"{{ $execution.resumeUrl }}?decision=rejected\">Reject</a></p>",
+        "options": {}
+      },
+      "id": "send-approval",
+      "name": "Send for Approval",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1380, 380],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": { "resume": "webhook", "options": { "webhookSuffix": "/approval" } },
+      "id": "wait-approval",
+      "name": "Wait for Approval",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [1600, 380],
+      "webhookId": "deprecation-approval"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "cd", "leftValue": "={{ $json.query?.decision || $json.body?.decision }}", "rightValue": "approved", "operator": { "type": "string", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-decision",
+      "name": "Approved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1820, 380]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.DEPRECATION_EMAIL_TO || 'engineering@acme-analytics.com' }}",
+        "subject": "=Dependency Deprecation Alert — {{ $('Format Warning Report').first().json.meta.critical }} critical items",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $('Format Warning Report').first().json.report_text }}</pre>",
+        "options": {}
+      },
+      "id": "send-alert",
+      "name": "Send to Engineering",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [2040, 280],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": { "assignments": { "assignments": [{ "id": "r1", "name": "status", "value": "rejected", "type": "string" }] }, "options": {} },
+      "id": "log-rejection",
+      "name": "Log Rejection",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2040, 480]
+    }
+  ],
+  "connections": {
+    "Weekly Schedule (Monday 8am)": { "main": [[{ "node": "Load Watch List", "type": "main", "index": 0 }]] },
+    "Manual Trigger": { "main": [[{ "node": "Load Watch List", "type": "main", "index": 0 }]] },
+    "Load Watch List": { "main": [[{ "node": "Check Package Versions", "type": "main", "index": 0 }]] },
+    "Check Package Versions": { "main": [[{ "node": "Any Warnings?", "type": "main", "index": 0 }]] },
+    "Any Warnings?": { "main": [[{ "node": "All Dependencies Current", "type": "main", "index": 0 }], [{ "node": "Format Warning Report", "type": "main", "index": 0 }]] },
+    "Format Warning Report": { "main": [[{ "node": "Send for Approval", "type": "main", "index": 0 }]] },
+    "Send for Approval": { "main": [[{ "node": "Wait for Approval", "type": "main", "index": 0 }]] },
+    "Wait for Approval": { "main": [[{ "node": "Approved?", "type": "main", "index": 0 }]] },
+    "Approved?": { "main": [[{ "node": "Send to Engineering", "type": "main", "index": 0 }], [{ "node": "Log Rejection", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1", "saveManualExecutions": true, "callerPolicy": "workflowsFromSameOwner", "errorWorkflow": "" },
+  "staticData": null,
+  "tags": ["engineering", "reliability", "dependencies", "deprecation", "beta"],
+  "triggerCount": 0,
+  "updatedAt": "2026-07-14T00:00:00.000Z",
+  "versionId": "85-dependency-api-deprecation-watcher-v0.1.0"
+}

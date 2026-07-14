@@ -1,0 +1,27 @@
+{
+  "_comment": "Illustrative LLM output. Actual summary will vary.",
+  "summary": {
+    "overall_usability_rating": "low",
+    "executive_summary": "The onboarding flow usability test (v2.3, 5 participants) revealed significant discoverability issues across 3 core tasks. Task completion rates ranged from 40% (recurring tasks) to 80% (task assignment). The recurring tasks feature is the most critical failure — 3 of 5 participants could not locate it, suggesting it requires a fundamental discoverability fix. Inline task editing also caused confusion for users expecting modal interactions.",
+    "task_summaries": [
+      { "task_id": "T1", "task": "Create project and add tasks", "success_rate_pct": 60, "avg_time_seconds": 142, "severity": "major", "primary_issue": "Add Task interaction model (inline vs expected modal) and project date field discoverability", "key_quotes": ["'This isn't where I expected it to be, but I found it'", "Could not find the Add Task button. Kept looking in the sidebar"] },
+      { "task_id": "T2", "task": "Assign task and set due date", "success_rate_pct": 80, "avg_time_seconds": 68, "severity": "minor", "primary_issue": "Collapsed task row hides due date field — not visible without expansion", "key_quotes": ["Due date field was not visible because the task row was collapsed"] },
+      { "task_id": "T3", "task": "Set recurring task", "success_rate_pct": 40, "avg_time_seconds": 198, "severity": "critical", "primary_issue": "Recurrence option is effectively hidden — buried in date picker with no visual affordance or discoverability", "key_quotes": ["'I assume this doesn't exist or it's buried somewhere'", "'I would just Google this'"] }
+    ],
+    "systemic_issues": [
+      { "issue": "Feature discoverability is consistently poor — participants look in wrong places (sidebar, settings, context menu) before finding functionality", "affected_tasks": ["T1", "T3"], "severity": "critical", "root_cause": "Key actions are not placed where users' mental models predict them. No contextual hints or empty-state guidance." },
+      { "issue": "Interaction model mismatch — users expect modal dialogs for create actions, but the product uses inline editing", "affected_tasks": ["T1", "T2"], "severity": "major", "root_cause": "Design pattern inconsistency vs common PM tool conventions (Asana, Monday.com use modals)." }
+    ],
+    "positive_findings": [
+      "Task assignment (T2) was the clearest interaction — the assignee dropdown was consistently found and praised",
+      "Once inside a task detail panel, most participants could navigate successfully — the detail panel UX is strong"
+    ],
+    "design_recommendations": [
+      { "recommendation": "Move recurring task option to a prominent button in the task header, not buried in the date picker. Add a clock icon with 'Recurring' label.", "priority": "high", "affected_tasks": ["T3"], "rationale": "60% failure rate for a marketed feature. Recurring tasks drive NPS promoters — it must be discoverable." },
+      { "recommendation": "Add an 'Add Task' empty-state CTA as a large visible button in the project view. Replace or supplement inline editing with a modal option.", "priority": "high", "affected_tasks": ["T1"], "rationale": "Two participants failed to find the Add Task interaction. This is a first-session blocker for new users." },
+      { "recommendation": "Default task rows to expanded in new projects, showing due date field without requiring expansion", "priority": "medium", "affected_tasks": ["T2"], "rationale": "The collapsed row hides a key field. 20% failure rate for an otherwise simple task." },
+      { "recommendation": "Add contextual tooltips or onboarding highlights for the top 3 most-failed tasks in the first 7 days", "priority": "medium", "affected_tasks": ["T1", "T3"], "rationale": "These discoverability failures are concentrated in the first-session experience. Contextual hints reduce the learning cliff." }
+    ]
+  },
+  "meta": { "test_title": "Onboarding Flow Usability Test — July 2026", "test_date": "2026-07-10", "generated_at": "2026-07-14T09:00:00.000Z" }
+}

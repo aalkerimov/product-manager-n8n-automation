@@ -1,0 +1,8 @@
+{
+  "test_suite": [
+    { "id": "T001", "prompt_name": "JTBD Extractor", "system_prompt": "You are a JTBD analyst. Extract the core job from this quote. Return JSON: {\"job\": \"string\"}", "user_prompt": "When I get to Monday morning, I just need to know what my team is working on without sending messages.", "assertions": [{ "field": "job", "contains": "know", "required": true }, { "field": "job", "min_length": 30, "required": true }] },
+    { "id": "T002", "prompt_name": "Bug Severity Classifier", "system_prompt": "Classify bug severity. P0=production down, P1=major broken, P2=minor. Return JSON: {\"severity\": \"P0|P1|P2\"}", "user_prompt": "Dashboard 504 timeout affecting 12 enterprise customers since v2.4.1 deployment.", "assertions": [{ "field": "severity", "equals": "P0", "required": true }] },
+    { "id": "T003", "prompt_name": "Sentiment Classifier", "system_prompt": "Classify NPS comment sentiment. Return JSON: {\"sentiment\": \"positive|negative|neutral\"}", "user_prompt": "This is the worst project management tool I have used. Everything breaks constantly.", "assertions": [{ "field": "sentiment", "equals": "negative", "required": true }] }
+  ],
+  "model": "gpt-4o-mini"
+}

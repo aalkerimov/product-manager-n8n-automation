@@ -1,0 +1,94 @@
+{
+  "name": "Automation Health Dashboard",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Automation Health Dashboard\n\n**Setup:**\n1. Create YOUR_SMTP_CREDENTIAL\n2. Set AUTOMATION_HEALTH_EMAIL_TO\n3. Provide workflow execution stats (from n8n API or manually)\n4. Code nodes compute pass rates, identify failing workflows, estimate cost savings — no LLM\n5. Weekly report sent to founder/ops lead — no approval gate",
+        "height": 220,
+        "width": 400,
+        "color": 4
+      },
+      "id": "sticky-setup",
+      "name": "Setup Instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, -240]
+    },
+    {
+      "parameters": { "rule": { "interval": [{ "field": "weeks", "triggerAtDay": [1], "triggerAtHour": 6 }] } },
+      "id": "cron-trigger",
+      "name": "Weekly Schedule (Monday 6am)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 200]
+    },
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 380]
+    },
+    {
+      "parameters": {
+        "jsCode": "// In production: fetch from n8n API GET /executions?status=all&limit=500&startedAfter=<7d ago>\n// or use the n8n Stats API endpoint\nconst workflows = [\n  { name: 'User Feedback Classifier', collection: '01-user-research', executions: 47, errors: 0, avg_duration_s: 12, manual_minutes_saved_per_run: 5 },\n  { name: 'Churn Risk Scorer', collection: '03-retention', executions: 7, errors: 0, avg_duration_s: 8, manual_minutes_saved_per_run: 15 },\n  { name: 'AI Cost Monitor', collection: '09-engineering', executions: 7, errors: 0, avg_duration_s: 3, manual_minutes_saved_per_run: 10 },\n  { name: 'LLM Prompt Regression Tester', collection: '09-engineering', executions: 12, errors: 2, avg_duration_s: 45, manual_minutes_saved_per_run: 30 },\n  { name: 'Competitor Radar', collection: '06-market-intel', executions: 7, errors: 1, avg_duration_s: 22, manual_minutes_saved_per_run: 20 },\n  { name: 'Dependency Deprecation Watcher', collection: '09-engineering', executions: 7, errors: 0, avg_duration_s: 18, manual_minutes_saved_per_run: 25 },\n  { name: 'Bug Triage Assistant', collection: '09-engineering', executions: 23, errors: 3, avg_duration_s: 30, manual_minutes_saved_per_run: 8 },\n  { name: 'Weekly Priorities Planner', collection: '10-team', executions: 1, errors: 0, avg_duration_s: 15, manual_minutes_saved_per_run: 45 },\n  { name: 'Uptime SLA Reporter', collection: '09-engineering', executions: 7, errors: 0, avg_duration_s: 5, manual_minutes_saved_per_run: 20 }\n];\nconst week = 'July 7–11, 2026';\nreturn [{ json: { workflows, week } }];"
+      },
+      "id": "load-stats",
+      "name": "Load Workflow Stats",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 280]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { workflows, week } = $input.first().json;\nconst total_executions = workflows.reduce((s,w) => s + w.executions, 0);\nconst total_errors = workflows.reduce((s,w) => s + w.errors, 0);\nconst pass_rate = parseFloat(((1 - total_errors/total_executions)*100).toFixed(1));\nconst total_minutes_saved = workflows.reduce((s,w) => s + (w.executions * w.manual_minutes_saved_per_run), 0);\nconst failing = workflows.filter(w => w.errors > 0).sort((a,b)=>(b.errors/b.executions)-(a.errors/a.executions));\nconst healthy = workflows.filter(w => w.errors === 0);\nconst most_active = [...workflows].sort((a,b)=>b.executions-a.executions).slice(0,3);\nconst highest_savings = [...workflows].sort((a,b)=>(b.executions*b.manual_minutes_saved_per_run)-(a.executions*a.manual_minutes_saved_per_run)).slice(0,3);\nconst by_collection = {};\nworkflows.forEach(w => { if(!by_collection[w.collection]) by_collection[w.collection]={runs:0,errors:0}; by_collection[w.collection].runs+=w.executions; by_collection[w.collection].errors+=w.errors; });\nreturn [{ json: { workflows, week, metrics: { total_workflows: workflows.length, total_executions, total_errors, pass_rate, total_minutes_saved, total_hours_saved: parseFloat((total_minutes_saved/60).toFixed(1)) }, failing, healthy, most_active, highest_savings, by_collection, generated_at: new Date().toISOString() } }];"
+      },
+      "id": "compute-health",
+      "name": "Compute Automation Health",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [740, 280]
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $input.first().json;\nconst failingLines = d.failing.map(w => `  ⚠️ ${w.name} — ${w.errors}/${w.executions} runs failed (${((w.errors/w.executions)*100).toFixed(0)}% error rate)`).join('\\n');\nconst activeLines = d.most_active.map(w => `  ${w.executions}x ${w.name}`).join('\\n');\nconst savingsLines = d.highest_savings.map(w => `  ${w.name}: ${(w.executions*w.manual_minutes_saved_per_run/60).toFixed(1)}h saved`).join('\\n');\nconst collLines = Object.entries(d.by_collection).map(([col,s]) => `  ${col}: ${s.runs} runs, ${s.errors} errors`).join('\\n');\nconst report = [\n  `AUTOMATION HEALTH DASHBOARD: ${d.week}`,\n  `Generated: ${d.generated_at}`,\n  `Workflows tracked: ${d.metrics.total_workflows} | Total runs: ${d.metrics.total_executions} | Pass rate: ${d.metrics.pass_rate}%`,\n  `Time saved this week: ${d.metrics.total_hours_saved}h (${d.metrics.total_minutes_saved} minutes)`,\n  ``,\n  d.failing.length > 0 ? `NEEDS ATTENTION (failing workflows):` : '✅ ALL WORKFLOWS HEALTHY',\n  d.failing.length > 0 ? failingLines : '',\n  ``,\n  `MOST ACTIVE:`,\n  activeLines,\n  ``,\n  `HIGHEST VALUE (time saved):`,\n  savingsLines,\n  ``,\n  `BY COLLECTION:`,\n  collLines,\n].filter(Boolean).join('\\n');\nreturn [{ json: { ...($input.first().json), report_text: report } }];"
+      },
+      "id": "format-dashboard",
+      "name": "Format Dashboard",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [960, 280]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.AUTOMATION_HEALTH_EMAIL_TO || 'founder@acme-analytics.com' }}",
+        "subject": "=Automation Health: {{ $json.metrics.pass_rate }}% pass rate | {{ $json.metrics.total_hours_saved }}h saved — {{ $json.week }}",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $json.report_text }}</pre>",
+        "options": {}
+      },
+      "id": "send-dashboard",
+      "name": "Send Health Dashboard",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1180, 280],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    }
+  ],
+  "connections": {
+    "Weekly Schedule (Monday 6am)": { "main": [[{ "node": "Load Workflow Stats", "type": "main", "index": 0 }]] },
+    "Manual Trigger": { "main": [[{ "node": "Load Workflow Stats", "type": "main", "index": 0 }]] },
+    "Load Workflow Stats": { "main": [[{ "node": "Compute Automation Health", "type": "main", "index": 0 }]] },
+    "Compute Automation Health": { "main": [[{ "node": "Format Dashboard", "type": "main", "index": 0 }]] },
+    "Format Dashboard": { "main": [[{ "node": "Send Health Dashboard", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1", "saveManualExecutions": true, "callerPolicy": "workflowsFromSameOwner", "errorWorkflow": "" },
+  "staticData": null,
+  "tags": ["founder", "automation", "health", "ops", "beta"],
+  "triggerCount": 0,
+  "updatedAt": "2026-07-14T00:00:00.000Z",
+  "versionId": "100-automation-health-dashboard-v0.1.0"
+}

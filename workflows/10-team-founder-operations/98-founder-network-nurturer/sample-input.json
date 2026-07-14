@@ -1,0 +1,15 @@
+{
+  "contacts": [
+    { "name": "Sarah Chen", "role": "VP Product, Fintech.io", "relationship": "peer", "last_contact": "2026-04-10", "outreach_cadence_days": 60, "context": "Met at ProductCon 2025. Gave great advice on pricing strategy for SMB. Wants to hear how Q3 launch goes.", "current_news": "Fintech.io just raised Series B — congrats moment", "priority": "high" },
+    { "name": "Marcus Obi", "role": "Founder, CreatorOS", "relationship": "investor_adjacent", "last_contact": "2026-05-20", "outreach_cadence_days": 45, "context": "Angel in our pre-seed round. Very well-networked. Offered to intro to 3 enterprise buyers.", "current_news": null, "priority": "high" },
+    { "name": "Priya Nair", "role": "Engineering Manager, Stripe", "relationship": "technical_advisor", "last_contact": "2026-06-01", "outreach_cadence_days": 90, "context": "Helped us debug our Stripe integration. Has deep expertise in payment reliability. Offered to review our architecture doc.", "current_news": null, "priority": "medium" },
+    { "name": "James Walton", "role": "CEO, TaskFlow (competitor)", "relationship": "competitor_friendly", "last_contact": "2026-01-15", "outreach_cadence_days": 90, "context": "Met at SaaStr. Surprisingly open conversation about the market. Said he'd swap NPS insights.", "current_news": "TaskFlow launched Gantt view last week", "priority": "low" }
+  ],
+  "today": "2026-07-14",
+  "my_context": {
+    "name": "Jamie",
+    "company": "ProjectFlow",
+    "recent_win": "Shipped recurring tasks feature, targeting July 31 GA",
+    "looking_for": "enterprise buyer introductions, hiring advice for first FE lead role"
+  }
+}

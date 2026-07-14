@@ -1,0 +1,21 @@
+{
+  "responses": [
+    { "id": "R001", "nps_score": 9, "open_text": "Love the speed and clean UI. The only thing I miss is a Gantt view for longer projects." },
+    { "id": "R002", "nps_score": 3, "open_text": "The onboarding is confusing. I spent two days trying to understand how to set up projects correctly and gave up twice." },
+    { "id": "R003", "nps_score": 8, "open_text": "Really good tool for solo work. Gets harder when your team has 10+ people — too many notifications and no way to silence specific projects." },
+    { "id": "R004", "nps_score": 7, "open_text": "Works well for most things. I wish the mobile app was better — it feels like an afterthought compared to the web version." },
+    { "id": "R005", "nps_score": 10, "open_text": "Best project tool I have used in 10 years. The recurring tasks feature saved us probably 2 hours per week." },
+    { "id": "R006", "nps_score": 4, "open_text": "We signed up as a team of 15 and about half the people still use a spreadsheet. The learning curve is too steep for non-technical folks." },
+    { "id": "R007", "nps_score": 8, "open_text": "Love it but please add Microsoft Teams integration. Our company is all-in on Teams and Slack is not an option." },
+    { "id": "R008", "nps_score": 6, "open_text": "Good features but performance is an issue — the dashboard takes about 4 seconds to load when I have many projects." },
+    { "id": "R009", "nps_score": 9, "open_text": "Switched from Asana and have not looked back. The recurring tasks alone paid for the subscription." },
+    { "id": "R010", "nps_score": 5, "open_text": "I like the concept but the CSV export does not include all fields. We have to manually copy some things over to our reports." },
+    { "id": "R011", "nps_score": 7, "open_text": "Solid product. Would love bulk editing of tasks — right now you have to update one by one which is painful for large projects." },
+    { "id": "R012", "nps_score": 2, "open_text": "The search function is terrible. I cannot find tasks from 3 months ago without scrolling through everything." },
+    { "id": "R013", "nps_score": 9, "open_text": "Excellent support team. Had an issue and it was resolved within an hour. The product itself is intuitive once you get it." },
+    { "id": "R014", "nps_score": 6, "open_text": "Good tool but the pricing is too high for small teams. Would love a cheaper tier for 2-5 person startups." },
+    { "id": "R015", "nps_score": 8, "open_text": "The task dependencies feature is underrated. Once we set those up, our team stopped missing handoffs." }
+  ],
+  "survey_title": "Product NPS Survey — Q2 2026",
+  "question": "What is the main thing you would like us to improve or add?"
+}

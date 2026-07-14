@@ -1,0 +1,16 @@
+{
+  "_comment": "Deterministic output based on passed/failed fields in checks.",
+  "failed": [
+    { "table": "events.page_views", "check_type": "freshness", "description": "Last row inserted more than 4 hours ago", "threshold_hours": 4, "actual_hours_since_last": 6.2, "passed": false },
+    { "table": "events.page_views", "check_type": "volume", "description": "Row count dropped >30% vs 7-day average", "threshold_pct_drop": 30, "actual_pct_drop": 41, "passed": false }
+  ],
+  "by_table": {
+    "events.page_views": { "failed": 2, "passed": 0 },
+    "users.accounts": { "failed": 0, "passed": 1 },
+    "billing.transactions": { "failed": 0, "passed": 1 },
+    "nps.responses": { "failed": 0, "passed": 1 },
+    "product.feature_flags": { "failed": 0, "passed": 1 }
+  },
+  "meta": { "total": 6, "passed": 4, "failed_count": 2, "pass_rate_pct": 66.7, "has_failures": true },
+  "interpretation": "Two failures both point to events.page_views: data is 6.2 hours stale (threshold 4h) and volume dropped 41% vs baseline (threshold 30%). This pattern is consistent with a failed ETL pipeline ingesting page view events — not a data definition issue. Check your event ingestion pipeline for errors starting around 01:00 UTC today."
+}

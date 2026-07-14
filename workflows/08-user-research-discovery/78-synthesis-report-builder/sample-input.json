@@ -1,0 +1,11 @@
+{
+  "report_title": "Q3 2026 Onboarding & Adoption Research Synthesis",
+  "period": "Q3 2026",
+  "studies": [
+    { "study": "Usability Test — Onboarding v2.3 (July 2026)", "type": "usability", "participants": 5, "key_findings": ["Task completion rate: 40% for recurring tasks, 60% for project creation, 80% for task assignment", "Systemic issue: feature discoverability — users look in wrong places for key actions", "Recurring task option is critically hard to find — 3/5 participants failed", "Inline editing model is unexpected — users anticipate modal dialogs"] },
+    { "study": "NPS Survey Q2 2026 (n=150)", "type": "survey", "participants": 150, "key_findings": ["NPS: 40. Promoters driven primarily by recurring tasks value", "Top detractor drivers: onboarding confusion, team adoption friction, search failure", "Feature requests by frequency: Teams integration (12%), Gantt view (9%), bulk edit (7%), notification controls (6%)"] },
+    { "study": "Customer Interviews — Switching Study (n=12)", "type": "interviews", "participants": 12, "key_findings": ["Primary switching trigger: recurring tasks accessibility vs Asana", "Retention risk: team adoption stalls when non-PM teammates do not see value in week 1", "Enterprise PMs blocked by missing RBAC and Teams integration at renewal"] },
+    { "study": "Feature Usage Analytics", "type": "analytics", "participants": null, "key_findings": ["Recurring tasks used by 28% of accounts — 2x NPS, 3x retention for those accounts", "Task dependencies used by 12% — exclusively Segment C (enterprise)", "Segment A (1-5 users) median LTV: 4 months. Key churn window: months 2-4"] }
+  ],
+  "audience": "Product, Design, and Engineering leadership"
+}

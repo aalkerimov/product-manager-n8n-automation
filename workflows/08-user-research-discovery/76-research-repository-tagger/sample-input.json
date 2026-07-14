@@ -1,0 +1,14 @@
+{
+  "notes": [
+    { "id": "N001", "title": "P2 — onboarding flow — July 10", "content": "User could not find the Add Task button. Spent 90 seconds looking in the sidebar. Eventually found it via the keyboard shortcut tooltip. Said: 'Why is this not more obvious?'", "source": "Usability test", "participant_code": "P2" },
+    { "id": "N002", "title": "NPS R012 — search critique", "content": "The search function is terrible. I cannot find tasks from 3 months ago without scrolling through everything.", "source": "NPS survey", "participant_code": "R012" },
+    { "id": "N003", "title": "Interview T3 — switching motivation", "content": "We switched from Asana because the recurring tasks feature was the only thing we actually needed. Asana had it buried 4 clicks deep.", "source": "Customer interview", "participant_code": "T3" },
+    { "id": "N004", "title": "NPS R005 — recurring tasks delight", "content": "Best project tool I have used in 10 years. The recurring tasks feature saved us probably 2 hours per week.", "source": "NPS survey", "participant_code": "R005" },
+    { "id": "N005", "title": "Interview T7 — collaboration friction", "content": "About half my team still uses a spreadsheet. They resist the tool because the onboarding is too long and they don't see the value quickly enough.", "source": "Customer interview", "participant_code": "T7" }
+  ],
+  "taxonomy": {
+    "themes": ["onboarding", "discoverability", "recurring-tasks", "team-adoption", "search", "mobile", "integrations"],
+    "personas": ["casual-activator", "team-lead", "enterprise-pm"],
+    "evidence_types": ["usability-test", "survey", "interview", "analytics"]
+  }
+}

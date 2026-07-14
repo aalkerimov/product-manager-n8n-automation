@@ -1,0 +1,17 @@
+{
+  "_comment": "RICE scores are deterministic. These are the exact expected output for the sample input.",
+  "scored": [
+    { "id": "OPP-002", "title": "Bulk CSV import for onboarding", "reach": 6, "impact": 8, "confidence": 9, "effort": 3, "strategic_fit": 7, "category": "friction-removal", "rice_score": 14.4, "adjusted_score": 14.6, "rank": 1 },
+    { "id": "OPP-006", "title": "Custom fields on projects and tasks", "reach": 9, "impact": 7, "confidence": 8, "effort": 5, "strategic_fit": 7, "category": "customisation", "rice_score": 10.1, "adjusted_score": 10.3, "rank": 2 },
+    { "id": "OPP-004", "title": "SSO (SAML 2.0) for enterprise", "reach": 4, "impact": 10, "confidence": 9, "effort": 5, "strategic_fit": 10, "category": "enterprise-requirement", "rice_score": 7.2, "adjusted_score": 7.7, "rank": 3 },
+    { "id": "OPP-005", "title": "Slack integration (two-way sync)", "reach": 7, "impact": 6, "confidence": 8, "effort": 4, "strategic_fit": 6, "category": "integration", "rice_score": 8.4, "adjusted_score": 8.5, "rank": 4 },
+    { "id": "OPP-010", "title": "Dark mode UI", "reach": 7, "impact": 3, "confidence": 9, "effort": 2, "strategic_fit": 3, "category": "ui-polish", "rice_score": 9.45, "adjusted_score": 9.25, "rank": 5 },
+    { "id": "OPP-008", "title": "Executive dashboard view", "reach": 4, "impact": 7, "confidence": 7, "effort": 4, "strategic_fit": 7, "category": "reporting", "rice_score": 4.9, "adjusted_score": 5.1, "rank": 6 },
+    { "id": "OPP-007", "title": "Advanced permissions (role-based access)", "reach": 5, "impact": 8, "confidence": 7, "effort": 6, "strategic_fit": 8, "category": "enterprise-requirement", "rice_score": 4.7, "adjusted_score": 4.9, "rank": 7 },
+    { "id": "OPP-003", "title": "AI-powered project risk detection", "reach": 5, "impact": 9, "confidence": 5, "effort": 8, "strategic_fit": 9, "category": "ai-feature", "rice_score": 2.8, "adjusted_score": 3.2, "rank": 8 },
+    { "id": "OPP-009", "title": "Time tracking built-in", "reach": 5, "impact": 5, "confidence": 6, "effort": 6, "strategic_fit": 4, "category": "new-capability", "rice_score": 2.5, "adjusted_score": 2.4, "rank": 9 },
+    { "id": "OPP-001", "title": "Native mobile app (iOS + Android)", "reach": 8, "impact": 7, "confidence": 6, "effort": 9, "strategic_fit": 8, "category": "new-capability", "rice_score": 3.7, "adjusted_score": 3.9, "rank": 10 }
+  ],
+  "total": 10,
+  "skipped": 0
+}

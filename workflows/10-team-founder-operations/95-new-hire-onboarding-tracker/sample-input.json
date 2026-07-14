@@ -1,0 +1,23 @@
+{
+  "hires": [
+    {
+      "name": "Sofia Park",
+      "role": "Junior Frontend Engineer",
+      "manager": "Alex Chen",
+      "start_date": "2026-06-30",
+      "week_in_role": 2,
+      "milestones": [
+        { "name": "Complete IT setup (laptop, accounts, tools)", "due_day": 1, "completed": true, "completed_date": "2026-06-30" },
+        { "name": "Meet entire team (introductions done)", "due_day": 3, "completed": true, "completed_date": "2026-07-02" },
+        { "name": "Read product onboarding docs and codebase intro", "due_day": 5, "completed": true, "completed_date": "2026-07-04" },
+        { "name": "First PR submitted (however small)", "due_day": 10, "completed": true, "completed_date": "2026-07-09" },
+        { "name": "Complete first independent task (PM-assigned)", "due_day": 14, "completed": false, "completed_date": null },
+        { "name": "30-day check-in with manager", "due_day": 30, "completed": false, "completed_date": null },
+        { "name": "Ship first user-facing feature", "due_day": 45, "completed": false, "completed_date": null }
+      ],
+      "manager_notes": "Sofia is integrating well. First PR merged independently. Gaining confidence quickly.",
+      "buddy": "James Kim"
+    }
+  ],
+  "today": "2026-07-14"
+}

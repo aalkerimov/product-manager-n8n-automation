@@ -1,0 +1,14 @@
+{
+  "_comment": "Deterministic output. 10080 minutes = 7 days. 10080-47=10033 uptime for P0 services.",
+  "results": [
+    { "name": "ProjectFlow Web App", "uptime_pct": 99.5337, "sla_target_pct": 99.9, "sla_met": false, "sla_gap": -0.3663, "downtime_minutes": 11, "incident_count": 1, "incidents": [{ "id": "INC-089", "duration_minutes": 47, "severity": "P0", "description": "Dashboard timeout — enterprise accounts" }] },
+    { "name": "ProjectFlow API", "uptime_pct": 99.5337, "sla_target_pct": 99.95, "sla_met": false, "sla_gap": -0.4163, "downtime_minutes": 11, "incident_count": 1, "incidents": [{ "id": "INC-089", "duration_minutes": 47, "severity": "P0", "description": "Same root cause as Web App" }] },
+    { "name": "Webhook Delivery", "uptime_pct": 100.0, "sla_target_pct": 99.5, "sla_met": true, "sla_gap": 0.5, "downtime_minutes": 0, "incident_count": 0, "incidents": [] },
+    { "name": "Data Export Service", "uptime_pct": 99.7024, "sla_target_pct": 99.0, "sla_met": true, "sla_gap": 0.7024, "downtime_minutes": 30, "incident_count": 1, "incidents": [{ "id": "INC-090", "duration_minutes": 30, "severity": "P2", "description": "CSV export errors after v2.4.0" }] }
+  ],
+  "meta": { "service_count": 4, "sla_breaches": 2, "total_incidents": 3, "generated_at": "2026-07-14T09:00:00.000Z" },
+  "breached": [
+    { "name": "ProjectFlow Web App", "uptime_pct": 99.5337, "sla_target_pct": 99.9, "sla_met": false },
+    { "name": "ProjectFlow API", "uptime_pct": 99.5337, "sla_target_pct": 99.95, "sla_met": false }
+  ]
+}

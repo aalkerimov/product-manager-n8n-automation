@@ -1,0 +1,198 @@
+{
+  "name": "Founder Network Nurturer",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Founder Network Nurturer\n\n**Setup:**\n1. Create YOUR_OPENAI_CREDENTIAL and YOUR_SMTP_CREDENTIAL\n2. Set NETWORK_EMAIL_TO (yourself)\n3. Provide your contact list with last-contact dates and relationship notes\n4. LLM identifies who to reach out to this week and drafts personalised outreach\n5. Approval gate before any outreach is sent",
+        "height": 220,
+        "width": 400,
+        "color": 4
+      },
+      "id": "sticky-setup",
+      "name": "Setup Instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, -240]
+    },
+    {
+      "parameters": { "rule": { "interval": [{ "field": "weeks", "triggerAtDay": [1], "triggerAtHour": 8 }] } },
+      "id": "cron-trigger",
+      "name": "Weekly Schedule (Monday 8am)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 200]
+    },
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 380]
+    },
+    {
+      "parameters": {
+        "jsCode": "const contacts = [\n  { name: 'Sarah Chen', role: 'VP Product, Fintech.io', relationship: 'peer', last_contact: '2026-04-10', outreach_cadence_days: 60, context: 'Met at ProductCon 2025. Gave great advice on pricing strategy for SMB. Wants to hear how Q3 launch goes.', current_news: 'Fintech.io just raised Series B — congrats moment', priority: 'high' },\n  { name: 'Marcus Obi', role: 'Founder, CreatorOS', relationship: 'investor_adjacent', last_contact: '2026-05-20', outreach_cadence_days: 45, context: 'Angel in our pre-seed round. Very well-networked. Offered to intro to 3 enterprise buyers.', current_news: null, priority: 'high' },\n  { name: 'Priya Nair', role: 'Engineering Manager, Stripe', relationship: 'technical_advisor', last_contact: '2026-06-01', outreach_cadence_days: 90, context: 'Helped us debug our Stripe integration. Has deep expertise in payment reliability. Offered to review our architecture doc.', current_news: null, priority: 'medium' },\n  { name: 'James Walton', role: 'CEO, TaskFlow (competitor)', relationship: 'competitor_friendly', last_contact: '2026-01-15', outreach_cadence_days: 90, context: 'Met at SaaStr. Surprisingly open conversation about the market. Said he\\\"d swap NPS insights.', current_news: 'TaskFlow launched Gantt view last week', priority: 'low' }\n];\nconst today = '2026-07-14';\nreturn [{ json: { contacts, today, my_context: { name: 'Jamie', company: 'ProjectFlow', recent_win: 'Shipped recurring tasks feature, targeting July 31 GA', looking_for: 'enterprise buyer introductions, hiring advice for first FE lead role' } } }];"
+      },
+      "id": "load-contacts",
+      "name": "Load Network Contacts",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 280]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { contacts, today, my_context } = $input.first().json;\nconst todayMs = new Date(today).getTime();\nconst prioritised = contacts.map(c => {\n  const lastMs = new Date(c.last_contact).getTime();\n  const days_since = Math.floor((todayMs - lastMs)/(1000*60*60*24));\n  const overdue = days_since >= c.outreach_cadence_days;\n  const urgency_score = (days_since / c.outreach_cadence_days) * (c.priority === 'high' ? 2 : c.priority === 'medium' ? 1.5 : 1);\n  return { ...c, days_since_contact: days_since, overdue, urgency_score: parseFloat(urgency_score.toFixed(2)) };\n}).sort((a,b) => b.urgency_score - a.urgency_score);\nconst to_contact = prioritised.filter(c => c.overdue);\nconst contactsText = to_contact.map(c => `  ${c.name} (${c.role}) — ${c.days_since_contact}d since last contact (target ${c.outreach_cadence_days}d)\\n  Context: ${c.context}${c.current_news ? '\\n  News peg: '+c.current_news : ''}`).join('\\n\\n');\nconst system = `You are a relationship-focused founder coach. You help founders maintain their network without feeling transactional. You draft brief, warm, personalised outreach messages that feel human — not automated. Reference specific context about the relationship. Return ONLY valid JSON.`;\nconst user = `I am ${my_context.name}, founder of ${my_context.company}. Recent update: ${my_context.recent_win}. Currently looking for: ${my_context.looking_for}.\\n\\nThese contacts are overdue for outreach:\\n${contactsText}\\n\\nFor each contact, draft a short (3–5 sentence) outreach message. Return JSON:\\n{\\n  \"outreach_list\": [\\n    {\\n      \"name\": \"string\",\\n      \"channel\": \"LinkedIn|Email|Twitter\",\\n      \"draft_message\": \"string\",\\n      \"ask_or_offer\": \"string — what I'm giving or asking for in this outreach\",\\n      \"why_now\": \"string\"\\n    }\\n  ],\\n  \"skip_list\": [{ \"name\": \"string\", \"reason\": \"string\" }],\\n  \"weekly_networking_goal\": \"string — what success looks like for networking this week\"\\n}`;\nreturn [{ json: { contacts: prioritised, to_contact, my_context, today, system_prompt: system, user_prompt: user } }];"
+      },
+      "id": "prioritise-and-draft",
+      "name": "Prioritise & Prepare Drafts",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [740, 280]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.OPENAI_BASE_URL || 'https://api.openai.com' }}/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParameters": {
+          "parameters": [
+            { "name": "model", "value": "={{ $env.AI_MODEL || 'gpt-4o-mini' }}" },
+            { "name": "messages", "value": "=[{\"role\":\"system\",\"content\":\"{{ $json.system_prompt }}\"},{\"role\":\"user\",\"content\":\"{{ $json.user_prompt }}\"}]" },
+            { "name": "temperature", "value": "=0.6" },
+            { "name": "response_format", "value": "={\"type\":\"json_object\"}" }
+          ]
+        },
+        "options": { "timeout": 60000 }
+      },
+      "id": "llm-call",
+      "name": "LLM: Draft Outreach",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [960, 280],
+      "credentials": { "httpHeaderAuth": { "name": "YOUR_OPENAI_CREDENTIAL" } }
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst upstream = $('Prioritise & Prepare Drafts').first().json;\nlet parsed;\ntry {\n  const c = response.choices?.[0]?.message?.content;\n  if (!c) throw new Error('No content');\n  parsed = JSON.parse(c);\n} catch(e) { return [{ json: { _error: true, reason: e.message } }]; }\nif (!parsed.outreach_list || !Array.isArray(parsed.outreach_list)) return [{ json: { _error: true, reason: 'Missing outreach_list' } }];\nreturn [{ json: { _error: false, outreach: parsed, ctx: upstream, meta: { outreach_count: parsed.outreach_list.length, today: upstream.today, generated_at: new Date().toISOString() } } }];"
+      },
+      "id": "validate-llm",
+      "name": "Validate LLM Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1180, 280]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "ce", "leftValue": "={{ $json._error }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "error-check",
+      "name": "LLM Error?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1400, 280]
+    },
+    {
+      "parameters": { "assignments": { "assignments": [{ "id": "e1", "name": "status", "value": "error", "type": "string" }] }, "options": {} },
+      "id": "error-handler",
+      "name": "LLM Error Handler",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1600, 180]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { outreach: o, ctx, meta: m } = $input.first().json;\nconst outreachLines = o.outreach_list.map(item => [\n  `  [${item.channel}] ${item.name}`,\n  `  Why now: ${item.why_now}`,\n  `  Ask/offer: ${item.ask_or_offer}`,\n  `  Draft:`,\n  `  \"${item.draft_message}\"`,\n  ''\n].join('\\n')).join('\\n');\nconst skipLines = (o.skip_list||[]).map(s => `  ${s.name}: ${s.reason}`).join('\\n');\nconst report = [\n  `NETWORK NURTURER: Week of ${m.today}`,\n  `Generated: ${m.generated_at} | Outreach: ${m.outreach_count} contacts`,\n  ``,\n  `WEEKLY GOAL: ${o.weekly_networking_goal}`,\n  ``,\n  `OUTREACH DRAFTS (APPROVAL REQUIRED — review and personalise before sending):`,\n  outreachLines,\n  skipLines ? `SKIPPED:\\n${skipLines}` : ''\n].filter(Boolean).join('\\n');\nreturn [{ json: { ...($input.first().json), report_text: report } }];"
+      },
+      "id": "format-outreach",
+      "name": "Format Outreach Plan",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1600, 380]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.NETWORK_EMAIL_TO || 'pm@acme-analytics.com' }}",
+        "subject": "=APPROVAL REQUIRED: Network Nurturer — {{ $json.meta.outreach_count }} outreach draft{{ $json.meta.outreach_count !== 1 ? 's' : '' }} ready for review",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $json.report_text }}</pre><p><strong>Review and personalise each draft before sending manually.</strong><br/><a href=\"{{ $execution.resumeUrl }}?decision=approved\">Mark as reviewed</a> | <a href=\"{{ $execution.resumeUrl }}?decision=rejected\">Discard</a></p>",
+        "options": {}
+      },
+      "id": "send-approval",
+      "name": "Send Drafts for Approval",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1820, 380],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": { "resume": "webhook", "options": { "webhookSuffix": "/approval" } },
+      "id": "wait-approval",
+      "name": "Wait for Approval",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [2040, 380],
+      "webhookId": "network-approval"
+    },
+    {
+      "parameters": { "assignments": { "assignments": [{ "id": "d1", "name": "status", "value": "reviewed_and_approved", "type": "string" }, { "id": "d2", "name": "note", "value": "Send outreach messages manually via LinkedIn/Email. Workflow records approval only — does not send messages automatically.", "type": "string" }] }, "options": {} },
+      "id": "mark-reviewed",
+      "name": "Mark Reviewed",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2260, 280]
+    },
+    {
+      "parameters": { "assignments": { "assignments": [{ "id": "r1", "name": "status", "value": "discarded", "type": "string" }] }, "options": {} },
+      "id": "log-discard",
+      "name": "Log Discard",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2260, 480]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "cd", "leftValue": "={{ $json.query?.decision || $json.body?.decision }}", "rightValue": "approved", "operator": { "type": "string", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-decision",
+      "name": "Reviewed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2040, 200]
+    }
+  ],
+  "connections": {
+    "Weekly Schedule (Monday 8am)": { "main": [[{ "node": "Load Network Contacts", "type": "main", "index": 0 }]] },
+    "Manual Trigger": { "main": [[{ "node": "Load Network Contacts", "type": "main", "index": 0 }]] },
+    "Load Network Contacts": { "main": [[{ "node": "Prioritise & Prepare Drafts", "type": "main", "index": 0 }]] },
+    "Prioritise & Prepare Drafts": { "main": [[{ "node": "LLM: Draft Outreach", "type": "main", "index": 0 }]] },
+    "LLM: Draft Outreach": { "main": [[{ "node": "Validate LLM Output", "type": "main", "index": 0 }]] },
+    "Validate LLM Output": { "main": [[{ "node": "LLM Error?", "type": "main", "index": 0 }]] },
+    "LLM Error?": { "main": [[{ "node": "LLM Error Handler", "type": "main", "index": 0 }], [{ "node": "Format Outreach Plan", "type": "main", "index": 0 }]] },
+    "Format Outreach Plan": { "main": [[{ "node": "Send Drafts for Approval", "type": "main", "index": 0 }]] },
+    "Send Drafts for Approval": { "main": [[{ "node": "Wait for Approval", "type": "main", "index": 0 }]] },
+    "Wait for Approval": { "main": [[{ "node": "Reviewed?", "type": "main", "index": 0 }]] },
+    "Reviewed?": { "main": [[{ "node": "Mark Reviewed", "type": "main", "index": 0 }], [{ "node": "Log Discard", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1", "saveManualExecutions": true, "callerPolicy": "workflowsFromSameOwner", "errorWorkflow": "" },
+  "staticData": null,
+  "tags": ["founder", "networking", "outreach", "beta"],
+  "triggerCount": 0,
+  "updatedAt": "2026-07-14T00:00:00.000Z",
+  "versionId": "98-founder-network-nurturer-v0.1.0"
+}

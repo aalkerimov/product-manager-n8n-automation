@@ -1,0 +1,24 @@
+{
+  "quarter": "Q3 2026",
+  "last_quarter_summary": {
+    "shipped": ["SSO (SAML 2.0)", "Bulk CSV export", "Recurring tasks (partial — deletion behavior deferred)", "Mobile app beta (iOS)"],
+    "missed": ["RBAC (slipped to Q3)", "Gantt chart view (deprioritised)"],
+    "key_learnings": [
+      "Enterprise features (SSO, export) drove 3 new enterprise logo wins",
+      "Mobile app stickier than expected — 45% of beta users active daily",
+      "RBAC underestimated — needs 6 engineer-weeks, not 3"
+    ],
+    "metrics": { "arr_end_of_quarter": 1200000, "net_new_arr": 180000, "churn_pct": 2.1, "nps": 42 }
+  },
+  "proposed_themes_q3": [
+    { "theme": "Enterprise security", "initiatives": ["RBAC (carry-over)", "Audit log", "Data retention policy"], "rationale": "Enterprise deals blocked on security checklist" },
+    { "theme": "Mobile GA", "initiatives": ["iOS GA from beta", "Android v1", "Offline mode"], "rationale": "Mobile stickiness signal — invest to capture retention advantage" },
+    { "theme": "Integrations", "initiatives": ["Microsoft Teams", "Salesforce", "Zapier connector"], "rationale": "Mid-market deals asking for these integrations" }
+  ],
+  "constraints": {
+    "headcount": "8 engineers, 1 designer, 1 data engineer",
+    "budget_restriction": "No new infrastructure spend without VP approval",
+    "hard_deadlines": ["SOC 2 audit: 2026-09-01 (RBAC and audit log must be done first)"]
+  },
+  "strategic_context": "We are executing a mid-market expansion. Enterprise is strategic but secondary. CompetitorX just raised Series C and is moving upmarket — we have 6-12 months before they compete directly in our core segment."
+}

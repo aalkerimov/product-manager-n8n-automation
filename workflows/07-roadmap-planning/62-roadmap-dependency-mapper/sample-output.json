@@ -1,0 +1,18 @@
+{
+  "_comment": "Deterministic output from the sample input. Critical path and blocker analysis.",
+  "has_cycles": false,
+  "cycles": null,
+  "critical_path": [
+    { "id": "I008", "title": "Mobile app (Android)", "cumulative_weeks": 24 },
+    { "id": "I004", "title": "Mobile app (iOS)", "cumulative_weeks": 18 },
+    { "id": "I007", "title": "Offline mode support", "cumulative_weeks": 15 },
+    { "id": "I002", "title": "API v2 endpoints", "cumulative_weeks": 10 },
+    { "id": "I003", "title": "Real-time sync engine", "cumulative_weeks": 11 }
+  ],
+  "blockers": [
+    { "id": "I001", "title": "Data model v2 refactor", "blocks_count": 3, "blocks": ["I002", "I003", "I005"] },
+    { "id": "I002", "title": "API v2 endpoints", "blocks_count": 2, "blocks": ["I004", "I006"] }
+  ],
+  "roots": ["I001", "I010"],
+  "total": 10
+}

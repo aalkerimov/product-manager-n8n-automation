@@ -1,0 +1,197 @@
+{
+  "name": "Usability Test Summariser",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Usability Test Summariser\n\n**Setup:**\n1. Create YOUR_OPENAI_CREDENTIAL and YOUR_SMTP_CREDENTIAL\n2. Set USABILITY_EMAIL_TO\n3. Post usability test notes/transcript snippets via webhook or use sample\n4. LLM extracts task completion rates, key pain points, and UX recommendations\n5. Approval gate before sharing with design and product",
+        "height": 260,
+        "width": 420,
+        "color": 5
+      },
+      "id": "sticky-setup",
+      "name": "Setup Instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, -260]
+    },
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: {\n  test_title: 'Onboarding Flow Usability Test — July 2026',\n  test_date: '2026-07-10',\n  prototype_version: 'v2.3',\n  tasks: [\n    {\n      task_id: 'T1',\n      task: 'Create a new project called \"Q3 Launch\" with a start date of August 1 and add 3 tasks',\n      success_rate_pct: 60,\n      avg_time_seconds: 142,\n      notes: [\n        { participant: 'P1', outcome: 'success', note: 'Struggled to find where to add a start date. Clicked into Settings first before finding the Date field.' },\n        { participant: 'P2', outcome: 'success', note: 'Completed smoothly. No hesitation.' },\n        { participant: 'P3', outcome: 'failure', note: 'Could not find the Add Task button. Kept looking in the sidebar.' },\n        { participant: 'P4', outcome: 'failure', note: 'Created the project but could not figure out how to add tasks — expected a modal not inline editing.' },\n        { participant: 'P5', outcome: 'success', note: 'Slow but completed. Said: \"This isn\\'t where I expected it to be, but I found it.\"' }\n      ]\n    },\n    {\n      task_id: 'T2',\n      task: 'Assign the first task to a team member and set a due date of August 15',\n      success_rate_pct: 80,\n      avg_time_seconds: 68,\n      notes: [\n        { participant: 'P1', outcome: 'success', note: 'Easy. The assignee dropdown was clear.' },\n        { participant: 'P2', outcome: 'success', note: 'No issues.' },\n        { participant: 'P3', outcome: 'success', note: 'Found it quickly once in the task.' },\n        { participant: 'P4', outcome: 'failure', note: 'Due date field was not visible because the task row was collapsed. Did not know to expand it.' },\n        { participant: 'P5', outcome: 'success', note: 'Completed easily.' }\n      ]\n    },\n    {\n      task_id: 'T3',\n      task: 'Set a task as recurring — repeat every Monday',\n      success_rate_pct: 40,\n      avg_time_seconds: 198,\n      notes: [\n        { participant: 'P1', outcome: 'failure', note: 'Never found the recurrence option. Said: \"I assume this doesn\\'t exist or it\\'s buried somewhere.\"' },\n        { participant: 'P2', outcome: 'success', note: 'Found it in the task detail panel eventually. Took about 2 minutes.' },\n        { participant: 'P3', outcome: 'failure', note: 'Looked in the task context menu, in settings, and gave up after 3 minutes.' },\n        { participant: 'P4', outcome: 'success', note: 'Found the recurrence option in the date picker — said it was not obvious.' },\n        { participant: 'P5', outcome: 'failure', note: 'Did not complete. \"I would just Google this.\"' }\n      ]\n    }\n  ]\n} }];"
+      },
+      "id": "load-sample",
+      "name": "Load Sample Test Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $input.first().json;\nconst tasksText = d.tasks.map(t => {\n  const noteLines = t.notes.map(n => `    [${n.participant}|${n.outcome}] ${n.note}`).join('\\n');\n  return `Task ${t.task_id}: \"${t.task}\"\\n  Success: ${t.success_rate_pct}% | Avg time: ${t.avg_time_seconds}s\\n  Notes:\\n${noteLines}`;\n}).join('\\n\\n');\nconst system = `You are a UX researcher summarising usability test findings. You extract patterns across participants, identify systemic issues vs one-off problems, and provide specific, actionable design recommendations. Return ONLY valid JSON.`;\nconst user = `Summarise this usability test: \"${d.test_title}\" (${d.test_date}, prototype ${d.prototype_version})\n\n${tasksText}\n\nReturn JSON:\n{\n  \"overall_usability_rating\": \"high|medium|low\",\n  \"task_summaries\": [\n    { \"task_id\": \"string\", \"task\": \"string\", \"success_rate_pct\": 60, \"avg_time_seconds\": 142, \"severity\": \"critical|major|minor\", \"primary_issue\": \"string\", \"key_quotes\": [\"string\"] }\n  ],\n  \"systemic_issues\": [{ \"issue\": \"string\", \"affected_tasks\": [\"T1\"], \"severity\": \"critical|major|minor\", \"root_cause\": \"string\" }],\n  \"positive_findings\": [\"string\"],\n  \"design_recommendations\": [{ \"recommendation\": \"string\", \"priority\": \"high|medium|low\", \"affected_tasks\": [\"string\"], \"rationale\": \"string\" }],\n  \"executive_summary\": \"string — 3-4 sentence summary suitable for stakeholders\"\n}`;\nreturn [{ json: { data: d, system_prompt: system, user_prompt: user } }];"
+      },
+      "id": "prepare-prompt",
+      "name": "Prepare Summary Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [740, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.OPENAI_BASE_URL || 'https://api.openai.com' }}/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParameters": {
+          "parameters": [
+            { "name": "model", "value": "={{ $env.AI_MODEL || 'gpt-4o-mini' }}" },
+            { "name": "messages", "value": "=[{\"role\":\"system\",\"content\":\"{{ $json.system_prompt }}\"},{\"role\":\"user\",\"content\":\"{{ $json.user_prompt }}\"}]" },
+            { "name": "temperature", "value": "=0.2" },
+            { "name": "response_format", "value": "={\"type\":\"json_object\"}" }
+          ]
+        },
+        "options": { "timeout": 60000 }
+      },
+      "id": "llm-call",
+      "name": "LLM: Summarise Test",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [960, 200],
+      "credentials": { "httpHeaderAuth": { "name": "YOUR_OPENAI_CREDENTIAL" } }
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst upstream = $('Prepare Summary Prompt').first().json;\nlet parsed;\ntry {\n  const c = response.choices?.[0]?.message?.content;\n  if (!c) throw new Error('No content');\n  parsed = JSON.parse(c);\n} catch(e) { return [{ json: { _error: true, reason: e.message } }]; }\nif (!parsed.task_summaries || !Array.isArray(parsed.task_summaries)) return [{ json: { _error: true, reason: 'Missing task_summaries' } }];\nreturn [{ json: { _error: false, summary: parsed, meta: { test_title: upstream.data.test_title, test_date: upstream.data.test_date, generated_at: new Date().toISOString() } } }];"
+      },
+      "id": "validate-llm",
+      "name": "Validate LLM Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1180, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "ce", "leftValue": "={{ $json._error }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "error-check",
+      "name": "LLM Error?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1400, 200]
+    },
+    {
+      "parameters": { "assignments": { "assignments": [{ "id": "e1", "name": "status", "value": "error", "type": "string" }] }, "options": {} },
+      "id": "error-handler",
+      "name": "LLM Error Handler",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1600, 100]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { summary: s, meta: m } = $input.first().json;\nconst taskLines = (s.task_summaries||[]).map(t =>\n  `  [${t.severity.toUpperCase()}] Task ${t.task_id}: ${t.task}\\n  Success: ${t.success_rate_pct}% | Avg time: ${t.avg_time_seconds}s | Issue: ${t.primary_issue}\\n  Quotes: ${(t.key_quotes||[]).map(q=>JSON.stringify(q)).join(', ')}`\n).join('\\n\\n');\nconst report = [\n  `USABILITY TEST SUMMARY: ${m.test_title}`,\n  `Date: ${m.test_date} | Generated: ${m.generated_at}`,\n  `Overall usability: ${s.overall_usability_rating?.toUpperCase()}`,\n  ``,\n  `EXECUTIVE SUMMARY: ${s.executive_summary}`,\n  ``,\n  `TASK RESULTS:`,\n  taskLines,\n  ``,\n  `SYSTEMIC ISSUES:`,\n  (s.systemic_issues||[]).map(i=>`  [${i.severity.toUpperCase()}] ${i.issue}\\n  Tasks: ${i.affected_tasks.join(', ')} | Root cause: ${i.root_cause}`).join('\\n') || '  (none)',\n  ``,\n  `POSITIVE FINDINGS:`,\n  (s.positive_findings||[]).map(f=>`  ✓ ${f}`).join('\\n'),\n  ``,\n  `DESIGN RECOMMENDATIONS:`,\n  (s.design_recommendations||[]).map(r=>`  [${r.priority.toUpperCase()}] ${r.recommendation}\\n  Tasks: ${r.affected_tasks.join(', ')} | Rationale: ${r.rationale}`).join('\\n'),\n].join('\\n');\nreturn [{ json: { ...($input.first().json), report_text: report } }];"
+      },
+      "id": "format-summary",
+      "name": "Format Test Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1600, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.USABILITY_APPROVER_EMAIL || $env.USABILITY_EMAIL_TO }}",
+        "subject": "=APPROVAL REQUIRED: Usability Test Summary — {{ $json.meta.test_title }}",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $json.report_text }}</pre><p><a href=\"{{ $execution.resumeUrl }}?decision=approved\">Approve and share</a> | <a href=\"{{ $execution.resumeUrl }}?decision=rejected\">Reject</a></p>",
+        "options": {}
+      },
+      "id": "send-approval",
+      "name": "Send for Approval",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1820, 300],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": { "resume": "webhook", "options": { "webhookSuffix": "/approval" } },
+      "id": "wait-approval",
+      "name": "Wait for Approval",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [2040, 300],
+      "webhookId": "usability-summary-approval"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "cd", "leftValue": "={{ $json.query?.decision || $json.body?.decision }}", "rightValue": "approved", "operator": { "type": "string", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-decision",
+      "name": "Approved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2260, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "toEmail": "={{ $env.USABILITY_EMAIL_TO || 'design@acme-analytics.com' }}",
+        "subject": "=Usability Test Summary: {{ $('Format Test Summary').first().json.meta.test_title }}",
+        "emailType": "html",
+        "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $('Format Test Summary').first().json.report_text }}</pre>",
+        "options": {}
+      },
+      "id": "send-summary",
+      "name": "Share with Design and Product",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [2480, 200],
+      "credentials": { "smtp": { "name": "YOUR_SMTP_CREDENTIAL" } }
+    },
+    {
+      "parameters": { "assignments": { "assignments": [{ "id": "r1", "name": "status", "value": "rejected", "type": "string" }] }, "options": {} },
+      "id": "log-rejection",
+      "name": "Log Rejection",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2480, 400]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": { "main": [[{ "node": "Load Sample Test Data", "type": "main", "index": 0 }]] },
+    "Load Sample Test Data": { "main": [[{ "node": "Prepare Summary Prompt", "type": "main", "index": 0 }]] },
+    "Prepare Summary Prompt": { "main": [[{ "node": "LLM: Summarise Test", "type": "main", "index": 0 }]] },
+    "LLM: Summarise Test": { "main": [[{ "node": "Validate LLM Output", "type": "main", "index": 0 }]] },
+    "Validate LLM Output": { "main": [[{ "node": "LLM Error?", "type": "main", "index": 0 }]] },
+    "LLM Error?": { "main": [[{ "node": "LLM Error Handler", "type": "main", "index": 0 }], [{ "node": "Format Test Summary", "type": "main", "index": 0 }]] },
+    "Format Test Summary": { "main": [[{ "node": "Send for Approval", "type": "main", "index": 0 }]] },
+    "Send for Approval": { "main": [[{ "node": "Wait for Approval", "type": "main", "index": 0 }]] },
+    "Wait for Approval": { "main": [[{ "node": "Approved?", "type": "main", "index": 0 }]] },
+    "Approved?": { "main": [[{ "node": "Share with Design and Product", "type": "main", "index": 0 }], [{ "node": "Log Rejection", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1", "saveManualExecutions": true, "callerPolicy": "workflowsFromSameOwner", "errorWorkflow": "" },
+  "staticData": null,
+  "tags": ["research", "discovery", "usability", "ux", "beta"],
+  "triggerCount": 0,
+  "updatedAt": "2026-07-14T00:00:00.000Z",
+  "versionId": "73-usability-test-summariser-v0.1.0"
+}

@@ -1,0 +1,11 @@
+{
+  "product": "ProjectFlow — project management SaaS",
+  "research_inputs": [
+    { "source": "NPS survey (n=150)", "findings": "Two distinct groups: power users who use recurring tasks, dependencies, and bulk export daily; casual users who only create tasks and update status. The second group has high churn." },
+    { "source": "Customer interviews (n=12)", "findings": "Three main PM archetypes: solo founders managing product and team simultaneously, project leads at 20-50 person companies, enterprise PMs managing 5+ concurrent projects. Founders care about speed and mobile access. Enterprise PMs care about integrations and reporting. Mid-market PMs care about team adoption and collaboration." },
+    { "source": "Segment analysis", "findings": "Segment A: 1-5 users, avg 8 tasks/week, 4-month LTV. Segment B: 6-20 users, avg 45 tasks/week, 14-month LTV. Segment C: 21-100 users, avg 200+ tasks/week, 24-month LTV." },
+    { "source": "Feature usage analytics", "findings": "Recurring tasks used by 28% of accounts but those accounts have 2x the NPS and 3x the retention. Dependencies used by 12% of accounts but all are in Segment C." }
+  ],
+  "segments_to_personas": 3,
+  "notes": "Focus on actionable personas tied to retention and revenue. Avoid fictional detail — ground everything in research."
+}

@@ -1,0 +1,14 @@
+{
+  "workflows": [
+    { "name": "User Feedback Classifier", "collection": "01-user-research", "executions": 47, "errors": 0, "avg_duration_s": 12, "manual_minutes_saved_per_run": 5 },
+    { "name": "Churn Risk Scorer", "collection": "03-retention", "executions": 7, "errors": 0, "avg_duration_s": 8, "manual_minutes_saved_per_run": 15 },
+    { "name": "AI Cost Monitor", "collection": "09-engineering", "executions": 7, "errors": 0, "avg_duration_s": 3, "manual_minutes_saved_per_run": 10 },
+    { "name": "LLM Prompt Regression Tester", "collection": "09-engineering", "executions": 12, "errors": 2, "avg_duration_s": 45, "manual_minutes_saved_per_run": 30 },
+    { "name": "Competitor Radar", "collection": "06-market-intel", "executions": 7, "errors": 1, "avg_duration_s": 22, "manual_minutes_saved_per_run": 20 },
+    { "name": "Dependency Deprecation Watcher", "collection": "09-engineering", "executions": 7, "errors": 0, "avg_duration_s": 18, "manual_minutes_saved_per_run": 25 },
+    { "name": "Bug Triage Assistant", "collection": "09-engineering", "executions": 23, "errors": 3, "avg_duration_s": 30, "manual_minutes_saved_per_run": 8 },
+    { "name": "Weekly Priorities Planner", "collection": "10-team", "executions": 1, "errors": 0, "avg_duration_s": 15, "manual_minutes_saved_per_run": 45 },
+    { "name": "Uptime SLA Reporter", "collection": "09-engineering", "executions": 7, "errors": 0, "avg_duration_s": 5, "manual_minutes_saved_per_run": 20 }
+  ],
+  "week": "July 7–11, 2026"
+}

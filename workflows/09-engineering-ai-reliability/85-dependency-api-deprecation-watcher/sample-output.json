@@ -1,0 +1,16 @@
+{
+  "_comment": "Deterministic output given the simulated latestVersions map in the Code node.",
+  "version_warnings": [
+    { "name": "stripe", "current_version": "12.3.0", "latest_version": "14.21.0", "majors_behind": 2, "status": "critical", "notes": "Stripe deprecated API version 2022-08-01 on Jan 1 2026" },
+    { "name": "openai", "current_version": "4.11.0", "latest_version": "4.52.0", "majors_behind": 0, "status": "ok", "notes": "Pinned to gpt-4o-mini. Check for model deprecation." },
+    { "name": "express", "current_version": "4.18.2", "latest_version": "5.0.0", "majors_behind": 1, "status": "warning", "notes": "Express 5 is stable — v4 still active but migration needed" },
+    { "name": "react", "current_version": "18.2.0", "latest_version": "19.0.0", "majors_behind": 1, "status": "warning", "notes": "React 19 released — check breaking changes for upgrade path" }
+  ],
+  "actionable_warnings": [
+    { "name": "stripe", "current_version": "12.3.0", "latest_version": "14.21.0", "majors_behind": 2, "status": "critical", "notes": "Stripe deprecated API version 2022-08-01 on Jan 1 2026" },
+    { "name": "express", "current_version": "4.18.2", "latest_version": "5.0.0", "majors_behind": 1, "status": "warning", "notes": "Express 5 is stable — v4 still active but migration needed" },
+    { "name": "react", "current_version": "18.2.0", "latest_version": "19.0.0", "majors_behind": 1, "status": "warning", "notes": "React 19 released — check breaking changes for upgrade path" }
+  ],
+  "meta": { "total": 4, "critical": 1, "warning": 2 },
+  "checked_at": "2026-07-14T08:00:00.000Z"
+}

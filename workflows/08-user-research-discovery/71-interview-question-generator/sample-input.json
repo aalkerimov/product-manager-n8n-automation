@@ -1,0 +1,9 @@
+{
+  "research_goal": "Understand why mid-market project managers switch from incumbent tools to ours, and what barriers prevent full adoption after signing",
+  "interview_type": "discovery",
+  "participant_profile": "Mid-market (50-500 employees) project manager, using our product for 3-6 months, came from Asana or Monday.com",
+  "topic_areas": ["switching motivation", "onboarding experience", "daily workflow fit", "collaboration with non-PM stakeholders", "blockers to full team adoption", "unmet needs"],
+  "duration_minutes": 45,
+  "format": "semi-structured",
+  "researcher_note": "We want to understand adoption gaps. Avoid leading questions about features."
+}
