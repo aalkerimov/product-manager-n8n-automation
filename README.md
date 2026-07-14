@@ -1,6 +1,6 @@
 # Product & Founder Automation OS
 
-> ⚠️ **This project has zero affiliation with n8n GmbH.** It is fully independent, 100% open-source, and non-profit. No sponsorship, no endorsement, no commercial relationship — just workflows built by practitioners for practitioners.
+> ⚠️ **This project has zero affiliation with n8n GmbH.** It is fully independent, 100% open-source, and non-profit. No sponsorship, no endorsement, no commercial relationship just workflows built by practitioners for practitioners.
 
 <div align="center">
 
@@ -187,61 +187,6 @@ Drop any `workflow.json` straight into your n8n via the **Import from file** opt
 | Issue tracking | Linear or Jira |
 | Code context | GitHub API |
 | AI | Any OpenAI-compatible provider |
-
----
-
-## Architecture
-
-```mermaid
-graph TD
-    subgraph Inputs
-        A[Webhook / Form]
-        B[CSV / Sheets]
-        C[RSS Feeds]
-        D[GitHub / Linear API]
-        E[Schedule Trigger]
-    end
-
-    subgraph Workflow_Categories
-        DR[01 Discovery & Research]
-        PE[02 Planning & Execution]
-        GM[03 Growth & Metrics]
-        CF[04 Customer & Feedback]
-        FI[05 Founder Intelligence]
-    end
-
-    subgraph Shared_Subworkflows
-        LC[LLM Classifier]
-        HA[Human Approval Gate]
-        NR[Notification Router]
-    end
-
-    subgraph Outputs
-        S[Slack / Email / Telegram]
-        GS[Google Sheets / PostgreSQL]
-        LN[Linear / Jira Ticket]
-    end
-
-    A --> DR
-    B --> GM
-    C --> FI
-    D --> PE
-    E --> CF
-
-    DR --> LC
-    PE --> HA
-    GM --> NR
-    CF --> LC
-    FI --> HA
-
-    LC --> HA
-    HA -->|Approved| NR
-    HA -->|Rejected| GS
-
-    NR --> S
-    NR --> GS
-    NR --> LN
-```
 
 ---
 
