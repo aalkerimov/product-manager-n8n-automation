@@ -8,7 +8,7 @@ This guide covers every way to install and run the **Product & Founder Automatio
 
 | Requirement | Minimum | Notes |
 |---|---|---|
-| n8n | 2.30.0 | Cloud or self-hosted |
+| n8n | 1.50.0 | Cloud or self-hosted |
 | Node.js | 22.x | For local scripts only |
 | Docker | 24.x | For local dev stack |
 | OpenAI-compatible API | Any | Required for AI nodes |
@@ -30,8 +30,8 @@ This guide covers every way to install and run the **Product & Founder Automatio
 
 ```bash
 # Clone the repository
-git clone https://github.com/YOUR_ORG/product-founder-automation-os
-cd product-founder-automation-os
+git clone https://github.com/aalkerimov/product-manager-n8n-automation
+cd product-manager-n8n-automation
 
 # Create your environment file
 cp .env.example .env
@@ -70,11 +70,16 @@ If you already run n8n:
 
 ## Credential setup
 
-### OpenAI (required for AI features)
+### OpenAI / LLM provider (required for AI features)
 
-1. Get an API key from [platform.openai.com](https://platform.openai.com)
-2. In n8n: **Credentials → Add credential → OpenAI API**
-3. Paste the key — never put it in `.env.example` or commit it
+All AI workflows use **HTTP Header Auth** (not the built-in OpenAI credential type) so that any OpenAI-compatible provider works without code changes.
+
+1. Get an API key from [platform.openai.com](https://platform.openai.com) or your preferred provider
+2. In n8n: **Credentials → Add credential → HTTP Header Auth**
+   - Name: `YOUR_OPENAI_CREDENTIAL` (exact name used in all workflow JSONs)
+   - Header name: `Authorization`
+   - Header value: `Bearer YOUR_API_KEY`
+3. Never commit the key — set it via the `OPENAI_API_KEY` env var or n8n Credentials only
 
 ### Google Sheets (Basic stack)
 
@@ -140,8 +145,8 @@ docker compose exec postgres psql -U n8n -d automation_os -f /docker-entrypoint-
 
 ### "Workflow failed to import"
 
-- Check that the JSON is valid: `node scripts/validate-json.js workflows/your-workflow/workflow.json`
-- Ensure you are on n8n ≥ 2.30.0
+- Check that the JSON is valid: `node scripts/validate-json.js`
+- Ensure you are on n8n ≥ 1.50.0
 
 ### "AI node not found"
 

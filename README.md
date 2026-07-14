@@ -1,15 +1,16 @@
 # Product & Founder Automation OS
 
-> ⚠️ **This project has zero affiliation with n8n GmbH.** It is fully independent, 100% open-source, and non-profit. No sponsorship, no endorsement, no commercial relationship just workflows built by practitioners for practitioners.
+> ⚠️ **This project has zero affiliation with n8n GmbH.** It is fully independent, 100% open-source, and non-profit. No sponsorship, no endorsement, no commercial relationship — just workflows built by practitioners for practitioners.
 
 <div align="center">
 
-**50 production-ready n8n workflows for product managers, founders, and small teams.**
+**100 production-ready n8n workflows for product managers, founders, and small teams.**
 *Stop building systems. Start shipping product.*
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![n8n version](https://img.shields.io/badge/n8n-2.30.0%2B-orange)](https://n8n.io)
-[![Workflows](https://img.shields.io/badge/workflows-53-blue)](#workflows)
+[![n8n version](https://img.shields.io/badge/n8n-1.50.0%2B-orange)](https://n8n.io)
+[![Workflows](https://img.shields.io/badge/workflows-100-blue)](#workflows)
+[![Status](https://img.shields.io/badge/status-beta-yellow)](#quality-status)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 [![Made by Arthur Kerimov](https://img.shields.io/badge/made%20by-Arthur%20Kerimov-blueviolet)](https://arthurkerimov.com)
 
@@ -19,7 +20,7 @@
 
 ## What this is
 
-**Product & Founder Automation OS** is an open-source collection of 50 complete, importable [n8n](https://n8n.io) workflows built for the people who run products and build companies.
+**Product & Founder Automation OS** is an open-source collection of 100 complete, importable [n8n](https://n8n.io) workflows built for people who run products and build companies.
 
 Every workflow solves a real, repeated problem — the kind that costs founders and PMs hours every week. They're designed to be **imported in minutes, not configured for days**.
 
@@ -32,28 +33,37 @@ Every workflow solves a real, repeated problem — the kind that costs founders 
 | Feedback scattered across Intercom, Slack, App Store, and surveys | One weekly AI-synthesised insight report |
 | Competitor pricing changed — you found out from a customer | Automated diff → alert within hours |
 | Friday stand-up prep takes 2 hours | Weekly product brief generated in minutes |
-| Investor updates written from scratch every month | AI drafts it from your Sheets data |
+| Investor updates written from scratch every month | AI drafts it from your data → you approve |
 | Board deck data collected manually the night before | Auto-assembled 10 days before every meeting |
 | AI outputs trusted blindly | Every AI conclusion shows confidence + source evidence |
 | Approvals skipped because it's "just a notification" | Human-in-the-loop gate before any external action |
+| Team skill gaps discovered mid-sprint | Weekly gap analysis mapped to upcoming roadmap work |
+| Founder network decays between busy weeks | Weekly outreach drafts for overdue relationships |
+| No visibility into which automations are broken | Weekly pass-rate + hours-saved dashboard |
+
+---
+
+## Quality status
+
+All workflows in this collection are currently in **beta** — fully implemented, reviewed, and locally validated, but not yet runtime-tested against a live n8n instance. See individual `CHANGELOG.md` files for known limitations per workflow.
 
 ---
 
 ## Shared Subworkflows
 
-Three reusable building blocks are called by the main workflows — **import them first**.
+Three reusable building blocks are called by the main workflows — **import these first**.
 
 | Subworkflow | Purpose | Called by |
 |---|---|---|
-| `subworkflows/llm-classifier` | AI text classification — feedback, competitor changes, brief items | Workflows 01, 03, 04-40 |
-| `subworkflows/human-approval` | Pause execution → email approve/reject button → resume on decision or timeout | Workflows 13, 40, 43, 50 |
+| `subworkflows/llm-classifier` | AI text classification with confidence scores and source evidence | Workflows using AI classification |
+| `subworkflows/human-approval` | Pause execution → email approve/reject link → resume on decision or timeout | Any workflow with an approval gate |
 | `subworkflows/notification-router` | Route an alert to Slack, Email, Telegram, or all three | Most scheduled workflows |
 
-> **Setup order:** Import the 3 subworkflows first, note their n8n workflow IDs, then paste those IDs into each main workflow that calls them.
+> **Setup order:** Import the 3 subworkflows first, note their n8n workflow IDs, then paste those IDs into each main workflow that references them.
 
 ---
 
-## 53 Workflows
+## 100 Workflows
 
 ### 01 — Discovery & Research
 
@@ -127,43 +137,131 @@ Three reusable building blocks are called by the main workflows — **import the
 | 46 | Burn Rate Runway Tracker | Monthly burn, runway, default rate with runway alert |
 | 47 | Competitive Pricing Scanner | Detects competitor price changes from historical snapshots |
 | 48 | Press Mention Aggregator | Brand + competitor monitoring with sentiment classification |
-| 49 | Product News Digest | Monday curation of 5-7 top product stories with PM insight |
+| 49 | Product News Digest | Monday curation of 5–7 top product stories with PM insight |
 | 50 | Board Deck Data Collector | Auto-assembles board brief with data gaps + prep checklist |
+
+### 06 — Strategy & Market Intelligence
+
+| # | Workflow | What it does |
+|---|---|---|
+| 51 | Market Sizing Assistant | TAM / SAM / SOM modelling with bottom-up and top-down views |
+| 52 | Win-Loss Analysis Engine | Structures win/loss call notes into competitive insight |
+| 53 | Battlecard Generator | Auto-drafts sales battlecards from competitive data |
+| 54 | Analyst Review Tracker | Monitors G2, Capterra, and Trustpilot for category shifts |
+| 55 | Regulatory Change Monitor | Tracks regulatory news relevant to your product category |
+| 56 | Technology Trend Radar | Weekly AI synthesis of emerging tech relevant to your roadmap |
+| 57 | Funding & M&A Tracker | Monitors competitor funding rounds and acquisition signals |
+| 58 | ICP Drift Detector | Flags when new customers diverge from your ideal profile |
+| 59 | Strategy Assumption Auditor | Challenges your core strategy assumptions with market evidence |
+| 60 | Competitive Pricing Monitor | Tracks pricing page changes across the competitive landscape |
+
+### 07 — Roadmap & Planning
+
+| # | Workflow | What it does |
+|---|---|---|
+| 61 | Opportunity Scoring Engine | Scores opportunities using impact, confidence, and effort |
+| 62 | Roadmap Dependency Mapper | Surfaces cross-team dependencies before sprint planning |
+| 63 | Sprint Retrospective Analyser | Extracts themes and action items from retro notes |
+| 64 | Feature Request Prioritiser | Weights feature requests by frequency, segment, and revenue impact |
+| 65 | Release Notes Generator | Drafts release notes from PRs and commit messages |
+| 66 | Product Spec Reviewer | Reviews spec drafts against quality criteria → feedback report |
+| 67 | Stakeholder Update Composer | Generates stakeholder-appropriate summaries from raw progress |
+| 68 | Quarterly Planning Assistant | Structures quarterly planning inputs into a decision-ready brief |
+| 69 | OKR Progress Tracker | Weekly OKR health with RAG status and trend tracking |
+| 70 | Roadmap Communication Planner | Generates comms plan for a roadmap update across audiences |
+
+### 08 — User Research & Discovery
+
+| # | Workflow | What it does |
+|---|---|---|
+| 71 | Interview Question Generator | Drafts JTBD-framed interview guides for any problem area |
+| 72 | Survey Response Analyser | Extracts themes and sentiment from open-text survey responses |
+| 73 | Usability Test Summariser | Turns session notes into structured findings and severity ratings |
+| 74 | Persona Generator | Synthesises research data into PM-ready persona documents |
+| 75 | JTBD Extractor | Extracts Jobs-to-be-Done from interview transcripts |
+| 76 | Research Repository Tagger | Auto-tags research artefacts with problem areas and segments |
+| 77 | Participant Recruitment Screener | Screens research participants against your ICP criteria |
+| 78 | Synthesis Report Builder | Combines tagged research into an executive synthesis report |
+| 79 | Research Insight Broadcaster | Distributes approved research insights to team channels |
+| 80 | Discovery Session Scheduler | Coordinates scheduling and reminders for user research sessions |
+
+### 09 — Engineering & AI Reliability
+
+| # | Workflow | What it does |
+|---|---|---|
+| 81 | Bug Triage Assistant | Classifies, prioritises, and routes incoming bug reports |
+| 82 | Error Spike Translator | Converts technical error spikes into plain-English PM summaries |
+| 83 | Tech Debt Register | Maintains a scored tech debt backlog with impact estimates |
+| 84 | Engineering Digest for PMs | Weekly plain-English summary of engineering activity |
+| 85 | Dependency & API Deprecation Watcher | Monitors for deprecated dependencies and upstream API changes |
+| 86 | LLM Prompt Regression Tester | Runs prompt regression tests and flags quality regressions |
+| 87 | AI Cost Monitor | Tracks AI API spend vs budget with threshold alerts |
+| 88 | AI Output Quality Sampler | Samples AI outputs weekly and scores them for quality drift |
+| 89 | Uptime & SLA Reporter | Weekly uptime and SLA compliance report with incident history |
+| 90 | Data Quality Sentinel | Monitors key data pipelines for schema drift and anomalies |
+
+### 10 — Team & Founder Operations
+
+| # | Workflow | What it does |
+|---|---|---|
+| 91 | Weekly Priorities Planner | Structures your top 3 weekly priorities with success criteria |
+| 92 | Calendar Audit & Focus Protector | Analyses calendar data and flags focus time erosion |
+| 93 | 1:1 Prep Assistant | Generates coaching questions and agenda from relationship context |
+| 94 | Team Pulse Analyzer | Weekly mood and blocker analysis — flags at-risk team members |
+| 95 | New Hire Onboarding Tracker | Tracks onboarding milestones and alerts on overdue items |
+| 96 | Knowledge Gap Finder | Maps team skills against upcoming roadwork — quarterly gap report |
+| 97 | Documentation Freshness Checker | Flags stale docs by severity before they mislead the team |
+| 98 | Founder Network Nurturer | Weekly outreach drafts for overdue network relationships |
+| 99 | Founder Weekly Review | Friday reflection: pattern, leverage point, coaching question |
+| 100 | Automation Health Dashboard | Weekly pass rate, time saved, and failing workflow report |
 
 ---
 
 ## Quick Start
 
-### Option A — n8n Cloud (fastest)
+### Step 1 — Import subworkflows first
+
+```
+subworkflows/llm-classifier/workflow.json
+subworkflows/human-approval/workflow.json
+subworkflows/notification-router/workflow.json
+```
+
+Note the n8n workflow ID for each after import. Workflows that call them reference these IDs.
+
+### Step 2 — Import a main workflow
+
+#### Option A — n8n Cloud (fastest)
 
 1. Sign in to [app.n8n.cloud](https://app.n8n.cloud)
 2. Open any workflow folder → copy `workflow.json`
-3. In n8n: **Workflows → Import from clipboard**
+3. In n8n: **Workflows → ⋮ → Import from clipboard**
 4. Follow the setup steps in the workflow's `README.md`
 
-### Option B — Self-hosted (Docker)
+#### Option B — Self-hosted (Docker)
 
 ```bash
-# Clone
 git clone https://github.com/aalkerimov/product-manager-n8n-automation
 cd product-manager-n8n-automation
 
-# Configure
 cp .env.example .env
 # Edit .env with your values
 
-# Start n8n
 docker compose up -d
-
-# Open in browser
 open http://localhost:5678
 ```
 
 Then import any `workflow.json` via **Workflows → ⋮ → Import from file**.
 
-### Option C — Existing n8n instance
+#### Option C — Existing n8n instance
 
-Drop any `workflow.json` straight into your n8n via the **Import from file** option.
+Drop any `workflow.json` into your n8n via **Workflows → Import from file**.
+
+### Step 3 — Configure credentials
+
+Each workflow uses named credentials (e.g., `YOUR_OPENAI_CREDENTIAL`, `YOUR_SMTP_CREDENTIAL`). Create these in n8n under **Settings → Credentials** before activating.
+
+See [`docs/installation.md`](docs/installation.md) for the full credential setup guide.
 
 ---
 
@@ -173,10 +271,10 @@ Drop any `workflow.json` straight into your n8n via the **Import from file** opt
 
 | Layer | Tool |
 |---|---|
-| Orchestration | n8n (self-hosted or Cloud) |
+| Orchestration | n8n self-hosted or Cloud |
 | Storage | Google Sheets |
 | Notifications | SMTP Email |
-| AI | OpenAI gpt-4o-mini (~$0.01–0.10/run) |
+| AI | OpenAI gpt-4o-mini (~$0.001–0.01/run) |
 
 ### Recommended (full stack)
 
@@ -190,48 +288,50 @@ Drop any `workflow.json` straight into your n8n via the **Import from file** opt
 
 ---
 
-## Per-workflow file structure
-## Repository Structure
+## Repository structure
 
 ```
 product-manager-n8n-automation/
-├── subworkflows/                       # Import these FIRST — called by main workflows
-│   ├── llm-classifier/             # Shared AI classifier (OpenAI)
-│   ├── human-approval/             # Human approval gate via email
-│   └── notification-router/        # Route to Slack / Email / Telegram
+├── subworkflows/                         # Import these FIRST
+│   ├── human-approval/
+│   ├── llm-classifier/
+│   └── notification-router/
 ├── workflows/
-│   ├── 01-discovery-research/      # Workflows 01-10
-│   │   ├── 01-customer-feedback-brain/
-│   │   ├── 02-competitor-change-monitor/
-│   │   ├── 03-weekly-product-brief/
-│   │   ├── 04-user-interview-processor/
-│   │   └── ...
-│   ├── 02-planning-execution/      # Workflows 11-20
-│   ├── 03-growth-metrics/          # Workflows 21-30
-│   ├── 04-customer-feedback/       # Workflows 31-40
-│   └── 05-founder-intelligence/    # Workflows 41-50
+│   ├── 01-discovery-research/            # Workflows 01–10
+│   ├── 02-planning-execution/            # Workflows 11–20
+│   ├── 03-growth-metrics/                # Workflows 21–30
+│   ├── 04-customer-feedback/             # Workflows 31–40
+│   ├── 05-founder-intelligence/          # Workflows 41–50
+│   ├── 06-strategy-market-intelligence/  # Workflows 51–60
+│   ├── 07-roadmap-planning/              # Workflows 61–70
+│   ├── 08-user-research-discovery/       # Workflows 71–80
+│   ├── 09-engineering-ai-reliability/    # Workflows 81–90
+│   └── 10-team-founder-operations/       # Workflows 91–100
 ├── docs/
-├── examples/
+│   ├── installation.md
+│   ├── architecture.md
+│   ├── creating-a-workflow.md
+│   └── customization.md
 ├── scripts/
+│   ├── check-required-files.js
+│   ├── check-secrets.js
+│   └── validate-json.js
 ├── .env.example
 └── docker-compose.yml
 ```
 
-### Per-workflow file structure
+### Per-workflow file set
 
-Every workflow and subworkflow ships with 7 files:
+Every workflow and subworkflow ships with exactly 6 files:
 
 ```
 <id>-<workflow-name>/
 ├── workflow.json          # Import directly into n8n
-├── README.md              # Setup guide, env vars, expected behaviour
-├── config.example.json    # All environment variables documented
-├── sample-input.json      # Test payload to trigger manually
+├── README.md              # 18-section setup guide, env vars, failure behaviour
+├── config.example.json    # All environment variables with types and defaults
+├── sample-input.json      # Test payload to trigger the workflow manually
 ├── sample-output.json     # What a successful run produces
-├── CHANGELOG.md           # Version history
-└── tests/
-    ├── fixtures/
-    └── expected-output/
+└── CHANGELOG.md           # Version history (starts at 0.1.0)
 ```
 
 ---
@@ -240,9 +340,10 @@ Every workflow and subworkflow ships with 7 files:
 
 1. **Useful before impressive** — every workflow solves a real repeated problem
 2. **Modular over duplicated** — shared subworkflows for AI, approvals, and notifications
-3. **Human approval for consequential actions** — no tickets, messages, or outbound emails without a gate
+3. **Human approval for consequential actions** — no tickets, messages, or outbound emails without an explicit gate
 4. **Transparent AI** — every AI conclusion shows confidence score + source evidence
-5. **Easy to import and test** — sample data included, no paid infra required to start
+5. **Determinism over LLMs** — if arithmetic or rule-based logic can do the job, no LLM is used
+6. **Easy to import and test** — sample data included, no paid infra required to start
 
 ---
 
@@ -251,7 +352,36 @@ Every workflow and subworkflow ships with 7 files:
 - No customer data leaves your n8n instance without your explicit configuration
 - All AI calls go to the provider you set — n8n does not proxy them
 - Competitor URLs and pricing snapshots stay in your own storage
+- All fallback email addresses in workflows use `@example.com` placeholders — replace with your own before activating
 - See [SECURITY.md](SECURITY.md) for credential and secret guidance
+
+---
+
+## Validation scripts
+
+```bash
+# Check all 103 directories have the required 6 files
+node scripts/check-required-files.js
+
+# Validate all JSON files are syntactically correct
+node scripts/validate-json.js
+
+# Scan for hardcoded secrets or real email addresses
+node scripts/check-secrets.js
+```
+
+All three scripts exit `0` on a clean repository.
+
+---
+
+## Documentation
+
+| Doc | Contents |
+|---|---|
+| [`docs/installation.md`](docs/installation.md) | Full setup guide — n8n Cloud, Docker, credentials |
+| [`docs/architecture.md`](docs/architecture.md) | Subworkflow contracts, data flow diagrams, error handling |
+| [`docs/creating-a-workflow.md`](docs/creating-a-workflow.md) | How to contribute a new workflow |
+| [`docs/customization.md`](docs/customization.md) | Adapting workflows to your stack and data sources |
 
 ---
 
