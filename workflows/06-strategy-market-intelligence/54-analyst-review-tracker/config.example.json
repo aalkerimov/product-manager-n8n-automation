@@ -6,7 +6,7 @@
   "status": "beta",
   "configuration": {
     "TRACKER_EMAIL_TO": { "default": "", "description": "Weekly report recipient", "required": "Required" },
-    "NOTIFICATION_EMAIL_FROM": { "default": "automation@acme-analytics.com", "description": "Sender address", "required": "Optional" },
+    "NOTIFICATION_EMAIL_FROM": { "default": "automation@example.com", "description": "Sender address", "required": "Optional" },
     "OUR_COMPANY_NAME": { "default": "Acme Analytics", "description": "Your company name as it appears in snapshot data. Must match exactly.", "required": "Optional" },
     "TRACKER_SCHEDULE": { "default": "0 8 * * 1", "description": "Cron expression for weekly run (default: Monday 08:00)", "required": "Optional" }
   },

@@ -113,7 +113,7 @@
     },
     {
       "parameters": {
-        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@example.com' }}",
         "toEmail": "={{ $env.JTBD_APPROVER_EMAIL || $env.JTBD_EMAIL_TO }}",
         "subject": "=APPROVAL REQUIRED: JTBD Map — {{ $json.meta.persona }}",
         "emailType": "html",
@@ -153,8 +153,8 @@
     },
     {
       "parameters": {
-        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
-        "toEmail": "={{ $env.JTBD_EMAIL_TO || 'product@acme-analytics.com' }}",
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@example.com' }}",
+        "toEmail": "={{ $env.JTBD_EMAIL_TO || 'product@example.com' }}",
         "subject": "=JTBD Map: {{ $('Format JTBD Map').first().json.meta.persona }}",
         "emailType": "html",
         "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $('Format JTBD Map').first().json.report_text }}</pre>",

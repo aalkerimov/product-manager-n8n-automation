@@ -6,7 +6,7 @@
   "status": "beta",
   "configuration": {
     "BATTLECARD_EMAIL_TO": { "default": "", "description": "Sales team email for approved battlecards", "required": "Required" },
-    "NOTIFICATION_EMAIL_FROM": { "default": "automation@acme-analytics.com", "description": "Sender address", "required": "Optional" },
+    "NOTIFICATION_EMAIL_FROM": { "default": "automation@example.com", "description": "Sender address", "required": "Optional" },
     "AI_MODEL": { "default": "gpt-4o-mini", "description": "LLM model. Must support JSON mode.", "required": "Required" },
     "OPENAI_BASE_URL": { "default": "https://api.openai.com", "description": "LLM base URL", "required": "Optional" }
   },

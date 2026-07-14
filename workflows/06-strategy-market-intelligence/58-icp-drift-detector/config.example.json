@@ -9,7 +9,7 @@
     "ICP_DEFINITION": { "default": "B2B SaaS, 50-500 employees, software/technology industry, US or EU, mid-market or SMB segment", "description": "Your stated ICP — appears in the report header for human comparison", "required": "Required" },
     "ICP_EMAIL_TO": { "default": "", "description": "Monthly report recipient", "required": "Required" },
     "ICP_SCHEDULE": { "default": "0 9 1 * *", "description": "Monthly cron (1st of month at 09:00)", "required": "Optional" },
-    "NOTIFICATION_EMAIL_FROM": { "default": "automation@acme-analytics.com", "description": "Sender address", "required": "Optional" }
+    "NOTIFICATION_EMAIL_FROM": { "default": "automation@example.com", "description": "Sender address", "required": "Optional" }
   },
   "n8n_credentials_required": [
     { "name": "YOUR_GOOGLE_SHEETS_CREDENTIAL", "type": "googleSheetsOAuth2Api", "required": true, "purpose": "Read customer data from Google Sheets" },

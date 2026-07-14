@@ -7,7 +7,7 @@
   "configuration": {
     "DEPRECATION_EMAIL_TO": { "default": "", "description": "Engineering team recipients", "required": "Required" },
     "DEPRECATION_APPROVER_EMAIL": { "default": "", "description": "PM approver. Defaults to DEPRECATION_EMAIL_TO.", "required": "Optional" },
-    "NOTIFICATION_EMAIL_FROM": { "default": "automation@acme-analytics.com", "description": "Sender address", "required": "Optional" }
+    "NOTIFICATION_EMAIL_FROM": { "default": "automation@example.com", "description": "Sender address", "required": "Optional" }
   },
   "n8n_credentials_required": [
     { "name": "YOUR_SMTP_CREDENTIAL", "type": "smtp", "required": true, "purpose": "Approval and engineering alert" }

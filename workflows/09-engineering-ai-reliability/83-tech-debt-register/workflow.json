@@ -113,7 +113,7 @@
     },
     {
       "parameters": {
-        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@example.com' }}",
         "toEmail": "={{ $env.TECH_DEBT_APPROVER_EMAIL || $env.TECH_DEBT_EMAIL_TO }}",
         "subject": "=APPROVAL REQUIRED: Tech Debt Register — {{ $json.meta.item_count }} items",
         "emailType": "html",
@@ -153,8 +153,8 @@
     },
     {
       "parameters": {
-        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
-        "toEmail": "={{ $env.TECH_DEBT_EMAIL_TO || 'engineering@acme-analytics.com' }}",
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@example.com' }}",
+        "toEmail": "={{ $env.TECH_DEBT_EMAIL_TO || 'engineering@example.com' }}",
         "subject": "=Tech Debt Register — Prioritised {{ $('Format Debt Register').first().json.meta.item_count }} items",
         "emailType": "html",
         "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $('Format Debt Register').first().json.report_text }}</pre>",

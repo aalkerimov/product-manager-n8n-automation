@@ -113,7 +113,7 @@
     },
     {
       "parameters": {
-        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@example.com' }}",
         "toEmail": "={{ $env.PERSONA_APPROVER_EMAIL || $env.PERSONA_EMAIL_TO }}",
         "subject": "=APPROVAL REQUIRED: Product Personas — {{ $json.meta.product }}",
         "emailType": "html",
@@ -153,8 +153,8 @@
     },
     {
       "parameters": {
-        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
-        "toEmail": "={{ $env.PERSONA_EMAIL_TO || 'product@acme-analytics.com' }}",
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@example.com' }}",
+        "toEmail": "={{ $env.PERSONA_EMAIL_TO || 'product@example.com' }}",
         "subject": "=Product Personas: {{ $('Format Personas').first().json.meta.product }}",
         "emailType": "html",
         "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $('Format Personas').first().json.report_text }}</pre>",

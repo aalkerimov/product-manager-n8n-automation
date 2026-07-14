@@ -19,6 +19,6 @@
     "ACV is a blended average across both segments",
     "Competitor B revenue is analyst estimate, not audited"
   ],
-  "requested_by": "strategy-team@acme-analytics.com",
+  "requested_by": "strategy-team@example.com",
   "run_id": "manual_test_001"
 }

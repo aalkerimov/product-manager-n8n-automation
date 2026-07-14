@@ -86,7 +86,7 @@
     },
     {
       "parameters": {
-        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@example.com' }}",
         "toEmail": "={{ $env.DATA_QUALITY_APPROVER_EMAIL || $env.DATA_QUALITY_EMAIL_TO }}",
         "subject": "=APPROVAL REQUIRED: Data Quality Alert — {{ $json.meta.failed_count }} check{{ $json.meta.failed_count !== 1 ? 's' : '' }} failed ({{ $json.meta.pass_rate_pct }}% pass rate)",
         "emailType": "html",
@@ -126,8 +126,8 @@
     },
     {
       "parameters": {
-        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
-        "toEmail": "={{ $env.DATA_QUALITY_EMAIL_TO || 'data@acme-analytics.com' }}",
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@example.com' }}",
+        "toEmail": "={{ $env.DATA_QUALITY_EMAIL_TO || 'data@example.com' }}",
         "subject": "=Data Quality Alert: {{ $('Format Quality Alert').first().json.meta.failed_count }} checks failed — {{ $('Format Quality Alert').first().json.product }}",
         "emailType": "html",
         "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $('Format Quality Alert').first().json.report_text }}</pre>",

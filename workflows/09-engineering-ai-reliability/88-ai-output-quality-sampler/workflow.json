@@ -113,7 +113,7 @@
     },
     {
       "parameters": {
-        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@example.com' }}",
         "toEmail": "={{ $env.QUALITY_SAMPLE_APPROVER_EMAIL || $env.QUALITY_SAMPLE_EMAIL_TO }}",
         "subject": "=APPROVAL REQUIRED: AI Quality Report — avg {{ $json.meta.avg_overall_score }}/5 across {{ $json.meta.sample_count }} samples",
         "emailType": "html",
@@ -153,8 +153,8 @@
     },
     {
       "parameters": {
-        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
-        "toEmail": "={{ $env.QUALITY_SAMPLE_EMAIL_TO || 'engineering@acme-analytics.com' }}",
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@example.com' }}",
+        "toEmail": "={{ $env.QUALITY_SAMPLE_EMAIL_TO || 'engineering@example.com' }}",
         "subject": "=AI Output Quality: avg {{ $('Format Quality Report').first().json.meta.avg_overall_score }}/5 — {{ $('Format Quality Report').first().json.meta.sample_count }} samples",
         "emailType": "html",
         "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $('Format Quality Report').first().json.report_text }}</pre>",

@@ -8,7 +8,7 @@
     "WINLOSS_SHEET_ID": { "default": "", "description": "Google Sheet ID containing closed deal data", "required": "Required", "example": "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms" },
     "WINLOSS_SCHEDULE": { "default": "0 8 1 * *", "description": "Cron for monthly run. Default: 1st of month at 08:00", "required": "Optional" },
     "WINLOSS_EMAIL_TO": { "default": "", "description": "Recipient for approval request and final report", "required": "Required" },
-    "NOTIFICATION_EMAIL_FROM": { "default": "automation@acme-analytics.com", "description": "Sender address", "required": "Optional" },
+    "NOTIFICATION_EMAIL_FROM": { "default": "automation@example.com", "description": "Sender address", "required": "Optional" },
     "AI_MODEL": { "default": "gpt-4o-mini", "description": "LLM model. Must support JSON mode.", "required": "Required" },
     "OPENAI_BASE_URL": { "default": "https://api.openai.com", "description": "LLM provider base URL", "required": "Optional" }
   },

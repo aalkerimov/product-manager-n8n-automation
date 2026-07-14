@@ -39,7 +39,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Sample data for testing without external accounts.\n// Replace this node's output with a real webhook payload in production.\nreturn [{\n  json: {\n    product_category: \"B2B project management software\",\n    target_segments: [\"SMB (10-200 employees)\", \"Mid-market (201-1000 employees)\"],\n    geography: \"North America\",\n    pricing_model: \"SaaS subscription\",\n    avg_contract_value_usd: 2400,\n    revenue_proxies: [\n      { name: \"US SMB count (SBA 2024)\", value: 5800000 },\n      { name: \"Software adoption rate (SMB)\", value: 0.38 },\n      { name: \"Competitor revenue (est.)\", value: 180000000 }\n    ],\n    competitors: [\"Asana\", \"Monday.com\", \"ClickUp\"],\n    assumptions_to_flag: [\"adoption rate may be stale\", \"ACV is blended average\"],\n    requested_by: \"strategy-team@acme-analytics.com\",\n    run_id: `manual_${Date.now()}`\n  }\n}];"
+        "jsCode": "// Sample data for testing without external accounts.\n// Replace this node's output with a real webhook payload in production.\nreturn [{\n  json: {\n    product_category: \"B2B project management software\",\n    target_segments: [\"SMB (10-200 employees)\", \"Mid-market (201-1000 employees)\"],\n    geography: \"North America\",\n    pricing_model: \"SaaS subscription\",\n    avg_contract_value_usd: 2400,\n    revenue_proxies: [\n      { name: \"US SMB count (SBA 2024)\", value: 5800000 },\n      { name: \"Software adoption rate (SMB)\", value: 0.38 },\n      { name: \"Competitor revenue (est.)\", value: 180000000 }\n    ],\n    competitors: [\"Asana\", \"Monday.com\", \"ClickUp\"],\n    assumptions_to_flag: [\"adoption rate may be stale\", \"ACV is blended average\"],\n    requested_by: \"strategy-team@example.com\",\n    run_id: `manual_${Date.now()}`\n  }\n}];"
       },
       "id": "load-sample-data",
       "name": "Load Sample Data",
@@ -169,8 +169,8 @@
     },
     {
       "parameters": {
-        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
-        "toEmail": "={{ $env.MARKET_SIZING_EMAIL_TO || 'strategy@acme-analytics.com' }}",
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@example.com' }}",
+        "toEmail": "={{ $env.MARKET_SIZING_EMAIL_TO || 'strategy@example.com' }}",
         "subject": "=APPROVAL REQUIRED: Market Sizing — {{ $json.meta.product_category }}",
         "emailType": "html",
         "message": "=<p>A market sizing report is ready for your review.</p><p><strong>Product:</strong> {{ $json.meta.product_category }}<br><strong>Geography:</strong> {{ $json.meta.geography }}<br><strong>Confidence:</strong> {{ $json.sizing.confidence_overall }}</p>{{ $json.report_html }}<p><a href=\"{{ $execution.resumeUrl }}?decision=approved\">Approve and send report</a> | <a href=\"{{ $execution.resumeUrl }}?decision=rejected\">Reject</a></p><p><em>This link expires in 48 hours. If you take no action, the report will not be sent.</em></p>",
@@ -223,8 +223,8 @@
     },
     {
       "parameters": {
-        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
-        "toEmail": "={{ $env.MARKET_SIZING_EMAIL_TO || 'strategy@acme-analytics.com' }}",
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@example.com' }}",
+        "toEmail": "={{ $env.MARKET_SIZING_EMAIL_TO || 'strategy@example.com' }}",
         "subject": "=Market Sizing Report: {{ $('Format Report').first().json.meta.product_category }} ({{ $('Format Report').first().json.meta.geography }})",
         "emailType": "html",
         "message": "={{ $('Format Report').first().json.report_html }}",

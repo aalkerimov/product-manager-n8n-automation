@@ -113,7 +113,7 @@
     },
     {
       "parameters": {
-        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@example.com' }}",
         "toEmail": "={{ $env.SYNTHESIS_APPROVER_EMAIL || $env.SYNTHESIS_EMAIL_TO }}",
         "subject": "=APPROVAL REQUIRED: Research Synthesis — {{ $json.meta.title }}",
         "emailType": "html",
@@ -153,8 +153,8 @@
     },
     {
       "parameters": {
-        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
-        "toEmail": "={{ $env.SYNTHESIS_EMAIL_TO || 'product@acme-analytics.com' }}",
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@example.com' }}",
+        "toEmail": "={{ $env.SYNTHESIS_EMAIL_TO || 'product@example.com' }}",
         "subject": "=Research Synthesis Report: {{ $('Format Synthesis Report').first().json.meta.title }}",
         "emailType": "html",
         "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $('Format Synthesis Report').first().json.report_text }}</pre>",

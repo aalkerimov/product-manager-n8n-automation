@@ -8,7 +8,7 @@
     "OPP_SHEET_ID": { "default": "", "description": "Google Sheet ID containing the opportunity list", "required": "Required for scheduled runs" },
     "OPP_EMAIL_TO": { "default": "", "description": "Monthly report recipient", "required": "Required" },
     "OPP_SCHEDULE": { "default": "0 9 1 * *", "description": "Monthly cron (1st of month 09:00)", "required": "Optional" },
-    "NOTIFICATION_EMAIL_FROM": { "default": "automation@acme-analytics.com", "description": "Sender address", "required": "Optional" }
+    "NOTIFICATION_EMAIL_FROM": { "default": "automation@example.com", "description": "Sender address", "required": "Optional" }
   },
   "n8n_credentials_required": [
     { "name": "YOUR_GOOGLE_SHEETS_CREDENTIAL", "type": "googleSheetsOAuth2Api", "required": true, "purpose": "Read opportunity list" },

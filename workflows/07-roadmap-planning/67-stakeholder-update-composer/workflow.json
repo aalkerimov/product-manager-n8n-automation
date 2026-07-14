@@ -113,7 +113,7 @@
     },
     {
       "parameters": {
-        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@example.com' }}",
         "toEmail": "={{ $env.STAKEHOLDER_APPROVER_EMAIL || $env.STAKEHOLDER_EMAIL_TO }}",
         "subject": "=APPROVAL REQUIRED: Stakeholder Update Draft — {{ $json.update.subject }}",
         "emailType": "html",
@@ -153,8 +153,8 @@
     },
     {
       "parameters": {
-        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
-        "toEmail": "={{ $env.STAKEHOLDER_EMAIL_TO || 'leadership@acme-analytics.com' }}",
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@example.com' }}",
+        "toEmail": "={{ $env.STAKEHOLDER_EMAIL_TO || 'leadership@example.com' }}",
         "subject": "={{ $('Validate LLM Output').first().json.update.subject }}",
         "emailType": "html",
         "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $('Validate LLM Output').first().json.update.body_markdown }}</pre>",

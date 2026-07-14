@@ -87,7 +87,7 @@ Step 4: Test with Manual Trigger
 | `REGULATORY_JURISDICTIONS` | Optional | (all) | Comma-separated jurisdiction codes to filter |
 | `REGULATORY_PRODUCT_AREAS` | Required | `data-privacy,ai-model-outputs,billing,user-data` | Product areas for LLM mapping |
 | `REGULATORY_EMAIL_TO` | Required | — | Alert/digest recipient |
-| `NOTIFICATION_EMAIL_FROM` | Optional | `automation@acme-analytics.com` | Sender |
+| `NOTIFICATION_EMAIL_FROM` | Optional | `automation@example.com` | Sender |
 | `AI_MODEL` | Required | `gpt-4o-mini` | LLM model |
 | `REGULATORY_SCHEDULE` | Optional | `0 9 * * 1,4` | Run schedule |
 

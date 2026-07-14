@@ -9,7 +9,7 @@
     "PLANNING_EMAIL_TO": { "default": "", "description": "Leadership recipients for approved brief", "required": "Required" },
     "AI_MODEL": { "default": "gpt-4o", "description": "LLM model. Recommend gpt-4o for planning quality.", "required": "Required" },
     "OPENAI_BASE_URL": { "default": "https://api.openai.com", "description": "LLM base URL", "required": "Optional" },
-    "NOTIFICATION_EMAIL_FROM": { "default": "automation@acme-analytics.com", "description": "Sender address", "required": "Optional" }
+    "NOTIFICATION_EMAIL_FROM": { "default": "automation@example.com", "description": "Sender address", "required": "Optional" }
   },
   "n8n_credentials_required": [
     { "name": "YOUR_OPENAI_CREDENTIAL", "type": "httpHeaderAuth", "required": true, "purpose": "LLM planning brief generation" },

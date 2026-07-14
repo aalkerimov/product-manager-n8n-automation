@@ -7,7 +7,7 @@
   "configuration": {
     "SCHEDULER_RESEARCHER_EMAIL": { "default": "", "description": "Researcher who sends actual calendar invitations", "required": "Required" },
     "SCHEDULER_APPROVER_EMAIL": { "default": "", "description": "PM approver. Defaults to SCHEDULER_RESEARCHER_EMAIL.", "required": "Optional" },
-    "NOTIFICATION_EMAIL_FROM": { "default": "automation@acme-analytics.com", "description": "Sender address", "required": "Optional" }
+    "NOTIFICATION_EMAIL_FROM": { "default": "automation@example.com", "description": "Sender address", "required": "Optional" }
   },
   "n8n_credentials_required": [
     { "name": "YOUR_SMTP_CREDENTIAL", "type": "smtp", "required": true, "purpose": "Approval and researcher schedule delivery" }

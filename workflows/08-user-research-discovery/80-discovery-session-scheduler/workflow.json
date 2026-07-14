@@ -55,7 +55,7 @@
     },
     {
       "parameters": {
-        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@example.com' }}",
         "toEmail": "={{ $env.SCHEDULER_APPROVER_EMAIL || $env.SCHEDULER_RESEARCHER_EMAIL }}",
         "subject": "=APPROVAL REQUIRED: Session Schedule — {{ $json.study.study_name }} ({{ $json.meta.scheduled }} sessions)",
         "emailType": "html",
@@ -95,7 +95,7 @@
     },
     {
       "parameters": {
-        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@example.com' }}",
         "toEmail": "={{ $env.SCHEDULER_RESEARCHER_EMAIL || $env.SCHEDULER_EMAIL_TO }}",
         "subject": "=Session Schedule Confirmed: {{ $('Load Sample Session Data').first().json.study.study_name }}",
         "emailType": "html",

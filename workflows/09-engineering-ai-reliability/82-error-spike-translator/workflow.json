@@ -113,7 +113,7 @@
     },
     {
       "parameters": {
-        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@example.com' }}",
         "toEmail": "={{ $env.ERROR_SPIKE_APPROVER_EMAIL || $env.ERROR_SPIKE_EMAIL_TO }}",
         "subject": "=APPROVAL REQUIRED: Error Spike — {{ $json.meta.service }} [{{ $json.meta.alert_at }}]",
         "emailType": "html",
@@ -153,8 +153,8 @@
     },
     {
       "parameters": {
-        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
-        "toEmail": "={{ $env.ERROR_SPIKE_EMAIL_TO || 'product@acme-analytics.com' }}",
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@example.com' }}",
+        "toEmail": "={{ $env.ERROR_SPIKE_EMAIL_TO || 'product@example.com' }}",
         "subject": "=Production Incident: {{ $('Load Sample Error Spike').first().json.service }} — {{ $('Format Incident Report').first().json.meta.alert_at }}",
         "emailType": "html",
         "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $('Format Incident Report').first().json.report_text }}</pre>",

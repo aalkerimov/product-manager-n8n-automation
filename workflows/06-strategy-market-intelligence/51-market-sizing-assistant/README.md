@@ -105,7 +105,7 @@ Step 6: Test
 | `OPENAI_BASE_URL` | Optional | `https://api.openai.com` | Base URL for any OpenAI-compatible provider |
 | `AI_MODEL` | Required | `gpt-4o-mini` | LLM model name |
 | `MARKET_SIZING_EMAIL_TO` | Required | — | Recipient of approval request and final report |
-| `NOTIFICATION_EMAIL_FROM` | Optional | `automation@acme-analytics.com` | Sender address |
+| `NOTIFICATION_EMAIL_FROM` | Optional | `automation@example.com` | Sender address |
 | `COMPANY_NAME` | Optional | `Your Company` | Used in email subject lines |
 | `YOUR_GOOGLE_SHEET_ID` | Optional | — | Google Sheet for run logging (replace in node) |
 

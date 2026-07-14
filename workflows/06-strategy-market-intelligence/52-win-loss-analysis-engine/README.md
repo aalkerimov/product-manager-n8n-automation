@@ -96,7 +96,7 @@ Step 5: Test with Manual Trigger
 | `WINLOSS_SHEET_ID` | Required | — | Google Sheet ID for deal data |
 | `WINLOSS_SCHEDULE` | Optional | `0 8 1 * *` | Cron for monthly run |
 | `WINLOSS_EMAIL_TO` | Required | — | Recipient for approval and report |
-| `NOTIFICATION_EMAIL_FROM` | Optional | `automation@acme-analytics.com` | Sender address |
+| `NOTIFICATION_EMAIL_FROM` | Optional | `automation@example.com` | Sender address |
 | `AI_MODEL` | Required | `gpt-4o-mini` | LLM model name |
 | `OPENAI_BASE_URL` | Optional | `https://api.openai.com` | LLM provider base URL |
 

@@ -7,7 +7,7 @@
   "configuration": {
     "OKR_EMAIL_TO": { "default": "", "description": "Weekly pulse recipients", "required": "Required" },
     "OKR_SCHEDULE": { "default": "0 9 * * 1", "description": "Weekly cron (Monday 09:00)", "required": "Optional" },
-    "NOTIFICATION_EMAIL_FROM": { "default": "automation@acme-analytics.com", "description": "Sender address", "required": "Optional" }
+    "NOTIFICATION_EMAIL_FROM": { "default": "automation@example.com", "description": "Sender address", "required": "Optional" }
   },
   "n8n_credentials_required": [
     { "name": "YOUR_SMTP_CREDENTIAL", "type": "smtp", "required": true, "purpose": "Send weekly OKR pulse" }

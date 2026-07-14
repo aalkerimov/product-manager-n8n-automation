@@ -126,8 +126,8 @@
     },
     {
       "parameters": {
-        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
-        "toEmail": "={{ $env.FUNDING_EMAIL_TO || 'strategy@acme-analytics.com' }}",
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@example.com' }}",
+        "toEmail": "={{ $env.FUNDING_EMAIL_TO || 'strategy@example.com' }}",
         "subject": "=APPROVAL REQUIRED: Funding & M&A Tracker — {{ $json.meta.period }}",
         "emailType": "html",
         "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $json.report_text }}</pre><p><a href=\"{{ $execution.resumeUrl }}?decision=approved\">Approve and send</a> | <a href=\"{{ $execution.resumeUrl }}?decision=rejected\">Reject</a></p>",
@@ -166,8 +166,8 @@
     },
     {
       "parameters": {
-        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
-        "toEmail": "={{ $env.FUNDING_EMAIL_TO || 'strategy@acme-analytics.com' }}",
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@example.com' }}",
+        "toEmail": "={{ $env.FUNDING_EMAIL_TO || 'strategy@example.com' }}",
         "subject": "=Funding & M&A Report — {{ $('Format Report').first().json.meta.period }}",
         "emailType": "html",
         "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $('Format Report').first().json.report_text }}</pre>",

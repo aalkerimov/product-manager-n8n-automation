@@ -68,7 +68,7 @@ Step 4 (production): Connect to your roadmap data
 | Variable | Required | Default | Description |
 |---|---|---|---|
 | `DEPENDENCY_EMAIL_TO` | Required | — | Report recipient |
-| `NOTIFICATION_EMAIL_FROM` | Optional | `automation@acme-analytics.com` | Sender |
+| `NOTIFICATION_EMAIL_FROM` | Optional | `automation@example.com` | Sender |
 
 ---
 

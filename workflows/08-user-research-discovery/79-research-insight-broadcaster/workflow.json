@@ -45,7 +45,7 @@
     },
     {
       "parameters": {
-        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@example.com' }}",
         "toEmail": "={{ $env.BROADCAST_APPROVER_EMAIL || $env.BROADCAST_EMAIL_TO }}",
         "subject": "=APPROVAL REQUIRED: Research Broadcast — {{ $json.insight_title }} ({{ $json.meta.broadcast_count }} audience versions)",
         "emailType": "html",
@@ -85,7 +85,7 @@
     },
     {
       "parameters": {
-        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@example.com' }}",
         "toEmail": "={{ $env.BROADCAST_EMAIL_TO }}",
         "subject": "=Research Insight: {{ $('Load Sample Insight').first().json.insight_title }}",
         "emailType": "html",

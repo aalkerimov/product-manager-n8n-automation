@@ -183,8 +183,8 @@
     },
     {
       "parameters": {
-        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
-        "toEmail": "={{ $env.WINLOSS_EMAIL_TO || 'sales@acme-analytics.com' }}",
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@example.com' }}",
+        "toEmail": "={{ $env.WINLOSS_EMAIL_TO || 'sales@example.com' }}",
         "subject": "APPROVAL REQUIRED: Win/Loss Analysis Report",
         "emailType": "html",
         "message": "=<p>The monthly win/loss analysis is ready for your review.</p><p><strong>Deals analysed:</strong> {{ $json.meta.total_deals }}<br><strong>Run:</strong> {{ $json.meta.run_at }}</p><pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $json.report_text }}</pre><p><a href=\"{{ $execution.resumeUrl }}?decision=approved\">Approve and send</a> | <a href=\"{{ $execution.resumeUrl }}?decision=rejected\">Reject</a></p>",
@@ -226,8 +226,8 @@
     },
     {
       "parameters": {
-        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
-        "toEmail": "={{ $env.WINLOSS_EMAIL_TO || 'sales@acme-analytics.com' }}",
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@example.com' }}",
+        "toEmail": "={{ $env.WINLOSS_EMAIL_TO || 'sales@example.com' }}",
         "subject": "Win/Loss Analysis Report",
         "emailType": "html",
         "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $('Format Report').first().json.report_text }}</pre>",

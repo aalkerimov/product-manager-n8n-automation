@@ -7,7 +7,7 @@
   "configuration": {
     "UPTIME_EMAIL_TO": { "default": "", "description": "Engineering and PM recipients", "required": "Required" },
     "UPTIME_APPROVER_EMAIL": { "default": "", "description": "PM approver. Defaults to UPTIME_EMAIL_TO.", "required": "Optional" },
-    "NOTIFICATION_EMAIL_FROM": { "default": "automation@acme-analytics.com", "description": "Sender address", "required": "Optional" }
+    "NOTIFICATION_EMAIL_FROM": { "default": "automation@example.com", "description": "Sender address", "required": "Optional" }
   },
   "n8n_credentials_required": [
     { "name": "YOUR_SMTP_CREDENTIAL", "type": "smtp", "required": true, "purpose": "Approval and SLA report distribution" }

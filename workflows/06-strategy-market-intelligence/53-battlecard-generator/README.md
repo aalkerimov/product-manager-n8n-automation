@@ -86,7 +86,7 @@ Step 4 (optional): Connect workflow #02 (Competitor Change Monitor)
 | Variable | Required | Default | Description |
 |---|---|---|---|
 | `BATTLECARD_EMAIL_TO` | Required | — | Sales recipient email |
-| `NOTIFICATION_EMAIL_FROM` | Optional | `automation@acme-analytics.com` | Sender address |
+| `NOTIFICATION_EMAIL_FROM` | Optional | `automation@example.com` | Sender address |
 | `AI_MODEL` | Required | `gpt-4o-mini` | LLM model |
 | `OPENAI_BASE_URL` | Optional | `https://api.openai.com` | LLM provider |
 

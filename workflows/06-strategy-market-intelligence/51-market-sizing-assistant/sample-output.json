@@ -4,7 +4,7 @@
     "product_category": "B2B project management software",
     "geography": "North America",
     "run_id": "manual_test_001",
-    "requested_by": "strategy-team@acme-analytics.com",
+    "requested_by": "strategy-team@example.com",
     "validated_at": "2026-07-14T09:00:00.000Z"
   },
   "sizing": {

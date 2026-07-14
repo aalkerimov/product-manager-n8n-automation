@@ -6,7 +6,7 @@
   "status": "beta",
   "configuration": {
     "DEPENDENCY_EMAIL_TO": { "default": "", "description": "Report recipient email", "required": "Required" },
-    "NOTIFICATION_EMAIL_FROM": { "default": "automation@acme-analytics.com", "description": "Sender address", "required": "Optional" }
+    "NOTIFICATION_EMAIL_FROM": { "default": "automation@example.com", "description": "Sender address", "required": "Optional" }
   },
   "n8n_credentials_required": [
     { "name": "YOUR_SMTP_CREDENTIAL", "type": "smtp", "required": true, "purpose": "Deliver dependency report" }

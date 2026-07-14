@@ -24,7 +24,7 @@
       "example": "strategy@yourcompany.com"
     },
     "NOTIFICATION_EMAIL_FROM": {
-      "default": "automation@acme-analytics.com",
+      "default": "automation@example.com",
       "description": "Sender address for approval and report emails.",
       "required": "Optional",
       "example": "automation@yourcompany.com"

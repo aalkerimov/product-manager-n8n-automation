@@ -63,7 +63,7 @@
     },
     {
       "parameters": {
-        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@example.com' }}",
         "toEmail": "={{ $env.UPTIME_APPROVER_EMAIL || $env.UPTIME_EMAIL_TO }}",
         "subject": "=APPROVAL REQUIRED: SLA Report — {{ $json.meta.sla_breaches }} breach{{ $json.meta.sla_breaches !== 1 ? 'es' : '' }} | {{ $json.meta.total_incidents }} incident{{ $json.meta.total_incidents !== 1 ? 's' : '' }}",
         "emailType": "html",
@@ -103,8 +103,8 @@
     },
     {
       "parameters": {
-        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
-        "toEmail": "={{ $env.UPTIME_EMAIL_TO || 'engineering@acme-analytics.com' }}",
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@example.com' }}",
+        "toEmail": "={{ $env.UPTIME_EMAIL_TO || 'engineering@example.com' }}",
         "subject": "=Uptime & SLA Report: {{ $('Format SLA Report').first().json.period.start }} — {{ $('Format SLA Report').first().json.meta.sla_breaches }} breach(es)",
         "emailType": "html",
         "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $('Format SLA Report').first().json.report_text }}</pre>",

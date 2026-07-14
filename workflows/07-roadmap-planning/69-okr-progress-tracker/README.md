@@ -75,7 +75,7 @@ Step 4: For production, read KR values from Google Sheets
 |---|---|---|---|
 | `OKR_EMAIL_TO` | Required | — | Weekly pulse recipients |
 | `OKR_SCHEDULE` | Optional | `0 9 * * 1` | Monday 09:00 |
-| `NOTIFICATION_EMAIL_FROM` | Optional | `automation@acme-analytics.com` | Sender |
+| `NOTIFICATION_EMAIL_FROM` | Optional | `automation@example.com` | Sender |
 
 ---
 

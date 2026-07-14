@@ -76,7 +76,7 @@ Step 4 (production): Add HTTP Request nodes
 | Variable | Required | Default | Description |
 |---|---|---|---|
 | `TRACKER_EMAIL_TO` | Required | — | Weekly report recipient |
-| `NOTIFICATION_EMAIL_FROM` | Optional | `automation@acme-analytics.com` | Sender |
+| `NOTIFICATION_EMAIL_FROM` | Optional | `automation@example.com` | Sender |
 | `OUR_COMPANY_NAME` | Optional | `Acme Analytics` | Your company name in snapshot data |
 | `TRACKER_SCHEDULE` | Optional | `0 8 * * 1` | Weekly cron |
 

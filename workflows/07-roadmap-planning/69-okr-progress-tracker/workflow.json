@@ -65,8 +65,8 @@
     },
     {
       "parameters": {
-        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
-        "toEmail": "={{ $env.OKR_EMAIL_TO || 'leadership@acme-analytics.com' }}",
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@example.com' }}",
+        "toEmail": "={{ $env.OKR_EMAIL_TO || 'leadership@example.com' }}",
         "subject": "=OKR Pulse: {{ $json.quarter }} | {{ $json.week }} — Overall {{ $json.overall_pct }}%",
         "emailType": "html",
         "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $json.report_text }}</pre>",

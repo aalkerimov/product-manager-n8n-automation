@@ -55,7 +55,7 @@
     },
     {
       "parameters": {
-        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@example.com' }}",
         "toEmail": "={{ $env.REGRESSION_APPROVER_EMAIL || $env.REGRESSION_EMAIL_TO }}",
         "subject": "=APPROVAL REQUIRED: LLM Regression — {{ $json.meta.passed }}/{{ $json.meta.total }} passed{{ $json.meta.failed > 0 ? ' ⚠️ '+$json.meta.failed+' FAILED' : '' }}",
         "emailType": "html",
@@ -95,8 +95,8 @@
     },
     {
       "parameters": {
-        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
-        "toEmail": "={{ $env.REGRESSION_EMAIL_TO || 'engineering@acme-analytics.com' }}",
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@example.com' }}",
+        "toEmail": "={{ $env.REGRESSION_EMAIL_TO || 'engineering@example.com' }}",
         "subject": "=LLM Regression Results: {{ $('Format Regression Report').first().json.meta.passed }}/{{ $('Format Regression Report').first().json.meta.total }} passed",
         "emailType": "html",
         "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $('Format Regression Report').first().json.report_text }}</pre>",

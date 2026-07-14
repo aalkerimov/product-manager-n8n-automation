@@ -127,8 +127,8 @@
     },
     {
       "parameters": {
-        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
-        "toEmail": "={{ $env.SPEC_EMAIL_TO || 'product@acme-analytics.com' }}",
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@example.com' }}",
+        "toEmail": "={{ $env.SPEC_EMAIL_TO || 'product@example.com' }}",
         "subject": "=APPROVAL REQUIRED: Spec Review — {{ $json.meta.spec_title }}",
         "emailType": "html",
         "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $json.report_text }}</pre><p><a href=\"{{ $execution.resumeUrl }}?decision=approved\">Approve and send to author</a> | <a href=\"{{ $execution.resumeUrl }}?decision=rejected\">Reject — review not suitable</a></p>",
@@ -167,8 +167,8 @@
     },
     {
       "parameters": {
-        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
-        "toEmail": "={{ $env.SPEC_AUTHOR_EMAIL || $env.SPEC_EMAIL_TO || 'product@acme-analytics.com' }}",
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@example.com' }}",
+        "toEmail": "={{ $env.SPEC_AUTHOR_EMAIL || $env.SPEC_EMAIL_TO || 'product@example.com' }}",
         "subject": "=Spec Review Feedback: {{ $('Format Review Report').first().json.meta.spec_title }}",
         "emailType": "html",
         "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $('Format Review Report').first().json.report_text }}</pre>",

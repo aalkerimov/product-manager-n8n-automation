@@ -8,7 +8,7 @@
     "REGULATORY_JURISDICTIONS": { "default": "", "description": "Comma-separated jurisdiction codes to monitor (e.g. US,EU,UK). Leave empty to include all.", "required": "Optional", "example": "US,EU,UK,US-CA" },
     "REGULATORY_PRODUCT_AREAS": { "default": "data-privacy,ai-model-outputs,billing,user-data", "description": "Comma-separated product areas for LLM mapping. Customize to match your product.", "required": "Required" },
     "REGULATORY_EMAIL_TO": { "default": "", "description": "Recipient for alerts and digests", "required": "Required" },
-    "NOTIFICATION_EMAIL_FROM": { "default": "automation@acme-analytics.com", "description": "Sender address", "required": "Optional" },
+    "NOTIFICATION_EMAIL_FROM": { "default": "automation@example.com", "description": "Sender address", "required": "Optional" },
     "AI_MODEL": { "default": "gpt-4o-mini", "description": "LLM model for mapping", "required": "Required" },
     "OPENAI_BASE_URL": { "default": "https://api.openai.com", "description": "LLM provider base URL", "required": "Optional" },
     "REGULATORY_SCHEDULE": { "default": "0 9 * * 1,4", "description": "Cron for bi-weekly run (Mon + Thu at 09:00)", "required": "Optional" }

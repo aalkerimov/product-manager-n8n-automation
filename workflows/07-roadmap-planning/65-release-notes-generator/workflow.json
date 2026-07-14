@@ -117,8 +117,8 @@
     },
     {
       "parameters": {
-        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
-        "toEmail": "={{ $env.RELEASE_EMAIL_TO || 'product@acme-analytics.com' }}",
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@example.com' }}",
+        "toEmail": "={{ $env.RELEASE_EMAIL_TO || 'product@example.com' }}",
         "subject": "=APPROVAL REQUIRED: Release Notes v{{ $json.meta.version }}",
         "emailType": "html",
         "message": "=<p>Release notes for <strong>{{ $json.meta.version }}</strong> ({{ $json.meta.release_date }}) generated from {{ $json.meta.ticket_count }} tickets.</p><p><strong>Summary:</strong> {{ $json.notes.release_summary }}</p><hr/><pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $json.notes.full_text_markdown }}</pre><p><a href=\"{{ $execution.resumeUrl }}?decision=approved\">Approve and publish</a> | <a href=\"{{ $execution.resumeUrl }}?decision=rejected\">Reject — needs editing</a></p>",
@@ -157,8 +157,8 @@
     },
     {
       "parameters": {
-        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@acme-analytics.com' }}",
-        "toEmail": "={{ $env.RELEASE_DISTRIBUTION_EMAIL || $env.RELEASE_EMAIL_TO || 'product@acme-analytics.com' }}",
+        "fromEmail": "={{ $env.NOTIFICATION_EMAIL_FROM || 'automation@example.com' }}",
+        "toEmail": "={{ $env.RELEASE_DISTRIBUTION_EMAIL || $env.RELEASE_EMAIL_TO || 'product@example.com' }}",
         "subject": "={{ 'Release Notes: ' + $('Validate LLM Output').first().json.notes.release_title + ' (v' + $('Validate LLM Output').first().json.meta.version + ')' }}",
         "emailType": "html",
         "message": "=<pre style=\"font-family:monospace;white-space:pre-wrap\">{{ $('Validate LLM Output').first().json.notes.full_text_markdown }}</pre>",
