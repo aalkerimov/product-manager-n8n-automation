@@ -12,7 +12,7 @@
       { "incident": "INC-089: Enterprise dashboard outage (47 minutes, July 12, root cause: missing database query limit in v2.4.1)", "customer_impact": "12 enterprise accounts could not access their main dashboard. Fully resolved. Engineering added monitoring to detect this pattern before future deployments.", "status": "resolved" }
     ],
     "what_engineering_is_doing": [
-      { "work": "Migrating authentication to use non-blocking password checking (PR-1847)", "why_it_matters": "Reduces the risk of the login system slowing down all other features during periods of high sign-in traffic. Removes a known reliability risk." },
+      { "work": "Migrating authentication to use non-blocking credential hashing (PR-1847)", "why_it_matters": "Reduces the risk of the login system slowing down all other features during periods of high sign-in traffic. Removes a known reliability risk." },
       { "work": "Improving performance of the task list for large projects (PR-1851)", "why_it_matters": "Directly addresses the UI jank experienced by team leads with 200+ tasks. Unblocks the large-project market segment." },
       { "work": "Building a task dependency graph API (PR-1855)", "why_it_matters": "Backend foundation for the Gantt view and critical path features on the Q4 roadmap." }
     ],
